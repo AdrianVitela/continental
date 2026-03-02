@@ -207,7 +207,7 @@ function updateLobbyState(lobbyState) {
       <span>${p.nombre}</span>
       ${i===0 ? '<span class="player-badge">HOST</span>' : ''}
     </div>`).join('');
-  const canStart = isHost && playersList.length >= 2 && lobbyState.status === 'lobby';
+  const canStart = playersList.length >= 2 && lobbyState.status === 'lobby';
   const btn = document.getElementById('btn-start');
   btn.style.display = canStart ? 'block' : 'none';
   const waiting = document.getElementById('waiting-msg');

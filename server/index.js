@@ -82,7 +82,7 @@ wss.on('connection', (ws) => {
       case 'start_game': {
         const room = rooms.get(ctx.roomCode);
         if (!room) return send(ws, { type: 'error', msg: 'Sala no encontrada.' });
-        if (room.host !== ctx.playerId && room.players[0]?.id !== ctx.playerId)
+        if (room.players[0]?.id !== ctx.playerId)
           return send(ws, { type: 'error', msg: 'Solo el host puede iniciar.' });
         const result = room.startGame();
         if (!result.ok) return send(ws, { type: 'error', msg: result.error });

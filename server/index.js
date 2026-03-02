@@ -72,6 +72,8 @@ wss.on('connection', (ws) => {
         if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
         send(ws, { type: 'room_joined', code, playerId, lobbyState: room.lobbyState() });
+        // Notificar a todos los demás con el lobby actualizado
+        room.broadcast({ type: 'player_joined', nombre, lobbyState: room.lobbyState() }, playerId);
         // If reconnecting mid-game, send current state
         if (room.engine) {
           send(ws, { type: 'state_update', event: 'reconnect', state: room.engine.stateFor(playerId) });

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Continental</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+#game { position: fixed; inset: 0; display: flex; flex-direction: column; z-index: 1; }
+
+/* TOPBAR */
+.topbar { flex-shrink:0; background:rgba(0,0,0,.5); border-bottom:1px solid rgba(200,160,69,.12); backdrop-filter:blur(12px); padding:8px 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; z-index:10; }
+.tb-title { font-family:'Cormorant Garamond',serif; font-size:1.1rem; color:var(--gold); letter-spacing:2px; }
+.scoreboard { display:flex; gap:10px; margin-left:auto; }
+.sitem { text-align:center; }
+.sname { font-size:.68rem; color:var(--text-dim); }
+.spts  { font-size:.9rem; color:var(--gold); font-weight:600; }
+.sitem.me .sname { color:var(--gold-hi); } .sitem.me .spts { color:#fff; }
+
+/* TABLE */
+.table { flex:1; overflow:hidden; display:flex; flex-direction:column; gap:8px; padding:10px; position:relative; }
+
+/* OPPONENTS */
+.opponents-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.opp { background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:8px 12px; text-align:center; transition:border-color .3s,box-shadow .3s; min-width:90px; }
+.opp.turn { border-color:var(--gold); box-shadow:0 0 14px rgba(200,160,69,.25); }
+.opp.bajado { border-color:#2a8a4a; }
+.opp-name { font-size:.72rem; color:var(--text-dim); margin-bottom:5px; }
+.opp-backs { display:flex; gap:2px; justify-content:center; flex-wrap:wrap; }
+.cback-xs { width:14px; height:20px; border-radius:2px; background:linear-gradient(135deg,#1a3680,#0d2050); border:1px solid rgba(255,255,255,.15); }
+
+/* CENTER */
+.center-zone { display:flex; align-items:center; justify-content:center; gap:24px; flex:1; }
+.table-bajadas { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:flex-start; max-width:55%; }
+.bajada-pile { background:rgba(0,0,0,.22); border:2px solid rgba(255,255,255,.07); border-radius:10px; padding:7px 9px; cursor:pointer; transition:border-color .2s,background .2s; }
+.bajada-pile:hover { border-color:rgba(200,160,69,.5); background:rgba(200,160,69,.07); }
+.bajada-pile.drop-target { border-color:#2ecc71; background:rgba(46,204,113,.1); box-shadow:0 0 12px rgba(46,204,113,.3); }
+.bajada-pile-label { font-size:.6rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:5px; }
+.bajada-pile-cards { display:flex; gap:3px; flex-wrap:wrap; }
+
+.deck-area { display:flex; flex-direction:column; align-items:center; gap:7px; }
+.deck-label { font-size:.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1.5px; }
+.mazo-wrap { position:relative; width:var(--cw); height:var(--ch); cursor:pointer; }
+.mazo-wrap .cback { position:absolute; }
+.mazo-wrap .cback:nth-child(1){top:5px;left:5px} .mazo-wrap .cback:nth-child(2){top:3px;left:3px} .mazo-wrap .cback:nth-child(3){top:0;left:0}
+.mazo-count { font-size:.62rem; color:var(--text-dim); text-align:center; }
+
+/* PLAYER */
+.player-section { flex-shrink:0; border-top:1px solid rgba(200,160,69,.1); padding-top:8px; }
+.player-header { display:flex; align-items:center; justify-content:space-between; padding:0 4px; margin-bottom:7px; }
+.player-label { display:flex; align-items:center; gap:8px; font-family:'Cormorant Garamond',serif; font-size:1rem; color:var(--gold-hi); }
+.pulse-dot { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:pulse 1.3s ease-in-out infinite; }
+
+.hand-zone { display:flex; gap:6px; align-items:flex-end; min-height:calc(var(--ch) + 18px); padding:8px 10px; background:rgba(0,0,0,.15); border:2px dashed rgba(255,255,255,.07); border-radius:12px; overflow-x:auto; transition:border-color .2s,background .2s; position:relative; scrollbar-width:thin; flex-wrap:nowrap; }
+.hand-zone.drag-over { border-color:var(--gold); background:rgba(200,160,69,.06); }
+.insert-ghost { width:3px; min-width:3px; height:calc(var(--ch) - 8px); background:var(--gold); border-radius:4px; box-shadow:0 0 8px var(--gold); pointer-events:none; align-self:center; flex-shrink:0; }
+
+/* ACTION BAR */
+.action-bar { flex-shrink:0; background:rgba(0,0,0,.45); border-top:1px solid rgba(200,160,69,.12); backdrop-filter:blur(12px); padding:9px 12px; }
+.castigo-banner { background:rgba(180,60,30,.15); border:1px solid rgba(180,60,30,.35); border-radius:8px; padding:8px 12px; text-align:center; font-size:.82rem; color:#e88060; margin-bottom:8px; display:none; }
+.instr { font-size:.78rem; color:var(--gold-hi); padding:5px 10px; background:rgba(200,160,69,.07); border-left:3px solid var(--gold); border-radius:0 6px 6px 0; margin-bottom:8px; }
+.action-btns { display:flex; gap:7px; flex-wrap:wrap; }
+.abtn { padding:9px 16px; border-radius:8px; border:1px solid; font-family:'Outfit',sans-serif; font-size:.82rem; font-weight:500; cursor:pointer; transition:transform .1s,box-shadow .15s,background .15s; white-space:nowrap; }
+.abtn:hover{transform:translateY(-1px)} .abtn:active{transform:none} .abtn:disabled{opacity:.38;cursor:not-allowed;transform:none!important}
+.abtn-gold{background:linear-gradient(135deg,#d4a84a,#8a6018);border-color:var(--gold);color:#1a0e00;font-weight:700;box-shadow:0 3px 14px rgba(200,160,69,.25)}
+.abtn-gold:hover{box-shadow:0 5px 20px rgba(200,160,69,.4)}
+.abtn-outline{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.2);color:var(--text)}
+.abtn-outline:hover{background:rgba(255,255,255,.1)}
+.abtn-green{background:rgba(40,180,90,.15);border-color:#28b45a;color:#4de88a}
+.abtn-green:hover{background:rgba(40,180,90,.28)}
+.abtn-red{background:rgba(180,48,48,.15);border-color:var(--red);color:var(--red-hi)}
+.log-line { font-size:.68rem; color:var(--text-muted); margin-top:6px; border-top:1px solid rgba(255,255,255,.05); padding-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Waiting overlay */
+.not-your-turn { position:fixed; inset:0; z-index:50; pointer-events:none; }
+.turn-tag { font-size:.72rem; color:var(--text-dim); margin-left:auto; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="topbar">
+    <span class="tb-title">Continental</span>
+    <span class="pill pill-gold" id="ronda-pill">Ronda 1</span>
+    <span class="pill pill-dim"  id="req-pill">2 tercias</span>
+    <span class="pill pill-dim"  id="mode-pill">●</span>
+    <div class="scoreboard" id="scoreboard"></div>
+  </div>
+
+  <div class="table">
+    <div class="opponents-row" id="opponents"></div>
+    <div class="center-zone">
+      <div class="table-bajadas" id="table-bajadas"></div>
+      <div class="deck-area">
+        <div class="deck-label">Mazo</div>
+        <div class="mazo-wrap" id="mazo-wrap" onclick="acMazo()">
+          <div class="cback"></div><div class="cback"></div><div class="cback" id="mazo-top"></div>
+        </div>
+        <div class="mazo-count" id="mazo-count"></div>
+      </div>
+      <div class="deck-area">
+        <div class="deck-label">Fondo</div>
+        <div id="fondo-wrap"></div>
+      </div>
+    </div>
+    <div class="player-section">
+      <div class="player-header">
+        <div class="player-label">
+          <span class="pulse-dot" id="pulse-dot" style="display:none"></span>
+          <span id="my-name">—</span>
+        </div>
+        <span class="turn-tag" id="turn-tag"></span>
+        <span style="font-size:.72rem;color:var(--text-dim)" id="hand-count"></span>
+      </div>
+      <div class="hand-zone" id="hand-zone"></div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="castigo-banner" id="castigo-banner"></div>
+    <div class="instr" id="instr"></div>
+    <div class="action-btns" id="action-btns"></div>
+    <div class="log-line" id="log-line"></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-ronda">
+  <div class="modal">
+    <h2 id="mr-title"></h2><p id="mr-msg"></p>
+    <div class="score-rows" id="mr-scores"></div>
+    <div class="modal-btns"><button class="btn btn-gold" style="flex:1" id="btn-next-round" onclick="ackRonda()">Siguiente Ronda →</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-juego">
+  <div class="modal">
+    <h2>🎉 ¡Juego Terminado!</h2><p>Resultados finales:</p>
+    <div class="score-rows" id="mj-scores"></div>
+    <div class="modal-btns"><button class="btn btn-gold" style="flex:1" onclick="location.href='/'">Nueva Partida</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-disconnected" style="z-index:250">
+  <div class="modal" style="text-align:center">
+    <h2>📡 Reconectando</h2>
+    <p>Perdiste conexión. Intentando reconectar<span style="animation:dots 1.2s infinite">...</span></p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/socket.js"></script>
+<script src="js/animations.js"></script>
+<script src="js/dragdrop.js"></script>
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const params  = new URLSearchParams(location.search);
+const MY_ID   = params.get('pid');
+const ROOM    = params.get('code');
+const SUIT_CLS = {'♠':'blk-s','♥':'red-s','♦':'red-s','♣':'blk-s'};
+const REQ_LABELS = {1:'2 tercias',2:'1 tercia + 1 corrida',3:'2 corridas',4:'3 tercias',5:'2 tercias + 1 corrida',6:'2 corridas + 1 tercia',7:'3 corridas — sin pagar'};
+
+let G = null;        // full state from server
+let myIdx = -1;      // my index in jugadores array
+let selId = null;    // selected card id
+let ackSent = false; // fin_ronda ack sent
+
+if (!MY_ID || !ROOM) location.href = '/';
+
+// Save nombre for reconnects
+localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
+
+// ══════════════════════════════════════════════
+// SOCKET EVENTS
+// ══════════════════════════════════════════════
+WS.on('_connected', () => {
+  document.getElementById('modal-disconnected').classList.remove('show');
+  document.getElementById('mode-pill').textContent = '🟢 Conectado';
+});
+WS.on('_disconnected', () => {
+  document.getElementById('modal-disconnected').classList.add('show');
+  document.getElementById('mode-pill').textContent = '🔴 Desconectado';
+});
+
+WS.on('state_update', ({ event, data, state }) => {
+  if (!state) return;
+  const prev = G;
+  G = state;
+  myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
+  applyEvent(event, data, prev);
+  render();
+});
+
+WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
+WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));
+WS.on('error', ({ msg }) => toast(msg));
+
+WS.connect();
+
+// ══════════════════════════════════════════════
+// EVENT → ANIMATION bridge
+// ══════════════════════════════════════════════
+async function applyEvent(event, data, prev) {
+  if (!event || !data) return;
+
+  switch (event) {
+    case 'game_started':
+    case 'nueva_ronda': {
+      ackSent = false;
+      const mazoEl = document.getElementById('mazo-wrap');
+      await Anim.shuffleAnim(mazoEl);
+      // Deal animation for my cards
+      const hz = document.getElementById('hand-zone');
+      if (hz && G.jugadores[myIdx]) {
+        await Anim.dealAnim(mazoEl, hz, G.jugadores[myIdx].mano || [], 0);
+      }
+      break;
+    }
+
+    case 'tomar_mazo': {
+      if (data.jugadorIdx === myIdx) {
+        const mazoEl = document.getElementById('mazo-wrap');
+        const hz     = document.getElementById('hand-zone');
+        // Brief delay so render has placed the card, then FLIP-animate it in
+        await new Promise(r => setTimeout(r, 20));
+        const newCardEl = hz?.querySelector(`.card[data-id="${data.carta?.id}"]`);
+        if (mazoEl && hz && newCardEl) {
+          await Anim.flyToHand(mazoEl, hz, hz.querySelectorAll('.card').length - 1, newCardEl);
+        }
+      }
+      break;
+    }
+
+    case 'tomar_fondo': {
+      if (data.jugadorIdx === myIdx) {
+        // Already in hand via drag or click; FLIP will handle it
+      }
+      break;
+    }
+
+    case 'pagar': {
+      // Rival pays
+      if (data.jugadorIdx !== myIdx) {
+        const oppEl  = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
+        const fondoW = document.getElementById('fondo-wrap');
+        if (oppEl && fondoW) await Anim.rivalPaysToFondo(oppEl, fondoW, null);
+      }
+      break;
+    }
+
+    case 'bajar': {
+      if (data.jugadorIdx === myIdx) {
+        const hz      = document.getElementById('hand-zone');
+        const bajadas = document.getElementById('table-bajadas');
+        const cardEls = [...(hz?.querySelectorAll('.card') || [])];
+        if (cardEls.length && bajadas) await Anim.bajarAnim(cardEls, bajadas);
+      }
+      break;
+    }
+
+    case 'fin_ronda': {
+      // Float scores
+      setTimeout(() => {
+        G.jugadores.forEach((j, i) => {
+          const pts = data.puntos?.[i];
+          if (!pts) return;
+          const el = i === myIdx
+            ? document.getElementById('my-name')
+            : document.querySelector(`.opp[data-idx="${i}"] .opp-name`);
+          if (el) Anim.floatScore(el, pts.pts_r, pts.pts_r === 0);
+        });
+        setTimeout(() => showModalRonda(data.ganadorIdx, data.puntos), 600);
+      }, 300);
+      break;
+    }
+
+    case 'fin_juego': {
+      showModalJuego(data.jugadores);
+      break;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+// ACTIONS → server
+// ══════════════════════════════════════════════
+function isMyTurn() { return myIdx === G?.turno; }
+function isPayable() { return isMyTurn() && ['esperando_accion','esperando_pago'].includes(G?.estado); }
+
+function acMazo() {
+  if (!isMyTurn() || G.estado !== 'esperando_robo') return;
+  WS.send({ type: 'tomar_mazo' });
+}
+function acFondo() {
+  if (!isMyTurn() || G.estado !== 'esperando_robo') return;
+  if (G.jugadores[myIdx]?.bajado) { toast('Ya te bajaste.'); return; }
+  WS.send({ type: 'tomar_fondo' });
+}
+function acFondoDrag(insertIdx) {
+  // Drag from fondo to hand at specific position
+  WS.send({ type: 'tomar_fondo' });
+  // reorder after: the card will land at end, then we reorder
+  // (server will confirm via state_update, then we reorder locally)
+  pendingReorderIdx = insertIdx;
+}
+let pendingReorderIdx = -1;
+
+function acCastigo(acepta) { WS.send({ type: 'castigo', acepta }); }
+function acBajar()         { WS.send({ type: 'bajar' }); }
+
+function acPagar(cartaId) {
+  const id = cartaId || selId;
+  if (!id) { toast('Selecciona una carta para pagar.'); return; }
+  WS.send({ type: 'pagar', cartaId: id });
+  selId = null;
+}
+
+function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx) {
+  WS.send({ type: 'acomodar', cartaId, destJugadorIdx, destJugadaIdx });
+  selId = null;
+}
+
+function acReorder(draggedId, beforeId) {
+  const me = G.jugadores[myIdx];
+  if (!me) return;
+  const fromIdx = me.mano.findIndex(c => c.id === draggedId);
+  if (fromIdx < 0) return;
+  let toIdx = beforeId === Infinity
+    ? me.mano.length - 1
+    : me.mano.findIndex(c => c.id === beforeId);
+  if (toIdx < 0) toIdx = me.mano.length - 1;
+  const newOrder = [...me.mano];
+  const [moved] = newOrder.splice(fromIdx, 1);
+  newOrder.splice(toIdx < fromIdx ? toIdx : toIdx - 1, 0, moved);
+  // Optimistic local update
+  me.mano = newOrder;
+  renderHand();
+  WS.send({ type: 'reordenar', order: newOrder.map(c => c.id) });
+}
+
+function selCard(id) {
+  selId = selId === id ? null : id;
+  renderHand();
+  renderActions();
+}
+
+function ackRonda() {
+  if (ackSent) return;
+  ackSent = true;
+  document.getElementById('modal-ronda').classList.remove('show');
+  WS.send({ type: 'ack_fin_ronda' });
+}
+
+// ══════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════
+function render() {
+  if (!G || myIdx < 0) return;
+  const me = G.jugadores[myIdx];
+  const req = { 1:{t:2,c:0},2:{t:1,c:1},3:{t:0,c:2},4:{t:3,c:0},5:{t:2,c:1},6:{t:1,c:2},7:{t:0,c:3} }[G.ronda];
+
+  document.getElementById('ronda-pill').textContent = `Ronda ${G.ronda} de 7`;
+  document.getElementById('req-pill').textContent   = REQ_LABELS[G.ronda] || '';
+
+  // Scoreboard
+  document.getElementById('scoreboard').innerHTML = G.jugadores.map((j,i) => `
+    <div class="sitem ${i===myIdx?'me':''}">
+      <div class="sname">${j.nombre}</div>
+      <div class="spts">${j.pts_t}</div>
+    </div>`).join('');
+
+  // Opponents
+  const opEl = document.getElementById('opponents'); opEl.innerHTML = '';
+  G.jugadores.forEach((j, i) => {
+    if (i === myIdx) return;
+    const d = document.createElement('div');
+    d.className = `opp${i===G.turno?' turn':''}${j.bajado?' bajado':''}`;
+    d.dataset.idx = i;
+    d.innerHTML = `
+      <div class="opp-name">${j.nombre}${j.bajado?' ✅':''}${!j.conectado?' 📴':''} · ${j.pts_t}pts</div>
+      <div class="opp-backs">${(j.mano||[]).map(()=>'<div class="cback-xs"></div>').join('')}</div>
+      ${j.bajado&&j.jugadas?.length?`<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>`:''}`;
+    opEl.appendChild(d);
+  });
+
+  // Table bajadas
+  const bajEl = document.getElementById('table-bajadas'); bajEl.innerHTML = '';
+  G.jugadores.forEach((j, ji) => {
+    if (!j.bajado || !j.jugadas?.length) return;
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-items:center';
+    wrap.innerHTML = `<div style="font-size:.62rem;color:var(--text-dim);margin-bottom:2px">${j.nombre}</div>`;
+    j.jugadas.forEach((jug, jugi) => {
+      const pile = document.createElement('div');
+      pile.className = 'bajada-pile'; pile.dataset.pi = ji; pile.dataset.ji = jugi;
+      pile.innerHTML = `<div class="bajada-pile-label">${jug.tipo}</div>
+        <div class="bajada-pile-cards">${jug.cartas.map(c => cSm(c)).join('')}</div>`;
+      pile.onclick = () => { if (selId && isMyTurn()) acAcomodar(selId, ji, jugi); };
+      wrap.appendChild(pile);
+    });
+    bajEl.appendChild(wrap);
+  });
+
+  // Mazo
+  document.getElementById('mazo-count').textContent = `${G.mazo_count} cartas`;
+  const mazoW = document.getElementById('mazo-wrap');
+  mazoW.style.cursor = isMyTurn() && G.estado === 'esperando_robo' ? 'pointer' : 'default';
+
+  // Fondo
+  const fw = document.getElementById('fondo-wrap');
+  if (G.fondo_top) {
+    fw.innerHTML = cFull(G.fondo_top, false);
+    const fc = fw.querySelector('.card');
+    if (fc) {
+      const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
+      if (!canTake) fc.classList.add('disabled');
+      else {
+        fc.onclick = acFondo;
+        fc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, fc, {
+          onTakeFondo: idx => { acFondoDrag(idx); }
+        }));
+        fc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, fc, {
+          onTakeFondo: idx => { acFondoDrag(idx); }
+        }), { passive: false });
+      }
+    }
+  } else {
+    fw.innerHTML = `<div class="cback" style="opacity:.3;cursor:default"></div>`;
+  }
+
+  // My name + turn indicator
+  document.getElementById('my-name').textContent = me?.nombre || '—';
+  document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+  const dot = document.getElementById('pulse-dot');
+  dot.style.display = isMyTurn() ? 'inline-block' : 'none';
+  document.getElementById('turn-tag').textContent = isMyTurn() ? '' :
+    `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+
+  renderHand();
+  renderActions();
+}
+
+function renderHand() {
+  if (!G || myIdx < 0) return;
+  const me = G.jugadores[myIdx];
+  const hz = document.getElementById('hand-zone');
+  if (!hz || !me?.mano) return;
+  hz.innerHTML = '';
+  (me.mano).forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'card' + (c.id === selId ? ' selected' : '');
+    el.dataset.id  = c.id;
+    el.dataset.idx = i;
+    if (c.comodin) {
+      el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+    } else {
+      const sc = SUIT_CLS[c.palo] || '';
+      el.innerHTML = `<div class="card-face ${sc}">
+        <div class="corner tl">${c.valor}<br>${c.palo}</div>
+        <div class="cv">${c.palo}</div><div class="cs">${c.valor}</div>
+        <div class="corner br">${c.valor}<br>${c.palo}</div>
+      </div>`;
+    }
+    el.addEventListener('click', () => selCard(c.id));
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      DragDrop.startHandDrag(e, el, c.id, {
+        isPayable,
+        onPagar:    id => acPagar(id),
+        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+        onReorder:  (id, beforeId) => acReorder(id, beforeId),
+      });
+    });
+    el.addEventListener('touchstart', e => {
+      DragDrop.startHandDrag(e, el, c.id, {
+        isPayable,
+        onPagar:    id => acPagar(id),
+        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+        onReorder:  (id, beforeId) => acReorder(id, beforeId),
+      });
+    }, { passive: false });
+    hz.appendChild(el);
+  });
+}
+
+function renderActions() {
+  if (!G || myIdx < 0) return;
+  const me     = G.jugadores[myIdx];
+  const myTurn = isMyTurn();
+  const btns   = document.getElementById('action-btns');
+  const instr  = document.getElementById('instr');
+  const cb     = document.getElementById('castigo-banner');
+  cb.style.display = 'none';
+  btns.innerHTML   = '';
+
+  const add = (txt, cls, fn, dis = false) => {
+    const b = document.createElement('button');
+    b.className = `abtn ${cls}`; b.textContent = txt; b.disabled = dis; b.onclick = fn;
+    btns.appendChild(b);
+  };
+
+  const hasDest = () => {
+    if (!selId) return false;
+    const carta = me?.mano?.find(c => c.id === selId); if (!carta) return false;
+    return G.jugadores.some((j, ji) => {
+      if (!j.bajado || ji === myIdx) return false;
+      return j.jugadas?.some(jug => {
+        if (jug.tipo === 'tercia') {
+          if (carta.comodin) return true;
+          const vs = jug.cartas.filter(c => !c.comodin).map(c => c.valor);
+          return vs.length > 0 && carta.valor === vs[0];
+        } else {
+          if (carta.comodin) return true;
+          const nats = jug.cartas.filter(c => !c.comodin);
+          if (!nats.length || carta.palo !== nats[0].palo) return false;
+          const vs = nats.map(c => ({A:1,J:11,Q:12,K:13}[c.valor] ?? parseInt(c.valor))).sort((a,b)=>a-b);
+          const v  = ({A:1,J:11,Q:12,K:13}[carta.valor] ?? parseInt(carta.valor));
+          return v === vs[0] - 1 || v === vs[vs.length-1] + 1;
+        }
+      });
+    });
+  };
+
+  if (!myTurn) {
+    instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+    // Castigo phase — show even if not my turn
+    if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx) {
+      const top = G.fondo_top;
+      cb.style.display = 'block';
+      cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}?`;
+      instr.textContent = 'Tienes prioridad de castigo.';
+      add('✅ Sí, castigarme', 'abtn-green', () => acCastigo(true));
+      add('❌ No', 'abtn-red', () => acCastigo(false));
+    }
+    return;
+  }
+
+  switch (G.estado) {
+    case 'esperando_robo':
+      instr.textContent = me?.bajado
+        ? `${me.nombre} (bajado) — roba del mazo.`
+        : `Tu turno — toma del fondo o roba del mazo.`;
+      if (!me?.bajado) add('📥 Tomar Fondo', 'abtn-gold', acFondo, !G.fondo_top);
+      add('🎴 Robar Mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo);
+      break;
+
+    case 'fase_castigo': {
+      const jc  = G.jugadores[G.castigo_idx];
+      const top = G.fondo_top;
+      if (G.castigo_idx === myIdx) {
+        cb.style.display = 'block';
+        cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+        instr.textContent = 'Tienes prioridad de castigo.';
+        add('✅ Sí', 'abtn-green', () => acCastigo(true));
+        add('❌ No', 'abtn-red',   () => acCastigo(false));
+      } else {
+        instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+      }
+      break;
+    }
+
+    case 'esperando_accion': {
+      instr.textContent = selId ? 'Carta seleccionada — págala o acomódala.' : 'Selecciona una carta para pagar o bájate.';
+      const canBajar = G.jugadores[myIdx] && !me?.bajado;
+      // (actual bajarse check is server-side; button always shows, server rejects if can't)
+      if (!me?.bajado) add('🔥 Bajarme', 'abtn-gold', acBajar);
+      add('💳 Pagar', selId ? 'abtn-outline' : 'abtn-outline', () => acPagar(selId), !selId);
+      if (hasDest()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+      break;
+    }
+
+    case 'esperando_pago':
+      instr.textContent = G.ronda === 7 && me?.bajado
+        ? 'Ronda 7 — acomoda todas tus cartas.'
+        : 'Selecciona una carta para pagar al fondo.';
+      add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+      if (hasDest()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+      break;
+  }
+
+  document.getElementById('log-line').textContent = G.log?.[G.log.length - 1] || '';
+}
+
+// ══════════════════════════════════════════════
+// CARD RENDERING HELPERS
+// ══════════════════════════════════════════════
+function cFull(c, withId = true) {
+  if (!c) return '';
+  if (c.comodin) return `<div class="card"${withId?` data-id="${c.id}"`:''}>
+    <div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div></div>`;
+  const sc = SUIT_CLS[c.palo] || '';
+  return `<div class="card"${withId?` data-id="${c.id}"`:''}>
+    <div class="card-face ${sc}">
+      <div class="corner tl">${c.valor}<br>${c.palo}</div>
+      <div class="cv">${c.palo}</div><div class="cs">${c.valor}</div>
+      <div class="corner br">${c.valor}<br>${c.palo}</div>
+    </div></div>`;
+}
+function cSm(c) {
+  if (!c) return '';
+  if (c.comodin) return `<div class="card-sm joker-sm">🃏</div>`;
+  const sc = SUIT_CLS[c.palo] || '';
+  return `<div class="card-sm natural ${sc}">${c.valor}<br>${c.palo}</div>`;
+}
+
+// ══════════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════════
+function showModalRonda(ganadorIdx, puntos) {
+  document.getElementById('mr-title').textContent = `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`;
+  document.getElementById('mr-msg').textContent   = G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!';
+  document.getElementById('mr-scores').innerHTML  = G.jugadores.map((j, i) => `
+    <div class="srow ${i===ganadorIdx?'winner':''}">
+      <span>${j.nombre}${i===ganadorIdx?' 🏆':''}</span>
+      <span class="srow-pts">+${puntos?.[i]?.pts_r ?? 0} · Total: ${j.pts_t}</span>
+    </div>`).join('');
+  ackSent = false;
+  document.getElementById('modal-ronda').classList.add('show');
+}
+function showModalJuego(jugadores) {
+  const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);
+  document.getElementById('mj-scores').innerHTML = sorted.map((j, i) => `
+    <div class="srow ${i===0?'winner':''}">
+      <span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${j.nombre}</span>
+      <span class="srow-pts">${j.pts_t} pts</span>
+    </div>`).join('');
+  document.getElementById('modal-juego').classList.add('show');
+}
+
+function toast(msg, type = 'red') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' : 'rgba(180,50,50,.9)';
+  t.style.display = 'block';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.display = 'none', 2600);
+}
+</script>
+</body>
+</html>

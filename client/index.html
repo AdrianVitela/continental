@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Continental</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body { display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%); }
+
+.lobby-wrap { position: relative; z-index: 1; width: min(480px, 96%); display: flex; flex-direction: column; gap: 24px; }
+
+.logo { text-align: center; animation: fadeDown .7s var(--eout) both; }
+.logo h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(3rem, 9vw, 5.5rem); font-weight: 700; color: var(--gold); text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5); letter-spacing: 4px; }
+.logo p { color: var(--text-dim); font-size: .8rem; letter-spacing: 4px; text-transform: uppercase; margin-top: 4px; }
+
+.card-box { background: rgba(0,0,0,.35); border: 1px solid rgba(200,160,69,.18); border-radius: 18px; padding: 26px 28px; backdrop-filter: blur(16px); animation: fadeUp .7s .1s var(--eout) both; }
+.card-box h2 { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 1.15rem; text-align: center; margin-bottom: 18px; letter-spacing: 2px; }
+
+.tabs { display: flex; gap: 0; background: rgba(0,0,0,.3); border-radius: 10px; padding: 3px; margin-bottom: 20px; }
+.tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: .85rem; color: var(--text-dim); transition: background .2s, color .2s; }
+.tab.active { background: rgba(200,160,69,.2); color: var(--gold-hi); font-weight: 600; }
+
+.tab-panel { display: none; } .tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
+
+.field-group { display: flex; flex-direction: column; gap: 6px; }
+.field-group label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+.mode-row { display: flex; gap: 8px; }
+.mode-btn { flex: 1; padding: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); border-radius: 9px; color: var(--text-dim); font-size: .82rem; cursor: pointer; text-align: center; transition: background .2s, border-color .2s, color .2s; }
+.mode-btn.active { background: rgba(200,160,69,.15); border-color: rgba(200,160,69,.4); color: var(--gold-hi); }
+.mode-btn small { display: block; font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+
+.player-count { display: flex; align-items: center; justify-content: space-between; }
+.player-count label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+.pc-ctrl { display: flex; align-items: center; gap: 10px; }
+.pc-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(200,160,69,.12); border: 1px solid rgba(200,160,69,.3); color: var(--gold); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+.pc-btn:hover { background: rgba(200,160,69,.25); }
+.pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
+
+/* Lobby waiting room */
+#lobby-room { display: none; flex-direction: column; gap: 16px; }
+#lobby-room.show { display: flex; }
+.room-code-display { text-align: center; }
+.room-code-display .code { font-family: 'Cormorant Garamond', serif; font-size: 2.5rem; font-weight: 700; color: var(--gold); letter-spacing: 8px; background: rgba(0,0,0,.3); border: 1px solid rgba(200,160,69,.25); border-radius: 12px; padding: 10px 20px; display: inline-block; cursor: pointer; transition: background .2s; }
+.room-code-display .code:hover { background: rgba(200,160,69,.1); }
+.room-code-display p { font-size: .75rem; color: var(--text-dim); margin-top: 6px; }
+.player-list { display: flex; flex-direction: column; gap: 6px; }
+.player-item { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px; animation: popIn .3s var(--spring) both; }
+.player-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
+.player-dot.away { background: var(--text-muted); }
+.player-badge { font-size: .72rem; color: var(--gold); margin-left: auto; }
+
+.separator { height: 1px; background: rgba(255,255,255,.08); }
+
+.waiting-msg { text-align: center; font-size: .82rem; color: var(--text-dim); }
+.dot-pulse::after { content: '...'; animation: dots 1.2s infinite; }
+@keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+</style>
+</head>
+<body>
+<div class="lobby-wrap">
+  <div class="logo">
+    <h1>Continental</h1>
+    <p>Juego de cartas multijugador</p>
+  </div>
+
+  <!-- Setup form -->
+  <div class="card-box" id="lobby-setup">
+    <h2>Unirse o Crear Sala</h2>
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('crear')">Crear sala</div>
+      <div class="tab"       onclick="switchTab('unirse')">Unirse</div>
+    </div>
+
+    <!-- CREATE -->
+    <div class="tab-panel active" id="panel-crear">
+      <div class="field-group">
+        <label>Tu nombre</label>
+        <input type="text" id="crear-nombre" placeholder="Nombre de jugador" maxlength="18">
+      </div>
+      <div class="field-group">
+        <label>Modo de juego</label>
+        <div class="mode-row">
+          <div class="mode-btn active" data-mode="realtime" onclick="setMode(this)">
+            Tiempo real <small>Todos conectados</small>
+          </div>
+          <div class="mode-btn" data-mode="async" onclick="setMode(this)">
+            Asíncrono <small>Juega cuando puedas</small>
+          </div>
+        </div>
+      </div>
+      <div class="player-count">
+        <label>Jugadores máx.</label>
+        <div class="pc-ctrl">
+          <button class="pc-btn" onclick="chgMax(-1)">−</button>
+          <span class="pc-val" id="max-val">4</span>
+          <button class="pc-btn" onclick="chgMax(1)">+</button>
+        </div>
+      </div>
+      <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSala()">🃏 Crear Sala</button>
+    </div>
+
+    <!-- JOIN -->
+    <div class="tab-panel" id="panel-unirse">
+      <div class="field-group">
+        <label>Tu nombre</label>
+        <input type="text" id="unirse-nombre" placeholder="Nombre de jugador" maxlength="18">
+      </div>
+      <div class="field-group">
+        <label>Código de sala</label>
+        <input type="text" id="unirse-code" placeholder="Ej: ABC12" maxlength="5" style="text-transform:uppercase;letter-spacing:4px;font-size:1.1rem;text-align:center">
+      </div>
+      <button class="btn btn-gold" style="width:100%" onclick="unirse()">Unirse →</button>
+    </div>
+  </div>
+
+  <!-- Waiting room -->
+  <div class="card-box" id="lobby-room">
+    <div class="room-code-display">
+      <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar">????</div>
+      <p>Comparte este código con tus amigos</p>
+    </div>
+    <div class="separator"></div>
+    <div class="player-list" id="player-list"></div>
+    <div class="separator"></div>
+    <div class="waiting-msg" id="waiting-msg">Esperando jugadores<span class="dot-pulse"></span></div>
+    <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start" onclick="iniciarJuego()">
+      ▶ Iniciar Partida
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/socket.js"></script>
+<script>
+let maxPlayers = 4;
+let gameMode   = 'realtime';
+let myId       = null;
+let myCode     = null;
+let isHost     = false;
+let playersList = [];
+
+// ── UI helpers ─────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', (i===0&&t==='crear')||(i===1&&t==='unirse')));
+  document.getElementById('panel-crear').classList.toggle('active', t==='crear');
+  document.getElementById('panel-unirse').classList.toggle('active', t==='unirse');
+}
+function setMode(el) {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  gameMode = el.dataset.mode;
+}
+function chgMax(d) {
+  maxPlayers = Math.max(2, Math.min(5, maxPlayers + d));
+  document.getElementById('max-val').textContent = maxPlayers;
+}
+function copyCode() {
+  navigator.clipboard?.writeText(myCode);
+  toast('¡Código copiado!', 'green');
+}
+function toast(msg, type='red') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='green' ? 'rgba(40,160,80,.9)' : 'rgba(180,50,50,.9)';
+  t.style.display = 'block';
+  clearTimeout(t._t); t._t = setTimeout(() => t.style.display='none', 2500);
+}
+
+// ── Actions ────────────────────────────
+function crearSala() {
+  const nombre = document.getElementById('crear-nombre').value.trim();
+  if (!nombre) { toast('Ingresa tu nombre.'); return; }
+  WS.send({ type: 'create_room', nombre, mode: gameMode, maxPlayers });
+}
+function unirse() {
+  const nombre = document.getElementById('unirse-nombre').value.trim();
+  const code   = document.getElementById('unirse-code').value.trim().toUpperCase();
+  if (!nombre) { toast('Ingresa tu nombre.'); return; }
+  if (code.length < 4) { toast('Ingresa el código de sala.'); return; }
+  WS.send({ type: 'join_room', nombre, code });
+}
+function iniciarJuego() {
+  WS.send({ type: 'start_game' });
+}
+
+// ── Lobby state ────────────────────────
+function showLobby(lobbyState, pid, code, host) {
+  myId   = pid;
+  myCode = code;
+  isHost = host;
+  document.getElementById('lobby-setup').style.display = 'none';
+  const lr = document.getElementById('lobby-room');
+  lr.classList.add('show');
+  document.getElementById('room-code-display').textContent = code;
+  updateLobbyState(lobbyState);
+}
+
+function updateLobbyState(lobbyState) {
+  playersList = lobbyState.players;
+  const list = document.getElementById('player-list');
+  list.innerHTML = playersList.map((p, i) => `
+    <div class="player-item">
+      <div class="player-dot ${p.conectado ? '' : 'away'}"></div>
+      <span>${p.nombre}</span>
+      ${i===0 ? '<span class="player-badge">HOST</span>' : ''}
+    </div>`).join('');
+  const canStart = isHost && playersList.length >= 2 && lobbyState.status === 'lobby';
+  const btn = document.getElementById('btn-start');
+  btn.style.display = canStart ? 'block' : 'none';
+  const waiting = document.getElementById('waiting-msg');
+  waiting.innerHTML = canStart
+    ? `<span style="color:var(--gold-hi)">${playersList.length} jugadores listos</span>`
+    : `Esperando jugadores<span class="dot-pulse"></span>`;
+}
+
+// ── WebSocket events ───────────────────
+WS.on('room_created', ({ code, playerId, lobbyState }) => {
+  showLobby(lobbyState, playerId, code, true);
+  localStorage.setItem('cid_' + code, playerId);
+});
+WS.on('room_joined', ({ code, playerId, lobbyState }) => {
+  showLobby(lobbyState, playerId, code, false);
+  localStorage.setItem('cid_' + code, playerId);
+});
+WS.on('player_joined', ({ lobbyState }) => { if (lobbyState) updateLobbyState(lobbyState); });
+WS.on('state_update', ({ event }) => {
+  if (event === 'game_started' || event === 'nueva_ronda') {
+    window.location.href = `/game?code=${myCode}&pid=${myId}`;
+  }
+});
+WS.on('error', ({ msg }) => toast(msg));
+
+WS.connect();
+</script>
+</body>
+</html>

@@ -41,8 +41,7 @@ class GameRoom {
     if (this.status !== 'lobby') return null;
     const player = { id, nombre, ws, conectado: true };
     this.players.push(player);
-    this.broadcast({ type: 'player_joined', nombre, count: this.players.length }, id);
-    return player;
+    this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);    return player;
   }
 
   removePlayer(id) {

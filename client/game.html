@@ -414,12 +414,26 @@
             cursor: pointer;
             transition: all 0.2s ease;
             border: 2px solid transparent;
+            position: relative;
         }
 
         .comodin-intercambiable:hover {
             transform: scale(1.1);
             border-color: var(--gold);
             box-shadow: 0 0 15px var(--gold);
+        }
+
+        .comodin-intercambiable small {
+            position: absolute;
+            bottom: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--gold);
+            color: black;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 8px;
+            white-space: nowrap;
         }
 
         .bajada-pile.intercambio-mode {
@@ -443,6 +457,26 @@
             background: rgba(0,0,0,0.5);
             padding: 4px;
             border-radius: 4px;
+        }
+
+        /* Tooltip para mostrar valor del comodín */
+        .joker-sm {
+            position: relative;
+        }
+
+        .joker-sm:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: var(--gold);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            z-index: 100;
         }
     </style>
 </head>

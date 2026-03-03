@@ -224,8 +224,8 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
         return;
     }
     
-    if (G.estado !== 'esperando_accion' && G.estado !== 'esperando_pago') {
-        toast('No puedes intercambiar comodines ahora.');
+    if (G.estado !== 'esperando_accion') {
+        toast('Debes robar una carta primero antes de intercambiar.');
         return;
     }
     
@@ -246,15 +246,37 @@ function activarModoIntercambio(jugadorIdx, jugadaIdx, comodinId) {
         return;
     }
     
+    if (G.estado !== 'esperando_accion') {
+        toast('Debes robar una carta primero antes de intercambiar.');
+        return;
+    }
+    
+    const me = G.jugadores[myIdx];
+    if (me?.bajado) {
+        toast('Ya estás bajado. Puedes acomodar directamente, no necesitas intercambiar.');
+        return;
+    }
+    
     if (!selId) {
         toast('Primero selecciona una carta de tu mano para intercambiar.');
+        return;
+    }
+    
+    const cartaSeleccionada = me?.mano?.find(c => c.id === selId);
+    if (!cartaSeleccionada) {
+        toast('Error: carta no encontrada.');
+        return;
+    }
+    
+    if (cartaSeleccionada.comodin) {
+        toast('No puedes intercambiar un comodín por otro comodín.');
         return;
     }
     
     intercambioMode = true;
     selectedComodinInfo = { jugadorIdx, jugadaIdx, comodinId };
     
-    toast('Selecciona una carta de tu mano para intercambiar por el comodín', 'green');
+    toast(`Intercambiarás ${cartaSeleccionada.valor}${cartaSeleccionada.palo || ''} por el comodín`, 'green');
     render();
 }
 
@@ -363,6 +385,9 @@ function renderOpponents() {
     });
 }
 
+// ═══════════════════════════════════════════════════
+// RENDER TABLE BAJADAS (ACTUALIZADO)
+// ═══════════════════════════════════════════════════
 function renderTableBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     bajEl.innerHTML = '';
@@ -383,18 +408,26 @@ function renderTableBajadas() {
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
             
+            // Renderizar cartas de la jugada
             const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
+                    // Determinar qué valor está reemplazando este comodín
+                    let valorReemplazado = c.valorReemplazado || '?';
+                    
+                    // Si es un comodín y estamos en modo intercambio, hacerlo clickeable
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
                         return `<div class="card-sm joker-sm comodin-intercambiable" 
+                                     title="Reemplaza a: ${valorReemplazado}"
                                      data-comodin-id="${c.id}"
                                      data-jugador="${ji}"
                                      data-jugada="${jugi}"
                                      onclick="event.stopPropagation(); window.activarModoIntercambio(${ji}, ${jugi}, '${c.id}')">
-                                     🃏
+                                     🃏<small style="font-size:8px;display:block;">=${valorReemplazado}</small>
                                 </div>`;
                     } else {
-                        return `<div class="card-sm joker-sm">🃏</div>`;
+                        return `<div class="card-sm joker-sm" title="Reemplaza a: ${valorReemplazado}">
+                                    🃏<small style="font-size:8px;display:block;">=${valorReemplazado}</small>
+                                </div>`;
                     }
                 } else {
                     return cSm(c);
@@ -406,7 +439,8 @@ function renderTableBajadas() {
                 <div class="bajada-pile-cards">${cardsHtml}</div>
             `;
             
-            if (!intercambioMode) {
+            // Click para acomodar (solo si el jugador YA ESTA BAJADO y no estamos en modo intercambio)
+            if (!intercambioMode && G.jugadores[myIdx]?.bajado) {
                 pile.onclick = () => {
                     if (selId && isMyTurn()) acAcomodar(selId, ji, jugi);
                 };
@@ -525,6 +559,9 @@ function renderHand() {
     }
 }
 
+// ═══════════════════════════════════════════════════
+// RENDER ACTIONS (ACTUALIZADO)
+// ═══════════════════════════════════════════════════
 function renderActions() {
     if (!G || myIdx < 0) return;
     
@@ -546,19 +583,23 @@ function renderActions() {
         btns.appendChild(b);
     };
     
+    // Botón para cancelar modo intercambio si está activo
     if (intercambioMode) {
         instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
         add('❌ Cancelar Intercambio', 'abtn-red', cancelIntercambio);
         return;
     }
     
-    const hasDest = () => {
+    // Función para verificar si hay destinos para acomodar (solo para jugadores que YA BAJARON)
+    const hasDestForAcomodar = () => {
+        if (!me?.bajado) return false; // SOLO si ya bajaste
         if (!selId) return false;
+        
         const carta = me?.mano?.find(c => c.id === selId);
         if (!carta) return false;
         
         return G.jugadores.some((j, ji) => {
-            if (!j.bajado || ji === myIdx) return false;
+            if (!j.bajado || ji === myIdx) return false; // Solo jugadores bajados
             return j.jugadas?.some(jug => {
                 if (jug.tipo === 'tercia') {
                     if (carta.comodin) return true;
@@ -574,6 +615,23 @@ function renderActions() {
                     
                     return v === vs[0] - 1 || v === vs[vs.length - 1] + 1;
                 }
+            });
+        });
+    };
+    
+    // Función para verificar si hay comodines intercambiables
+    const hasComodinesIntercambiables = () => {
+        if (!selId) return false;
+        if (me?.bajado) return false; // Si ya bajaste, no necesitas intercambiar
+        
+        const carta = me?.mano?.find(c => c.id === selId);
+        if (!carta || carta.comodin) return false;
+        
+        // Buscar comodines en jugadas de otros jugadores
+        return G.jugadores.some((j, ji) => {
+            if (!j.bajado || ji === myIdx) return false;
+            return j.jugadas?.some(jug => {
+                return jug.cartas.some(c => c.comodin);
             });
         });
     };
@@ -618,31 +676,40 @@ function renderActions() {
         }
         
         case 'esperando_accion':
-            instr.textContent = selId ? 'Carta seleccionada — págala, acomódala o intercambia por comodín' : 'Selecciona una carta para pagar o bájate.';
-            if (!me?.bajado) add('🔥 Bajarme', 'abtn-gold', acBajar);
-            add('💳 Pagar', selId ? 'abtn-outline' : 'abtn-outline', () => acPagar(selId), !selId);
-            if (hasDest()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => { });
-            if (selId) {
-                add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                    toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
-                    intercambioMode = true;
-                    render();
-                });
+            if (!me?.bajado) {
+                // NO HAS BAJADO - puedes pagar, bajar o intercambiar
+                instr.textContent = selId ? 'Carta seleccionada — págala o intercambia por comodín' : 'Selecciona una carta para pagar o bájate.';
+                if (!me?.bajado) add('🔥 Bajarme', 'abtn-gold', acBajar);
+                add('💳 Pagar', selId ? 'abtn-outline' : 'abtn-outline', () => acPagar(selId), !selId);
+                
+                // Botón de intercambio (solo si no has bajado y tienes una carta seleccionada)
+                if (selId && hasComodinesIntercambiables()) {
+                    add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
+                        toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
+                        intercambioMode = true;
+                        render();
+                    });
+                }
+            } else {
+                // YA ESTAS BAJADO - puedes acomodar
+                instr.textContent = selId ? 'Carta seleccionada — acomódala en jugadas de otros' : 'Selecciona una carta para acomodar.';
+                add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
+                if (hasDestForAcomodar()) {
+                    add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+                }
             }
             break;
             
         case 'esperando_pago':
-            instr.textContent = G.ronda === 7 && me?.bajado
-                ? 'Ronda 7 — acomoda todas tus cartas.'
-                : 'Selecciona una carta para pagar al fondo.';
-            add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-            if (hasDest()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => { });
-            if (selId && me?.bajado) {
-                add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                    toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
-                    intercambioMode = true;
-                    render();
-                });
+            if (!me?.bajado) {
+                instr.textContent = 'Selecciona una carta para pagar al fondo.';
+                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+            } else {
+                instr.textContent = 'Selecciona una carta para acomodar o pagar.';
+                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+                if (hasDestForAcomodar()) {
+                    add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+                }
             }
             break;
     }

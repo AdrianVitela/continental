@@ -545,3 +545,461 @@ input[type=text]:focus {
 input[type=text]::placeholder {
   color: var(--text-muted);
 }
+
+/* ============================================
+   RESPONSIVE DESIGN - MEDIA QUERIES
+   ============================================ */
+
+/* Variables de escala para cartas */
+:root {
+  /* Tamaños base (desktop) */
+  --cw: 62px;
+  --ch: 90px;
+  --cw-sm: 40px;
+  --ch-sm: 58px;
+  --card-scale: 1;
+  --hand-gap: 6px;
+  --hand-padding: 8px 10px;
+}
+
+/* === Laptops pequeñas / tablets grandes (992px - 1200px) === */
+@media (max-width: 1200px) {
+  :root {
+    --cw: 56px;
+    --ch: 82px;
+    --cw-sm: 36px;
+    --ch-sm: 52px;
+    --hand-gap: 5px;
+  }
+  
+  .card-face .cv {
+    font-size: 1.2rem;
+  }
+  
+  .card-face .corner {
+    font-size: 0.52rem;
+  }
+}
+
+/* === Tablets landscape / horizontales (768px - 991px) === */
+@media (max-width: 991px) {
+  :root {
+    --cw: 48px;
+    --ch: 70px;
+    --cw-sm: 32px;
+    --ch-sm: 46px;
+    --hand-gap: 4px;
+    --hand-padding: 6px 8px;
+  }
+  
+  .center-zone {
+    gap: 16px;
+  }
+  
+  .table-bajadas {
+    max-width: 50%;
+  }
+  
+  .card-face .cv {
+    font-size: 1rem;
+  }
+  
+  .card-face .corner {
+    font-size: 0.48rem;
+  }
+  
+  .card-face .cs {
+    font-size: 0.8rem;
+  }
+  
+  .btn, .abtn {
+    padding: 8px 16px;
+    font-size: 0.8rem;
+  }
+}
+
+/* === Tablets portrait / verticales (576px - 767px) === */
+@media (max-width: 767px) {
+  :root {
+    --cw: 42px;
+    --ch: 61px;
+    --cw-sm: 28px;
+    --ch-sm: 40px;
+    --hand-gap: 3px;
+  }
+  
+  .topbar {
+    padding: 5px 10px;
+    gap: 5px;
+  }
+  
+  .tb-title {
+    font-size: 0.9rem;
+  }
+  
+  .scoreboard {
+    gap: 5px;
+  }
+  
+  .sname {
+    font-size: 0.6rem;
+  }
+  
+  .spts {
+    font-size: 0.75rem;
+  }
+  
+  .center-zone {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .table-bajadas {
+    max-width: 90%;
+    order: 2;
+  }
+  
+  .deck-area {
+    flex-direction: row;
+    justify-content: center;
+    gap: 20px;
+  }
+  
+  .opp {
+    padding: 5px 8px;
+    min-width: 70px;
+  }
+  
+  .opp-name {
+    font-size: 0.65rem;
+  }
+  
+  .cback-xs {
+    width: 10px;
+    height: 15px;
+  }
+  
+  .card-face .cv {
+    font-size: 0.85rem;
+  }
+  
+  .card-face .cs {
+    font-size: 0.7rem;
+  }
+  
+  .btn, .abtn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+/* === Móviles grandes (415px - 575px) === */
+@media (max-width: 575px) {
+  :root {
+    --cw: 38px;
+    --ch: 55px;
+    --cw-sm: 24px;
+    --ch-sm: 35px;
+    --hand-gap: 2px;
+    --hand-padding: 5px;
+  }
+  
+  .topbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .tb-title {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 3px;
+  }
+  
+  .scoreboard {
+    margin-left: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .opponents-row {
+    gap: 5px;
+  }
+  
+  .opp {
+    min-width: 60px;
+    padding: 4px 5px;
+  }
+  
+  .opp-name {
+    font-size: 0.6rem;
+  }
+  
+  .center-zone {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .table-bajadas {
+    max-width: 95%;
+    order: 2;
+  }
+  
+  .bajada-pile {
+    padding: 4px 6px;
+  }
+  
+  .bajada-pile-label {
+    font-size: 0.5rem;
+  }
+  
+  .card-face .cv {
+    font-size: 0.75rem;
+  }
+  
+  .card-face .corner {
+    font-size: 0.42rem;
+    line-height: 0.9;
+  }
+  
+  .card-face .cs {
+    font-size: 0.6rem;
+  }
+  
+  .player-label {
+    font-size: 0.85rem;
+  }
+  
+  .action-btns {
+    justify-content: center;
+  }
+  
+  .btn, .abtn {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+    white-space: normal;
+    word-break: break-word;
+  }
+  
+  .instr {
+    font-size: 0.7rem;
+    padding: 5px 8px;
+    text-align: center;
+  }
+  
+  .log-line {
+    font-size: 0.6rem;
+  }
+}
+
+/* === Móviles pequeños (hasta 414px) === */
+@media (max-width: 414px) {
+  :root {
+    --cw: 32px;
+    --ch: 46px;
+    --cw-sm: 20px;
+    --ch-sm: 29px;
+    --hand-gap: 2px;
+  }
+  
+  .opp {
+    min-width: 50px;
+    padding: 3px 4px;
+  }
+  
+  .opp-name {
+    font-size: 0.55rem;
+  }
+  
+  .cback-xs {
+    width: 8px;
+    height: 12px;
+  }
+  
+  .card-face .cv {
+    font-size: 0.65rem;
+  }
+  
+  .card-face .corner {
+    font-size: 0.35rem;
+  }
+  
+  .card-face .cs {
+    font-size: 0.5rem;
+  }
+  
+  .btn, .abtn {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+  
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* === Ajustes para orientación landscape en móviles === */
+@media (max-height: 500px) and (orientation: landscape) {
+  .table {
+    gap: 4px;
+    padding: 5px;
+  }
+  
+  .center-zone {
+    flex-direction: row;
+  }
+  
+  .table-bajadas {
+    max-width: 60%;
+  }
+  
+  .opponents-row {
+    margin-bottom: 2px;
+  }
+  
+  .player-section {
+    padding-top: 4px;
+  }
+  
+  .hand-zone {
+    min-height: calc(var(--ch) + 8px);
+    padding: 4px 6px;
+  }
+  
+  .action-bar {
+    padding: 5px 8px;
+  }
+}
+
+/* ===== ESTILOS MEJORADOS PARA SLOTS DE CONSTRUCCIÓN ===== */
+.building-slot {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0,0,0,.2);
+  border: 2px solid rgba(200,160,69,.2);
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.2s ease;
+}
+
+.building-slot:hover {
+  border-color: var(--gold);
+  background: rgba(200,160,69,.1);
+}
+
+.building-slot.drop-target {
+  border-color: #2ecc71;
+  background: rgba(46,204,113,.1);
+  box-shadow: 0 0 12px rgba(46,204,113,.3);
+}
+
+.building-slot.complete {
+  border-color: #2ecc71;
+  background: rgba(46,204,113,.1);
+}
+
+.building-slot.complete .building-slot-title {
+  color: #2ecc71;
+}
+
+.building-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+.building-slot-title {
+  color: var(--gold);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.building-slot-count {
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  background: rgba(0,0,0,.3);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.building-slot-count.valid {
+  color: #2ecc71;
+  background: rgba(46,204,113,.2);
+}
+
+.building-slot-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  min-height: calc(var(--ch) - 10px);
+  margin-bottom: 5px;
+}
+
+.slot-hint {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 4px;
+  border-top: 1px dashed rgba(255,255,255,.1);
+  margin-top: 4px;
+}
+
+/* Hint específico para slots completos */
+.building-slot.complete .slot-hint {
+  color: #2ecc71;
+}
+
+/* Ajustes responsive */
+@media (max-width: 991px) {
+  .building-slot {
+    padding: 5px;
+  }
+  
+  .building-slot-header {
+    font-size: 0.7rem;
+  }
+  
+  .slot-hint {
+    font-size: 0.55rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .building-zones {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .building-slot-cards {
+    min-height: calc(var(--ch) - 5px);
+  }
+  
+  .building-slot-header {
+    font-size: 0.7rem;
+  }
+  
+  .slot-hint {
+    font-size: 0.55rem;
+    padding: 2px;
+  }
+}
+
+@media (max-width: 575px) {
+  .building-slot-header {
+    font-size: 0.65rem;
+  }
+  
+  .building-slot-count {
+    font-size: 0.6rem;
+    padding: 1px 4px;
+  }
+  
+  .slot-hint {
+    font-size: 0.5rem;
+  }
+}

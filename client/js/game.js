@@ -196,8 +196,54 @@ function acCastigo(acepta) {
 }
 
 function acBajar() {
-    WS.send({ type: 'bajar' });
-    cancelIntercambio();
+  // En lugar de enviar todo, podemos construir las jugadas desde las zonas
+  const slots = document.querySelectorAll('.building-slot');
+  const jugadas = [];
+  const cartasUsadas = new Set();
+  
+  slots.forEach(slot => {
+    const cards = [...slot.querySelectorAll('.card-sm')].map(c => {
+      // Aquí necesitas obtener el ID real de la carta
+      // Por ahora es un placeholder
+      return { id: c.dataset.id, tipo: slot.dataset.slotType };
+    }).filter(Boolean);
+    
+    const minCards = parseInt(slot.dataset.minCards);
+    
+    if (cards.length >= minCards) {
+      // Marcar estas cartas como usadas
+      cards.forEach(c => cartasUsadas.add(c.id));
+      
+      jugadas.push({
+        tipo: slot.dataset.slotType,
+        cartasIds: cards.map(c => c.id)
+      });
+    }
+  });
+  
+  // Validar que tenemos las jugadas necesarias
+  const req = REQ[G.ronda];
+  const tercias = jugadas.filter(j => j.tipo === 'tercia').length;
+  const corridas = jugadas.filter(j => j.tipo === 'corrida').length;
+  
+  if (tercias < req.t || corridas < req.c) {
+    toast(`Necesitas ${req.t} tercias (mínimo 3 cartas) y ${req.c} corridas (mínimo 4 cartas)`);
+    return;
+  }
+  
+  // Verificar que no haya cartas repetidas
+  if (cartasUsadas.size !== jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0)) {
+    toast('Error: Cartas duplicadas en las jugadas');
+    return;
+  }
+  
+  // Enviar al servidor con las jugadas construidas
+  WS.send({ 
+    type: 'bajar', 
+    jugadas: jugadas
+  });
+  
+  cancelIntercambio();
 }
 
 function acPagar(cartaId) {
@@ -497,66 +543,200 @@ function renderPlayerInfo(me) {
         `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
 }
 
+// Renderizar las zonas de construcción según la ronda
+function renderBuildingZones() {
+  if (!G || myIdx < 0) return;
+  
+  const me = G.jugadores[myIdx];
+  const buildingContainer = document.getElementById('building-zones');
+  if (!buildingContainer) return;
+  
+  const req = REQ_LABELS[G.ronda] || '';
+  document.getElementById('building-requirement').textContent = req;
+  
+  const slots = [];
+  
+  // Determinar los slots según la ronda
+  if (G.ronda === 1) { // 2 tercias
+    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
+    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
+  } else if (G.ronda === 2) { // 1 tercia + 1 corrida
+    slots.push({ type: 'tercia', index: 0, title: 'Tercia', cards: [], minCards: 3 });
+    slots.push({ type: 'corrida', index: 0, title: 'Corrida', cards: [], minCards: 4 });
+  } else if (G.ronda === 3) { // 2 corridas
+    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
+    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
+  } else if (G.ronda === 4) { // 3 tercias
+    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
+    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
+    slots.push({ type: 'tercia', index: 2, title: 'Tercia 3', cards: [], minCards: 3 });
+  } else if (G.ronda === 5) { // 2 tercias + 1 corrida
+    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
+    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
+    slots.push({ type: 'corrida', index: 0, title: 'Corrida', cards: [], minCards: 4 });
+  } else if (G.ronda === 6) { // 2 corridas + 1 tercia
+    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
+    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
+    slots.push({ type: 'tercia', index: 0, title: 'Tercia', cards: [], minCards: 3 });
+  } else if (G.ronda === 7) { // 3 corridas
+    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
+    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
+    slots.push({ type: 'corrida', index: 2, title: 'Corrida 3', cards: [], minCards: 4 });
+  }
+  
+  // Si el jugador ya tiene jugadas guardadas, mostrarlas
+  if (me.bajado && me.jugadas?.length) {
+    me.jugadas.forEach((jugada, i) => {
+      if (i < slots.length) {
+        slots[i].cards = jugada.cartas || [];
+      }
+    });
+  }
+  
+  // Renderizar slots
+  buildingContainer.innerHTML = slots.map((slot, i) => {
+    const cardCount = slot.cards.length;
+    const minCards = slot.minCards;
+    const isComplete = slot.type === 'tercia' ? cardCount >= 3 : cardCount >= 4;
+    
+    return `
+    <div class="building-slot ${isComplete ? 'complete' : ''}" 
+         data-slot-type="${slot.type}"
+         data-slot-index="${slot.index}"
+         data-min-cards="${minCards}">
+      <div class="building-slot-header">
+        <span class="building-slot-title">${slot.title}</span>
+        <span class="building-slot-count ${cardCount >= minCards ? 'valid' : ''}">
+          ${cardCount}/${minCards}+
+        </span>
+      </div>
+      <div class="building-slot-cards" id="slot-${i}-cards">
+        ${slot.cards.map(c => cSm(c)).join('')}
+      </div>
+      ${slot.type === 'tercia' 
+        ? '<div class="slot-hint">Mínimo 3 cartas del mismo valor</div>' 
+        : '<div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>'}
+    </div>
+  `}).join('');
+  
+  // Agregar event listeners para drop
+  if (!me.bajado && isMyTurn() && G.estado === 'esperando_accion') {
+    document.querySelectorAll('.building-slot').forEach(slot => {
+      slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slot.classList.add('drop-target');
+      });
+      
+      slot.addEventListener('dragleave', () => {
+        slot.classList.remove('drop-target');
+      });
+      
+      slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('drop-target');
+        
+        if (!selId) {
+          toast('Primero selecciona una carta');
+          return;
+        }
+        
+        const slotType = slot.dataset.slotType;
+        const slotIndex = parseInt(slot.dataset.slotIndex);
+        const minCards = parseInt(slot.dataset.minCards);
+        
+        // Aquí puedes validar si la carta puede ir en ese slot
+        // y guardar temporalmente la intención del jugador
+        
+        const currentCount = slot.querySelectorAll('.card-sm').length;
+        if (currentCount + 1 >= minCards) {
+          slot.classList.add('complete');
+        }
+        
+        toast(`Carta asignada a ${slotType} ${slotIndex + 1}`, 'green');
+      });
+    });
+  }
+}
+
+// Modificar renderHand() para incluir las nuevas zonas
 function renderHand() {
-    if (!G || myIdx < 0) return;
+  if (!G || myIdx < 0) return;
+  
+  const me = G.jugadores[myIdx];
+  const discardZone = document.getElementById('discard-zone');
+  const buildingContainer = document.getElementById('building-zones');
+  
+  if (!discardZone || !buildingContainer) return;
+  
+  // Limpiar zonas
+  discardZone.innerHTML = '';
+  
+  // Si el jugador ya se bajó, mostrar las jugadas en los slots y sobrantes en discard
+  if (me.bajado) {
+    // Renderizar jugadas en los slots
+    renderBuildingZones();
     
-    const me = G.jugadores[myIdx];
-    const hz = document.getElementById('hand-zone');
-    
-    if (!hz || !me?.mano) return;
-    
-    hz.innerHTML = '';
-    
-    me.mano.forEach((c, i) => {
-        const el = document.createElement('div');
-        el.className = 'card' + (c.id === selId ? ' selected' : '');
-        if (intercambioMode && selId && c.id === selId) {
-            el.classList.add('pending-intercambio');
-        }
-        el.dataset.id = c.id;
-        el.dataset.idx = i;
-        
-        if (c.comodin) {
-            el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
-        } else {
-            const sc = SUIT_CLS[c.palo] || '';
-            el.innerHTML = `
-                <div class="card-face ${sc}">
-                    <div class="corner tl">${c.valor}<br>${c.palo}</div>
-                    <div class="cv">${c.palo}</div>
-                    <div class="cs">${c.valor}</div>
-                    <div class="corner br">${c.valor}<br>${c.palo}</div>
-                </div>
-            `;
-        }
-        
-        el.addEventListener('click', () => selCard(c.id));
-        
-        const dragCallbacks = {
-            isPayable,
-            onPagar: id => acPagar(id),
-            onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
-            onReorder: (id, beforeId) => acReorder(id, beforeId),
-        };
-        
-        el.addEventListener('mousedown', e => {
-            if (e.button !== 0) return;
-            DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
-        });
-        
-        el.addEventListener('touchstart', e => {
-            DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
-        }, { passive: false });
-        
-        hz.appendChild(el);
+    // Mostrar sobrantes en discard zone
+    (me.mano || []).forEach(c => {
+      const el = createCardElement(c);
+      discardZone.appendChild(el);
+    });
+  } else {
+    // Aún no se ha bajado - todas las cartas en discard zone inicialmente
+    (me.mano || []).forEach(c => {
+      const el = createCardElement(c);
+      discardZone.appendChild(el);
     });
     
-    if (intercambioMode) {
-        const instr = document.createElement('div');
-        instr.className = 'intercambio-instr';
-        instr.innerHTML = '🔄 Modo intercambio: Selecciona una carta de tu mano para intercambiar';
-        hz.appendChild(instr);
-    }
+    // Renderizar slots vacíos
+    renderBuildingZones();
+  }
+  
+  document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+}
+
+// Función auxiliar para crear elemento carta
+function createCardElement(c) {
+  const el = document.createElement('div');
+  el.className = 'card' + (c.id === selId ? ' selected' : '');
+  if (intercambioMode && selId && c.id === selId) {
+    el.classList.add('pending-intercambio');
+  }
+  el.dataset.id = c.id;
+  
+  if (c.comodin) {
+    el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+  } else {
+    const sc = SUIT_CLS[c.palo] || '';
+    el.innerHTML = `
+      <div class="card-face ${sc}">
+        <div class="corner tl">${c.valor}<br>${c.palo}</div>
+        <div class="cv">${c.palo}</div>
+        <div class="cs">${c.valor}</div>
+        <div class="corner br">${c.valor}<br>${c.palo}</div>
+      </div>
+    `;
+  }
+  
+  el.addEventListener('click', () => selCard(c.id));
+  
+  const dragCallbacks = {
+    isPayable,
+    onPagar: id => acPagar(id),
+    onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+    onReorder: (id, beforeId) => acReorder(id, beforeId),
+  };
+  
+  el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
+  });
+  
+  el.addEventListener('touchstart', e => {
+    DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
+  }, { passive: false });
+  
+  return el;
 }
 
 // ═══════════════════════════════════════════════════

@@ -977,17 +977,25 @@ function renderHand() {
     
     if (!discardZone) return;
     
+    // Guardar referencia a la carta que se está arrastrando (si existe)
+    const draggingCard = document.querySelector('.card.dragging');
+    const draggingId = draggingCard?.dataset.id;
+    
     // Renderizar la fila de construcción
     renderBuildingRow();
     
-    // Limpiar zona de sobrantes
+    // Limpiar zona de sobrantes (pero mantener la carta arrastrada si existe)
+    const cardsToKeep = draggingCard ? [draggingCard] : [];
     discardZone.innerHTML = '';
     
     // Si el jugador ya se bajó, mostrar solo sobrantes
     if (me.bajado) {
         (me.mano || []).forEach(c => {
-            const el = createCardElement(c);
-            discardZone.appendChild(el);
+            // No recrear la carta que se está arrastrando
+            if (c.id !== draggingId) {
+                const el = createCardElement(c);
+                discardZone.appendChild(el);
+            }
         });
     } else {
         // Aún no se ha bajado - mostrar todas las cartas en sobrantes
@@ -999,11 +1007,16 @@ function renderHand() {
                 if (cards.includes(c.id)) enSlot = true;
             });
             
-            if (!enSlot) {
+            if (!enSlot && c.id !== draggingId) {
                 const el = createCardElement(c);
                 discardZone.appendChild(el);
             }
         });
+    }
+    
+    // Si había una carta arrastrada, mantenerla
+    if (draggingCard) {
+        discardZone.appendChild(draggingCard);
     }
     
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
@@ -1233,7 +1246,7 @@ function updateSlotUI(slotIndex, cards) {
     }
 }
 
-// NUEVA FUNCIÓN: Manejar cuando se arrastra una carta desde un slot
+// MODIFICADO: Manejar cuando se arrastra una carta desde un slot
 function handleRemoveFromSlot(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
     if (!me) return;
@@ -1252,14 +1265,54 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
             buildingCards.delete(slotIndex);
         }
         
-        // Actualizar UI del slot
+        // Actualizar UI del slot (esto elimina la carta visualmente del slot)
         updateSlotUI(slotIndex, slotCards);
         
-        // Forzar render completo para que la carta aparezca en discard zone
-        renderHand();
+        // NO llamar a renderHand() aquí - eso causa el problema
+        // En su lugar, la carta debería aparecer en discard zone cuando soltemos
         
         toast('Carta removida de la jugada', 'green');
     }
+}
+
+// NUEVA FUNCIÓN: Mover carta entre slots
+function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType) {
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) {
+        toast('Ya estás bajado, no puedes modificar jugadas');
+        return;
+    }
+    
+    // Verificar que la carta existe en el slot de origen
+    const fromSlotCards = buildingCards.get(fromSlotIndex);
+    if (!fromSlotCards || !fromSlotCards.includes(cartaId)) return;
+    
+    // Remover del slot origen
+    const index = fromSlotCards.indexOf(cartaId);
+    if (index > -1) {
+        fromSlotCards.splice(index, 1);
+        
+        // Si el slot origen queda vacío, eliminarlo
+        if (fromSlotCards.length === 0) {
+            buildingCards.delete(fromSlotIndex);
+        }
+        
+        // Actualizar UI del slot origen
+        updateSlotUI(fromSlotIndex, fromSlotCards);
+    }
+    
+    // Agregar al slot destino
+    if (!buildingCards.has(toSlotIndex)) {
+        buildingCards.set(toSlotIndex, []);
+    }
+    
+    const toSlotCards = buildingCards.get(toSlotIndex);
+    toSlotCards.push(cartaId);
+    
+    // Actualizar UI del slot destino
+    updateSlotUI(toSlotIndex, toSlotCards);
+    
+    toast(`Carta movida a ${toSlotType}`, 'green');
 }
 
 // ═══════════════════════════════════════════════════

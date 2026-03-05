@@ -7,7 +7,8 @@ const DragDrop = (() => {
   let dragSource = null; // 'hand' o 'fondo'
   let ghost = null;
   let draggingFromSlot = false;
-  let originalSlotIndex = null; // Guardar el slot original
+  let originalSlotIndex = null;
+  let originalCardEl = null; // Guardar referencia al elemento original
 
   // Obtiene coordenadas del evento (mouse o touch)
   function getPoint(e) {
@@ -70,7 +71,7 @@ const DragDrop = (() => {
 
   // Resalta las zonas donde se puede soltar la carta
   function highlightDropZones(mx, my, isPayable) {
-    // Resaltar building slots (para construcción de jugadas)
+    // Resaltar building slots
     document.querySelectorAll('.building-slot').forEach(slot => {
       const r = slot.getBoundingClientRect();
       slot.classList.toggle('drop-target', 
@@ -78,7 +79,7 @@ const DragDrop = (() => {
       );
     });
     
-    // Resaltar bajadas de otros jugadores (para acomodar)
+    // Resaltar bajadas de otros jugadores
     document.querySelectorAll('.bajada-pile').forEach(p => {
       const r = p.getBoundingClientRect();
       p.classList.toggle('drop-target', 
@@ -86,7 +87,7 @@ const DragDrop = (() => {
       );
     });
     
-    // Resaltar fondo (para pagar)
+    // Resaltar fondo
     const fw = document.getElementById('fondo-wrap');
     if (fw && isPayable) {
       const r = fw.getBoundingClientRect();
@@ -103,7 +104,6 @@ const DragDrop = (() => {
         const overDiscard = mx >= hr.left && mx <= hr.right && my >= hr.top && my <= hr.bottom;
         hz.classList.toggle('drop-target-sobrantes', overDiscard);
         
-        // También mostrar mensaje visual
         if (overDiscard) {
           hz.setAttribute('data-hint', 'Suelta para quitar de la jugada');
         } else {
@@ -131,9 +131,6 @@ const DragDrop = (() => {
       fw.style.outline = ''; 
       fw.style.borderRadius = ''; 
     }
-    
-    draggingFromSlot = false;
-    originalSlotIndex = null;
   }
 
   // Inicia arrastre desde la MANO del jugador
@@ -142,16 +139,13 @@ const DragDrop = (() => {
     
     dragId = cid;
     dragSource = 'hand';
+    originalCardEl = el;
     
-    // Verificar si la carta viene de un slot y guardar el slot original
+    // Verificar si la carta viene de un slot
     draggingFromSlot = el?.dataset.slot !== undefined;
     originalSlotIndex = draggingFromSlot ? parseInt(el.dataset.slot) : null;
     
-    // Ocultar temporalmente la carta original en el slot
-    if (draggingFromSlot) {
-      el.style.opacity = '0.2';
-    }
-    
+    // Crear fantasma
     ghost = mkGhost(el, getPoint(e));
     el.classList.add('dragging');
 
@@ -165,20 +159,23 @@ const DragDrop = (() => {
     
     const onUp = ev => {
       const pt = getPoint(ev);
-      ghost?.g.remove();
-      ghost = null;
       
-      // Restaurar opacidad de la carta original
-      if (draggingFromSlot) {
-        el.style.opacity = '';
+      // Eliminar fantasma
+      if (ghost) {
+        ghost.g.remove();
+        ghost = null;
       }
       
       // Limpiar zonas resaltadas
       cleanDropZones();
       
+      // Quitar clase dragging
       el.classList.remove('dragging');
+      
+      // Procesar el drop
       _endHandDrag(pt, cid, callbacks);
       
+      // Limpiar event listeners
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       document.removeEventListener('touchmove', onMove);
@@ -193,66 +190,69 @@ const DragDrop = (() => {
 
   // Maneja el fin del arrastre desde la mano
   function _endHandDrag(pt, cid, cbs) {
-    // Verificar si la carta viene de un slot
-    const fromSlot = originalSlotIndex;
-    
-    // Verificar en qué zona se soltó
-    const destSlot = document.elementFromPoint(pt.x, pt.y)?.closest('.building-slot');
-    const destPile = document.elementFromPoint(pt.x, pt.y)?.closest('.bajada-pile');
-    const hz = document.getElementById('discard-zone');
-    const fw = document.getElementById('fondo-wrap');
+    // Obtener elementos bajo el cursor
+    const elementsUnderCursor = document.elementsFromPoint(pt.x, pt.y);
     
     // Verificar si está sobre discard-zone
-    let overDiscard = false;
-    if (hz) {
-      const hr = hz.getBoundingClientRect();
-      overDiscard = pt.x >= hr.left && pt.x <= hr.right && pt.y >= hr.top && pt.y <= hr.bottom;
-    }
+    const hz = document.getElementById('discard-zone');
+    const isOverDiscard = hz && elementsUnderCursor.some(el => el.id === 'discard-zone' || el.closest('#discard-zone'));
+    
+    // Verificar si está sobre building slot
+    const destSlot = elementsUnderCursor.find(el => el.classList?.contains('building-slot') || el.closest?.('.building-slot'));
+    const buildingSlot = destSlot ? (destSlot.classList?.contains('building-slot') ? destSlot : destSlot.closest('.building-slot')) : null;
+    
+    // Verificar si está sobre bajada pile
+    const destPile = elementsUnderCursor.find(el => el.classList?.contains('bajada-pile') || el.closest?.('.bajada-pile'));
+    const bajadaPile = destPile ? (destPile.classList?.contains('bajada-pile') ? destPile : destPile.closest('.bajada-pile')) : null;
     
     // Verificar si está sobre fondo
-    let overFondo = false;
-    if (fw) {
-      const fr = fw.getBoundingClientRect();
-      overFondo = pt.x >= fr.left && pt.x <= fr.right && pt.y >= fr.top && pt.y <= fr.bottom;
-    }
+    const fw = document.getElementById('fondo-wrap');
+    const isOverFondo = fw && elementsUnderCursor.some(el => el.id === 'fondo-wrap' || el.closest('#fondo-wrap'));
     
-    // CASO 1: Viene de un slot
-    if (fromSlot !== null) {
-      // 1A: Soltó en otro slot → mover entre slots
-      if (destSlot) {
-        const destSlotIndex = destSlot.dataset.slotIndex;
-        const destSlotType = destSlot.dataset.slotType;
+    // CASO 1: VIENE DE UN SLOT
+    if (draggingFromSlot && originalSlotIndex !== null) {
+      
+      // 1A: Soltó en OTRO SLOT → mover entre slots
+      if (buildingSlot) {
+        const destSlotIndex = buildingSlot.dataset.slotIndex;
+        const destSlotType = buildingSlot.dataset.slotType;
         if (cbs.onMoveBetweenSlots) {
-          cbs.onMoveBetweenSlots(cid, fromSlot, parseInt(destSlotIndex), destSlotType);
+          cbs.onMoveBetweenSlots(cid, originalSlotIndex, parseInt(destSlotIndex), destSlotType);
         }
         dragId = null;
+        draggingFromSlot = false;
+        originalSlotIndex = null;
         return;
       }
       
-      // 1B: Soltó en discard-zone → quitar del slot (volver a sobrantes)
-      if (overDiscard) {
+      // 1B: Soltó en DISCARD-ZONE (sobrantes) → quitar del slot
+      if (isOverDiscard) {
         if (cbs.onRemoveFromSlot) {
-          cbs.onRemoveFromSlot(cid, fromSlot);
+          cbs.onRemoveFromSlot(cid, originalSlotIndex);
         }
         dragId = null;
+        draggingFromSlot = false;
+        originalSlotIndex = null;
         return;
       }
       
-      // 1C: Soltó en cualquier otro lugar → también quitar del slot
+      // 1C: Soltó en cualquier OTRO LUGAR → también quitar del slot
       // (asumimos que quiere sacarla de la jugada)
       if (cbs.onRemoveFromSlot) {
-        cbs.onRemoveFromSlot(cid, fromSlot);
+        cbs.onRemoveFromSlot(cid, originalSlotIndex);
       }
       dragId = null;
+      draggingFromSlot = false;
+      originalSlotIndex = null;
       return;
     }
     
-    // CASO 2: NO viene de un slot (viene de sobrantes)
+    // CASO 2: NO VIENE DE UN SLOT (viene de sobrantes)
     
-    // 2A: Soltó en building slot → agregar a slot
-    if (destSlot) {
-      const slotIndex = destSlot.dataset.slotIndex;
-      const slotType = destSlot.dataset.slotType;
+    // 2A: Soltó en BUILDING SLOT → agregar a slot
+    if (buildingSlot) {
+      const slotIndex = buildingSlot.dataset.slotIndex;
+      const slotType = buildingSlot.dataset.slotType;
       if (cbs.onBuildingDrop) {
         cbs.onBuildingDrop(cid, slotIndex, slotType);
       }
@@ -260,22 +260,22 @@ const DragDrop = (() => {
       return;
     }
     
-    // 2B: Soltó en bajada de otro jugador
-    if (destPile) {
-      cbs.onAcomodar?.(cid, parseInt(destPile.dataset.pi), parseInt(destPile.dataset.ji));
+    // 2B: Soltó en BAJADA DE OTRO JUGADOR
+    if (bajadaPile) {
+      cbs.onAcomodar?.(cid, parseInt(bajadaPile.dataset.pi), parseInt(bajadaPile.dataset.ji));
       dragId = null;
       return;
     }
     
-    // 2C: Soltó en fondo (para pagar)
-    if (overFondo && cbs.isPayable?.()) {
+    // 2C: Soltó en FONDO (para pagar)
+    if (isOverFondo && cbs.isPayable?.()) {
       cbs.onPagar?.(cid);
       dragId = null;
       return;
     }
     
-    // 2D: Soltó en discard-zone (reordenar)
-    if (overDiscard) {
+    // 2D: Soltó en DISCARD-ZONE (reordenar)
+    if (isOverDiscard) {
       const cards = [...hz.querySelectorAll('.card:not(.dragging)')];
       let insertIdx = cards.length;
       for (let i = 0; i < cards.length; i++) {
@@ -292,6 +292,8 @@ const DragDrop = (() => {
     
     // Si no soltó en ninguna zona válida, no hacer nada
     dragId = null;
+    draggingFromSlot = false;
+    originalSlotIndex = null;
   }
 
   // Inicia arrastre desde el FONDO
@@ -314,8 +316,12 @@ const DragDrop = (() => {
     
     const onUp = ev => {
       const pt = getPoint(ev);
-      ghost?.g.remove();
-      ghost = null;
+      
+      if (ghost) {
+        ghost.g.remove();
+        ghost = null;
+      }
+      
       cleanDropZones();
       cardEl.style.opacity = '';
       _endFondoDrag(pt, callbacks);

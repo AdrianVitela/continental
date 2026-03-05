@@ -364,7 +364,6 @@ function ordenarCorrida(cartas) {
     if (normales.length === 0) return cartas; // Solo comodines
     
     // Detectar la dirección de la secuencia
-    // Tomamos una muestra de hasta 3 cartas para decidir
     const valores = normales.map(c => c.valorNum);
     
     // Función para verificar si una secuencia es continua
@@ -535,6 +534,194 @@ function validarJugadasConstruidas(jugadas) {
 }
 
 // ═══════════════════════════════════════════════════
+// NUEVAS FUNCIONES PARA DETECTAR ESTADO DEL BOTÓN BAJAR
+// ═══════════════════════════════════════════════════
+
+// Verifica si una corrida está completa (tiene al menos 4 cartas del mismo palo en secuencia)
+function corridaCompleta(cartas) {
+    if (cartas.length < 4) return false;
+    
+    const normales = cartas.filter(c => !c.comodin);
+    if (normales.length === 0) return false;
+    
+    const primerPalo = normales[0].palo;
+    const mismoPalo = normales.every(c => c.palo === primerPalo);
+    if (!mismoPalo) return false;
+    
+    const valores = normales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
+    
+    for (let i = 0; i < valores.length - 1; i++) {
+        if (valores[i + 1] !== valores[i] + 1) return false;
+    }
+    
+    return true;
+}
+
+// Verifica si una corrida está casi completa (le falta 1 carta para ser completa)
+function corridaCasiCompleta(cartas) {
+    if (cartas.length < 3) return false;
+    
+    const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    
+    if (normales.length === 0) return false;
+    
+    const primerPalo = normales[0].palo;
+    const mismoPalo = normales.every(c => c.palo === primerPalo);
+    if (!mismoPalo) return false;
+    
+    const valores = normales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
+    
+    let huecos = 0;
+    for (let i = 0; i < valores.length - 1; i++) {
+        const diferencia = valores[i + 1] - valores[i];
+        if (diferencia === 2) {
+            huecos += 1;
+        } else if (diferencia > 2) {
+            return false;
+        }
+    }
+    
+    const puedeExtenderseAlPrincipio = valores[0] > 1;
+    const puedeExtenderseAlFinal = valores[valores.length - 1] < 13;
+    
+    const totalHuecos = huecos + (puedeExtenderseAlPrincipio ? 1 : 0) + (puedeExtenderseAlFinal ? 1 : 0);
+    
+    return totalHuecos === 1 && (cartas.length + (comodines.length > 0 ? 1 : 0)) >= 4;
+}
+
+// Verifica si una tercia está completa (3 o más cartas del mismo valor)
+function terciaCompleta(cartas) {
+    if (cartas.length < 3) return false;
+    
+    const normales = cartas.filter(c => !c.comodin);
+    if (normales.length === 0) return false;
+    
+    const primerValor = normales[0].valor;
+    return normales.every(c => c.valor === primerValor);
+}
+
+// Verifica si una tercia está casi completa (2 cartas del mismo valor + posibilidad)
+function terciaCasiCompleta(cartas) {
+    if (cartas.length < 2) return false;
+    
+    const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    
+    if (normales.length === 0) return false;
+    
+    const primerValor = normales[0].valor;
+    const mismoValor = normales.every(c => c.valor === primerValor);
+    
+    if (!mismoValor) return false;
+    
+    if (normales.length === 2 && comodines.length >= 1) return true;
+    if (normales.length === 2) return true;
+    
+    return false;
+}
+
+// Función principal para determinar si el botón "Bajar" debe habilitarse
+function puedeHabilitarBajar(jugadasConstruidas, req) {
+    if (!jugadasConstruidas || jugadasConstruidas.length === 0) return false;
+    
+    let terciasCompletas = 0;
+    let corridasCompletas = 0;
+    let terciasCasiCompletas = 0;
+    let corridasCasiCompletas = 0;
+    
+    jugadasConstruidas.forEach(jugada => {
+        if (jugada.tipo === 'tercia') {
+            if (terciaCompleta(jugada.cartas)) {
+                terciasCompletas++;
+            } else if (terciaCasiCompleta(jugada.cartas)) {
+                terciasCasiCompletas++;
+            }
+        } else if (jugada.tipo === 'corrida') {
+            if (corridaCompleta(jugada.cartas)) {
+                corridasCompletas++;
+            } else if (corridaCasiCompleta(jugada.cartas)) {
+                corridasCasiCompletas++;
+            }
+        }
+    });
+    
+    if (terciasCompletas >= req.t && corridasCompletas >= req.c) {
+        return true;
+    }
+    
+    const totalCompletas = terciasCompletas + corridasCompletas;
+    const totalRequeridas = req.t + req.c;
+    
+    if (totalCompletas === totalRequeridas - 1) {
+        const faltanTercias = req.t - terciasCompletas;
+        const faltanCorridas = req.c - corridasCompletas;
+        
+        if (faltanTercias === 1 && terciasCasiCompletas >= 1) return true;
+        if (faltanCorridas === 1 && corridasCasiCompletas >= 1) return true;
+    }
+    
+    return false;
+}
+
+// ═══════════════════════════════════════════════════
+// VALIDACIÓN DE BAJADA EN FALSO
+// ═══════════════════════════════════════════════════
+
+// Verificar si hay una bajada en falso (cartas de diferentes palos en una corrida)
+function detectarBajadaEnFalso(jugadas) {
+    const errores = [];
+    
+    jugadas.forEach((jugada, index) => {
+        if (jugada.tipo === 'corrida') {
+            const normales = jugada.cartas.filter(c => !c.comodin);
+            
+            if (normales.length > 0) {
+                const primerPalo = normales[0].palo;
+                const palosDiferentes = normales.some(c => c.palo !== primerPalo);
+                
+                if (palosDiferentes) {
+                    errores.push({
+                        tipo: 'falso',
+                        jugadaIndex: index,
+                        mensaje: 'Corrida con palos diferentes'
+                    });
+                }
+            }
+            
+            if (normales.length >= 2) {
+                const valores = normales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
+                for (let i = 0; i < valores.length - 1; i++) {
+                    if (valores[i + 1] - valores[i] > 2) {
+                        errores.push({
+                            tipo: 'invalida',
+                            jugadaIndex: index,
+                            mensaje: 'Corrida con saltos grandes'
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+    });
+    
+    return errores;
+}
+
+// Aplicar penalización por bajada en falso
+function aplicarPenalizacionBajadaFalso(jugador) {
+    jugador.penalizacion = {
+        activa: true,
+        turnosRestantes: 2,
+        fecha: Date.now()
+    };
+    
+    jugador.puedeBajar = false;
+    
+    return `⚠️ ${jugador.nombre} hizo una bajada en falso. No podrá bajar durante 2 turnos.`;
+}
+
+// ═══════════════════════════════════════════════════
 // GAME ENGINE CLASS
 // ═══════════════════════════════════════════════════
 class GameEngine {
@@ -547,6 +734,8 @@ class GameEngine {
             pts_t: 0,
             jugadas: [],   // [{tipo, cartas}]
             conectado: true,
+            penalizacion: null,
+            puedeBajar: true,
         }));
         this.ronda = 1;
         this.dealer = 0;
@@ -583,6 +772,8 @@ class GameEngine {
             j.bajado = false;
             j.pts_r = 0;
             j.jugadas = [];
+            j.penalizacion = null;
+            j.puedeBajar = true;
         });
         
         const n = 5 + this.ronda;
@@ -681,9 +872,24 @@ class GameEngine {
         if (err) return err;
         if (this.jActivo.bajado) return this._err('Ya te bajaste.');
         
+        // Verificar si el jugador tiene penalización activa
+        if (this.jActivo.penalizacion?.activa) {
+            return this._err(`Tienes penalización activa por ${this.jActivo.penalizacion.turnosRestantes} turnos más. No puedes bajar.`);
+        }
+        
         // Validar que se recibieron jugadas
         if (!jugadasConstruidas || !Array.isArray(jugadasConstruidas) || jugadasConstruidas.length === 0) {
             return this._err('No hay jugadas para bajar.');
+        }
+        
+        // DETECTAR BAJADA EN FALSO
+        const erroresFalso = detectarBajadaEnFalso(jugadasConstruidas);
+        const tieneBajadaFalso = erroresFalso.some(e => e.tipo === 'falso');
+        
+        if (tieneBajadaFalso) {
+            const mensajePenalizacion = aplicarPenalizacionBajadaFalso(this.jActivo);
+            this.addLog(mensajePenalizacion);
+            return this._err('¡BAJADA EN FALSO! Has mezclado palos en una corrida. No podrás bajar durante 2 turnos.');
         }
         
         // Validar las jugadas construidas por el usuario
@@ -774,6 +980,19 @@ class GameEngine {
         
         const prevTurno = this.turno;
         this.turno = (this.turno + 1) % this.jugadores.length;
+        
+        // Reducir penalizaciones al cambiar de turno
+        this.jugadores.forEach(jugador => {
+            if (jugador.penalizacion?.activa) {
+                jugador.penalizacion.turnosRestantes--;
+                if (jugador.penalizacion.turnosRestantes <= 0) {
+                    jugador.penalizacion = null;
+                    jugador.puedeBajar = true;
+                    this.addLog(`✅ ${jugador.nombre} ya puede bajar nuevamente.`);
+                }
+            }
+        });
+        
         this.estado = 'esperando_robo';
         this.addLog(`➡️ Turno de ${this.jActivo.nombre}.`);
         
@@ -889,6 +1108,19 @@ class GameEngine {
         return this._ok('reordenar', { jugadorIdx: this.jugadores.indexOf(j) }, false);
     }
 
+    // Nueva función para que el cliente consulte si puede habilitar el botón
+    puedeBajarCliente(playerId, jugadasConstruidas) {
+        const j = this._findPlayer(playerId);
+        if (!j) return false;
+        
+        if (j.bajado) return false;
+        if (j.penalizacion?.activa) return false;
+        if (this.estado !== 'esperando_accion') return false;
+        
+        const req = REQ[this.ronda];
+        return puedeHabilitarBajar(jugadasConstruidas, req);
+    }
+
     _checkTurn(playerId, estado) {
         if (this.estado !== estado) return this._err(`Estado incorrecto: ${this.estado}`);
         if (this.jActivo.id !== playerId) return this._err('No es tu turno.');
@@ -981,6 +1213,8 @@ class GameEngine {
                 jugadas: j.jugadas,
                 conectado: j.conectado,
                 mano: [],
+                penalizacion: j.penalizacion,
+                puedeBajar: j.puedeBajar,
             })),
             log: this.log.slice(-6).map(l => l.msg),
             req: REQ[this.ronda],

@@ -217,12 +217,8 @@ function acCastigo(acepta) {
 function acBajar() {
     const slots = document.querySelectorAll('.building-slot');
     const jugadas = [];
-    const cartasUsadas = new Set();
-    const req = REQ[G.ronda];
     
-    let terciasValidas = 0;
-    let corridasValidas = 0;
-    
+    // Construir las jugadas desde los slots
     for (const slot of slots) {
         const slotIndex = slot.dataset.slotIndex;
         const slotType = slot.dataset.slotType;
@@ -235,111 +231,24 @@ function acBajar() {
         
         if (cartasReales.length === 0) continue;
         
-        if (slotType === 'tercia') {
-            const normales = cartasReales.filter(c => !c.comodin);
-            const comodines = cartasReales.filter(c => c.comodin);
-            
-            if (normales.length === 0) {
-                terciasValidas++;
-                cartasReales.forEach(c => cartasUsadas.add(c.id));
-                jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
-                continue;
-            }
-            
-            const primerValor = normales[0].valor;
-            const todosIguales = normales.every(c => c.valor === primerValor);
-            
-            if (!todosIguales) {
-                const conteo = {};
-                normales.forEach(c => conteo[c.valor] = (conteo[c.valor] || 0) + 1);
-                const valorMasComun = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0];
-                toast(`❌ En ${slotType}: las cartas deben ser del mismo valor (ej: todas ${valorMasComun})`);
-                return;
-            }
-            
-            if (cartasReales.length < 3) {
-                toast(`❌ ${slotType} necesita al menos 3 cartas (tienes ${cartasReales.length})`);
-                return;
-            }
-            
-            terciasValidas++;
-            cartasReales.forEach(c => cartasUsadas.add(c.id));
-            jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
-        }
-        
-        else if (slotType === 'corrida') {
-            const normales = cartasReales.filter(c => !c.comodin);
-            const comodines = cartasReales.filter(c => c.comodin);
-            
-            if (normales.length === 0) {
-                if (cartasReales.length < 4) {
-                    toast(`❌ Corrida necesita al menos 4 cartas (tienes ${cartasReales.length})`);
-                    return;
-                }
-                corridasValidas++;
-                cartasReales.forEach(c => cartasUsadas.add(c.id));
-                jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
-                continue;
-            }
-            
-            const primerPalo = normales[0].palo;
-            const mismoPalo = normales.every(c => c.palo === primerPalo);
-            
-            if (!mismoPalo) {
-                toast(`❌ En corrida: todas las cartas deben ser del mismo palo (${primerPalo})`);
-                return;
-            }
-            
-            const valores = normales.map(c => VN[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
-            
-            const unicos = new Set(valores);
-            if (unicos.size !== valores.length) {
-                toast(`❌ En corrida: no puede haber valores repetidos`);
-                return;
-            }
-            
-            const valorMin = valores[0];
-            const valorMax = valores[valores.length - 1];
-            const totalPosiciones = valorMax - valorMin + 1;
-            const huecosNecesarios = totalPosiciones - valores.length;
-            
-            if (huecosNecesarios > comodines.length) {
-                toast(`❌ Corrida inválida: faltan ${huecosNecesarios} cartas y solo tienes ${comodines.length} comodines`);
-                return;
-            }
-            
-            if (cartasReales.length < 4) {
-                toast(`❌ Corrida necesita al menos 4 cartas (tienes ${cartasReales.length})`);
-                return;
-            }
-            
-            corridasValidas++;
-            cartasReales.forEach(c => cartasUsadas.add(c.id));
-            jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
-        }
+        jugadas.push({ 
+            tipo: slotType, 
+            cartas: cartasReales  // Enviamos las cartas completas, no solo IDs
+        });
     }
     
-    if (terciasValidas < req.t) {
-        toast(`❌ Necesitas ${req.t} tercias válidas (tienes ${terciasValidas})`);
+    if (jugadas.length === 0) {
+        toast('❌ No hay cartas en los slots de construcción');
         return;
     }
     
-    if (corridasValidas < req.c) {
-        toast(`❌ Necesitas ${req.c} corridas válidas (tienes ${corridasValidas})`);
-        return;
-    }
+    console.log('Enviando jugadas al servidor:', jugadas);
     
-    const totalCartasUsadas = jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0);
-    if (cartasUsadas.size !== totalCartasUsadas) {
-        toast('❌ Error: Cartas duplicadas en las jugadas');
-        return;
-    }
-    
-    toast(`✅ ${terciasValidas} tercias y ${corridasValidas} corridas válidas!`, 'green');
-    console.log('Jugadas válidas:', jugadas);
-    
-    // Descomentar cuando el servidor esté listo:
-    // WS.send({ type: 'bajar', jugadas: jugadas });
+    // Enviar las jugadas al servidor para validación
+    WS.send({ 
+        type: 'bajar', 
+        jugadas: jugadas
+    });
     
     cancelIntercambio();
 }

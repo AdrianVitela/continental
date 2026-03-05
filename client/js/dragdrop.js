@@ -25,6 +25,7 @@ const DragDrop = (() => {
     g.style.height = rect.height + 'px';
     g.style.left = (pt.x - rect.width / 2) + 'px';
     g.style.top = (pt.y - rect.height / 2) + 'px';
+    g.style.pointerEvents = 'none'; // FIX 4: el ghost no intercepta elementsFromPoint
     document.body.appendChild(g);
     return { g, rect };
   }
@@ -145,6 +146,9 @@ const DragDrop = (() => {
     ghost = mkGhost(el, getPoint(e));
     el.classList.add('dragging');
 
+    // FIX 1: Ocultar la carta original del slot para que no bloquee el hit-test
+    if (draggingFromSlot) el.style.visibility = 'hidden';
+
     const onMove = ev => {
       ev.preventDefault();
       const pt = getPoint(ev);
@@ -165,6 +169,9 @@ const DragDrop = (() => {
       cleanDropZones();
       el.classList.remove('dragging');
 
+      // FIX 2: Restaurar visibilidad al soltar
+      el.style.visibility = '';
+
       _endHandDrag(pt, cid, callbacks);
 
       document.removeEventListener('mousemove', onMove);
@@ -184,12 +191,11 @@ const DragDrop = (() => {
     const elementsUnderCursor = document.elementsFromPoint(pt.x, pt.y);
 
     const hz = document.getElementById('discard-zone');
-    
-    // CORREGIDO: Comparación explícita con null para closest
+
     const isOverDiscard =
       hz &&
-      elementsUnderCursor.some(el => 
-        el.id === 'discard-zone' || 
+      elementsUnderCursor.some(el =>
+        el.id === 'discard-zone' ||
         (el.closest && el.closest('#discard-zone') !== null)
       );
 
@@ -214,12 +220,11 @@ const DragDrop = (() => {
       : null;
 
     const fw = document.getElementById('fondo-wrap');
-    
-    // CORREGIDO: Comparación explícita con null para closest
+
     const isOverFondo =
       fw &&
-      elementsUnderCursor.some(el => 
-        el.id === 'fondo-wrap' || 
+      elementsUnderCursor.some(el =>
+        el.id === 'fondo-wrap' ||
         (el.closest && el.closest('#fondo-wrap') !== null)
       );
 
@@ -229,17 +234,24 @@ const DragDrop = (() => {
 
     if (draggingFromSlot && originalSlotIndex !== null) {
 
-      // 1A mover entre slots
+      // 1A: mover entre slots (solo si es un slot DIFERENTE)
       if (buildingSlot) {
-        const destSlotIndex = buildingSlot.dataset.slotIndex;
-        const destSlotType = buildingSlot.dataset.slotType;
+        const destSlotIndex = parseInt(buildingSlot.dataset.slotIndex);
+
+        // Si es el mismo slot, no hacer nada
+        if (destSlotIndex === originalSlotIndex) {
+          dragId = null;
+          draggingFromSlot = false;
+          originalSlotIndex = null;
+          return;
+        }
 
         if (cbs.onMoveBetweenSlots) {
           cbs.onMoveBetweenSlots(
             cid,
             originalSlotIndex,
-            parseInt(destSlotIndex),
-            destSlotType
+            destSlotIndex,
+            buildingSlot.dataset.slotType
           );
         }
 
@@ -249,24 +261,18 @@ const DragDrop = (() => {
         return;
       }
 
-      // 1B devolver a la mano
+      // 1B: devolver a la mano (soltó sobre discard-zone)
       if (isOverDiscard) {
-
         if (cbs.onReturnToHand) {
           cbs.onReturnToHand(cid, originalSlotIndex);
-          // CORREGIDO: Return DENTRO del if después de llamar al callback
-          dragId = null;
-          draggingFromSlot = false;
-          originalSlotIndex = null;
-          return;
         }
+        dragId = null;
+        draggingFromSlot = false;
+        originalSlotIndex = null;
+        return;
       }
 
-      // 1C fallback: quitar del slot
-      if (cbs.onReturnToHand) {
-        cbs.onReturnToHand(cid, originalSlotIndex);
-      }
-
+      // FIX 3: Fallback — soltó en lugar inválido, NO mover la carta, solo limpiar estado
       dragId = null;
       draggingFromSlot = false;
       originalSlotIndex = null;

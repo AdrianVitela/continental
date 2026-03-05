@@ -39,7 +39,8 @@ let intercambioMode = false;
 let selectedComodinInfo = null; // { jugadorIdx, jugadaIdx, cartaId }
 
 // Mapa para tracking de cartas en zonas de construcción
-let buildingCards = new Map(); // slotIndex -> array de cartas
+// Ahora guarda objetos carta COMPLETOS, no solo IDs
+let buildingCards = new Map(); // slotIndex -> array de cartas completas
 
 // Inicialización
 function init() {
@@ -120,7 +121,7 @@ async function handleNewRound() {
     ackSent = false;
     intercambioMode = false;
     selectedComodinInfo = null;
-    buildingCards.clear(); // Limpiar mapa de construcción
+    buildingCards.clear();
     
     const mazoEl = document.getElementById('mazo-wrap');
     await Anim.shuffleAnim(mazoEl);
@@ -213,9 +214,7 @@ function acCastigo(acepta) {
     cancelIntercambio();
 }
 
-// MODIFICADO: Validación de TODAS las jugadas al bajar
 function acBajar() {
-    // Construir las jugadas desde los slots
     const slots = document.querySelectorAll('.building-slot');
     const jugadas = [];
     const cartasUsadas = new Set();
@@ -224,55 +223,40 @@ function acBajar() {
     let terciasValidas = 0;
     let corridasValidas = 0;
     
-    // Primero, validar cada slot individualmente
     for (const slot of slots) {
         const slotIndex = slot.dataset.slotIndex;
         const slotType = slot.dataset.slotType;
         const cards = buildingCards.get(slotIndex) || [];
         
-        if (cards.length === 0) continue; // Slot vacío, no se usa
+        if (cards.length === 0) continue;
         
-        // Obtener las cartas reales de la mano
-        const cartasReales = cards.map(cardId => 
-            G.jugadores[myIdx].mano.find(c => c.id === cardId)
-        ).filter(Boolean);
+        // Las cartas ya son objetos completos
+        const cartasReales = cards.filter(Boolean);
         
         if (cartasReales.length === 0) continue;
         
-        // VALIDACIÓN PARA TERCIAS
         if (slotType === 'tercia') {
-            // Separar normales y comodines
             const normales = cartasReales.filter(c => !c.comodin);
             const comodines = cartasReales.filter(c => c.comodin);
             
-            // Si no hay cartas normales, la tercia es solo de comodines (válido)
             if (normales.length === 0) {
-                // Tercia de puros comodines es válida
                 terciasValidas++;
                 cartasReales.forEach(c => cartasUsadas.add(c.id));
-                jugadas.push({
-                    tipo: slotType,
-                    cartasIds: cards,
-                    cartas: cartasReales
-                });
+                jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
                 continue;
             }
             
-            // Verificar que todas las normales sean del mismo valor
             const primerValor = normales[0].valor;
             const todosIguales = normales.every(c => c.valor === primerValor);
             
             if (!todosIguales) {
-                // Buscar el valor que más se repite para dar un mensaje más útil
                 const conteo = {};
                 normales.forEach(c => conteo[c.valor] = (conteo[c.valor] || 0) + 1);
                 const valorMasComun = Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0];
-                
                 toast(`❌ En ${slotType}: las cartas deben ser del mismo valor (ej: todas ${valorMasComun})`);
                 return;
             }
             
-            // Mínimo 3 cartas (contando comodines)
             if (cartasReales.length < 3) {
                 toast(`❌ ${slotType} necesita al menos 3 cartas (tienes ${cartasReales.length})`);
                 return;
@@ -280,20 +264,13 @@ function acBajar() {
             
             terciasValidas++;
             cartasReales.forEach(c => cartasUsadas.add(c.id));
-            jugadas.push({
-                tipo: slotType,
-                cartasIds: cards,
-                cartas: cartasReales
-            });
+            jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
         }
         
-        // VALIDACIÓN PARA CORRIDAS
         else if (slotType === 'corrida') {
-            // Separar normales y comodines
             const normales = cartasReales.filter(c => !c.comodin);
             const comodines = cartasReales.filter(c => c.comodin);
             
-            // Si no hay cartas normales, la corrida es solo de comodines (válida pero necesita al menos 4)
             if (normales.length === 0) {
                 if (cartasReales.length < 4) {
                     toast(`❌ Corrida necesita al menos 4 cartas (tienes ${cartasReales.length})`);
@@ -301,15 +278,10 @@ function acBajar() {
                 }
                 corridasValidas++;
                 cartasReales.forEach(c => cartasUsadas.add(c.id));
-                jugadas.push({
-                    tipo: slotType,
-                    cartasIds: cards,
-                    cartas: cartasReales
-                });
+                jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
                 continue;
             }
             
-            // Verificar mismo palo
             const primerPalo = normales[0].palo;
             const mismoPalo = normales.every(c => c.palo === primerPalo);
             
@@ -318,17 +290,14 @@ function acBajar() {
                 return;
             }
             
-            // Obtener valores numéricos de las normales
             const valores = normales.map(c => VN[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
             
-            // Verificar que no haya valores repetidos
             const unicos = new Set(valores);
             if (unicos.size !== valores.length) {
                 toast(`❌ En corrida: no puede haber valores repetidos`);
                 return;
             }
             
-            // Calcular cuántos huecos hay que llenar con comodines
             const valorMin = valores[0];
             const valorMax = valores[valores.length - 1];
             const totalPosiciones = valorMax - valorMin + 1;
@@ -339,7 +308,6 @@ function acBajar() {
                 return;
             }
             
-            // Mínimo 4 cartas en total
             if (cartasReales.length < 4) {
                 toast(`❌ Corrida necesita al menos 4 cartas (tienes ${cartasReales.length})`);
                 return;
@@ -347,15 +315,10 @@ function acBajar() {
             
             corridasValidas++;
             cartasReales.forEach(c => cartasUsadas.add(c.id));
-            jugadas.push({
-                tipo: slotType,
-                cartasIds: cards,
-                cartas: cartasReales
-            });
+            jugadas.push({ tipo: slotType, cartasIds: cartasReales.map(c => c.id), cartas: cartasReales });
         }
     }
     
-    // Validar cantidad de jugadas según la ronda
     if (terciasValidas < req.t) {
         toast(`❌ Necesitas ${req.t} tercias válidas (tienes ${terciasValidas})`);
         return;
@@ -366,14 +329,12 @@ function acBajar() {
         return;
     }
     
-    // Verificar que no haya cartas repetidas entre slots
     const totalCartasUsadas = jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0);
     if (cartasUsadas.size !== totalCartasUsadas) {
         toast('❌ Error: Cartas duplicadas en las jugadas');
         return;
     }
     
-    // TODO: Enviar al servidor con las jugadas construidas
     toast(`✅ ${terciasValidas} tercias y ${corridasValidas} corridas válidas!`, 'green');
     console.log('Jugadas válidas:', jugadas);
     
@@ -390,24 +351,15 @@ function acPagar(cartaId) {
         return;
     }
     
-    // Verificar si la carta está en un slot
-    let slotOrigen = null;
+    // Verificar si la carta está en un slot y removerla
     buildingCards.forEach((cards, slotIndex) => {
-        if (cards.includes(id)) slotOrigen = slotIndex;
-    });
-    
-    if (slotOrigen !== null) {
-        // La carta está en un slot, quitarla de ahí
-        const slotCards = buildingCards.get(slotOrigen);
-        const index = slotCards.indexOf(id);
+        const index = cards.findIndex(c => c.id === id);
         if (index > -1) {
-            slotCards.splice(index, 1);
-            if (slotCards.length === 0) {
-                buildingCards.delete(slotOrigen);
-            }
-            updateSlotUI(slotOrigen, slotCards);
+            cards.splice(index, 1);
+            if (cards.length === 0) buildingCards.delete(slotIndex);
+            updateSlotUI(slotIndex, cards);
         }
-    }
+    });
     
     WS.send({ type: 'pagar', cartaId: id });
     selId = null;
@@ -415,24 +367,15 @@ function acPagar(cartaId) {
 }
 
 function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx) {
-    // Verificar si la carta está en un slot
-    let slotOrigen = null;
+    // Verificar si la carta está en un slot y removerla
     buildingCards.forEach((cards, slotIndex) => {
-        if (cards.includes(cartaId)) slotOrigen = slotIndex;
-    });
-    
-    if (slotOrigen !== null) {
-        // La carta está en un slot, quitarla de ahí
-        const slotCards = buildingCards.get(slotOrigen);
-        const index = slotCards.indexOf(cartaId);
+        const index = cards.findIndex(c => c.id === cartaId);
         if (index > -1) {
-            slotCards.splice(index, 1);
-            if (slotCards.length === 0) {
-                buildingCards.delete(slotOrigen);
-            }
-            updateSlotUI(slotOrigen, slotCards);
+            cards.splice(index, 1);
+            if (cards.length === 0) buildingCards.delete(slotIndex);
+            updateSlotUI(slotIndex, cards);
         }
-    }
+    });
     
     WS.send({ type: 'acomodar', cartaId, destJugadorIdx, destJugadaIdx });
     selId = null;
@@ -451,24 +394,15 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
         return;
     }
     
-    // Verificar si la carta está en un slot
-    let slotOrigen = null;
+    // Verificar si la carta está en un slot y removerla
     buildingCards.forEach((cards, slotIndex) => {
-        if (cards.includes(cartaId)) slotOrigen = slotIndex;
-    });
-    
-    if (slotOrigen !== null) {
-        // La carta está en un slot, quitarla de ahí
-        const slotCards = buildingCards.get(slotOrigen);
-        const index = slotCards.indexOf(cartaId);
+        const index = cards.findIndex(c => c.id === cartaId);
         if (index > -1) {
-            slotCards.splice(index, 1);
-            if (slotCards.length === 0) {
-                buildingCards.delete(slotOrigen);
-            }
-            updateSlotUI(slotOrigen, slotCards);
+            cards.splice(index, 1);
+            if (cards.length === 0) buildingCards.delete(slotIndex);
+            updateSlotUI(slotIndex, cards);
         }
-    }
+    });
     
     WS.send({ 
         type: 'intercambiar_comodin', 
@@ -544,10 +478,10 @@ function acReorder(draggedId, beforeId) {
     const me = G.jugadores[myIdx];
     if (!me) return;
     
-    // Verificar si la carta está en un slot (no debería, pero por si acaso)
+    // Verificar si la carta está en un slot (no debería poder reordenarse)
     let slotOrigen = null;
     buildingCards.forEach((cards, slotIndex) => {
-        if (cards.includes(draggedId)) slotOrigen = slotIndex;
+        if (cards.some(c => c.id === draggedId)) slotOrigen = slotIndex;
     });
     
     if (slotOrigen !== null) {
@@ -555,11 +489,9 @@ function acReorder(draggedId, beforeId) {
         return;
     }
     
-    // Reordenar en discard zone
     const fromIdx = me.mano.findIndex(c => c.id === draggedId);
     if (fromIdx < 0) return;
     
-    // beforeId puede ser un índice o Infinity
     let toIdx = beforeId;
     if (beforeId === Infinity || beforeId >= me.mano.length) {
         toIdx = me.mano.length - 1;
@@ -607,7 +539,7 @@ function render() {
     renderMazo();
     renderFondo(me);
     renderPlayerInfo(me);
-    renderHand(); // Esto ahora renderiza ambas filas
+    renderHand();
     renderActions();
 }
 
@@ -639,9 +571,6 @@ function renderOpponents() {
     });
 }
 
-// ═══════════════════════════════════════════════════
-// RENDER TABLE BAJADAS
-// ═══════════════════════════════════════════════════
 function renderTableBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     bajEl.innerHTML = '';
@@ -662,7 +591,6 @@ function renderTableBajadas() {
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
             
-            // Renderizar cartas de la jugada
             const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
                     let valorReemplazado = c.valorReemplazado || '?';
@@ -752,7 +680,6 @@ function renderPlayerInfo(me) {
 // RENDER DE LAS DOS FILAS (SOBRANTES Y CONSTRUCCIÓN)
 // ═══════════════════════════════════════════════════
 
-// Renderizar la fila de construcción (slots según la ronda)
 function renderBuildingRow() {
     if (!G || myIdx < 0) return;
     
@@ -765,8 +692,7 @@ function renderBuildingRow() {
     
     let html = '';
     
-    // Generar slots según la ronda
-    if (G.ronda === 1) { // 2 tercias
+    if (G.ronda === 1) {
         html = `
             <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
                 <div class="building-slot-header">
@@ -785,7 +711,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
             </div>
         `;
-    } else if (G.ronda === 2) { // 1 tercia + 1 corrida
+    } else if (G.ronda === 2) {
         html = `
             <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
                 <div class="building-slot-header">
@@ -804,7 +730,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
             </div>
         `;
-    } else if (G.ronda === 3) { // 2 corridas
+    } else if (G.ronda === 3) {
         html = `
             <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
                 <div class="building-slot-header">
@@ -823,7 +749,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
             </div>
         `;
-    } else if (G.ronda === 4) { // 3 tercias
+    } else if (G.ronda === 4) {
         html = `
             <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
                 <div class="building-slot-header">
@@ -850,7 +776,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
             </div>
         `;
-    } else if (G.ronda === 5) { // 2 tercias + 1 corrida
+    } else if (G.ronda === 5) {
         html = `
             <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
                 <div class="building-slot-header">
@@ -877,7 +803,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
             </div>
         `;
-    } else if (G.ronda === 6) { // 2 corridas + 1 tercia
+    } else if (G.ronda === 6) {
         html = `
             <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
                 <div class="building-slot-header">
@@ -904,7 +830,7 @@ function renderBuildingRow() {
                 <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
             </div>
         `;
-    } else if (G.ronda === 7) { // 3 corridas
+    } else if (G.ronda === 7) {
         html = `
             <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
                 <div class="building-slot-header">
@@ -935,37 +861,9 @@ function renderBuildingRow() {
     
     buildingRow.innerHTML = html;
     
+    // Restaurar el estado de los slots
     buildingCards.forEach((cards, slotIndex) => {
         updateSlotUI(slotIndex, cards);
-    });
-}
-
-// Actualizar los contadores de los slots
-function updateSlotCounters() {
-    buildingCards.forEach((cards, slotIndex) => {
-        const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
-        if (!slot) return;
-        
-        const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
-        if (cardsContainer) {
-            cardsContainer.innerHTML = cards.map(cardId => {
-                const carta = G.jugadores[myIdx].mano.find(c => c.id === cardId);
-                return carta ? cSm(carta) : '';
-            }).join('');
-        }
-        
-        const countSpan = slot.querySelector('.building-slot-count');
-        const minCards = parseInt(slot.dataset.minCards);
-        if (countSpan) {
-            countSpan.textContent = `${cards.length}/${minCards}+`;
-            if (cards.length >= minCards) {
-                countSpan.classList.add('valid');
-                slot.classList.add('complete');
-            } else {
-                countSpan.classList.remove('valid');
-                slot.classList.remove('complete');
-            }
-        }
     });
 }
 
@@ -977,17 +875,11 @@ function renderHand() {
     
     if (!discardZone) return;
     
-    // Guardar referencia a la carta que se está arrastrando
-    const draggingCard = document.querySelector('.card.dragging');
-    const draggingId = draggingCard?.dataset.id;
-    
-    // Renderizar la fila de construcción (esto llamará a updateSlotUI para cada slot)
     renderBuildingRow();
     
-    // Limpiar zona de sobrantes
     discardZone.innerHTML = '';
     
-    // Recopilar TODAS las cartas que están en slots para excluirlas
+    // Recopilar IDs de cartas que están en slots
     const cartasEnSlots = new Set();
     buildingCards.forEach(cards => {
         cards.forEach(carta => {
@@ -995,100 +887,15 @@ function renderHand() {
         });
     });
     
-    // Mostrar solo las cartas que NO están en slots
+    // Mostrar solo cartas que NO están en slots
     (me.mano || []).forEach(c => {
-        // Si la carta NO está en un slot Y no es la que se está arrastrando
-        if (!cartasEnSlots.has(c.id) && c.id !== draggingId) {
+        if (!cartasEnSlots.has(c.id)) {
             const el = createCardElement(c);
             discardZone.appendChild(el);
         }
     });
     
-    // Si había una carta arrastrada y no está en slots, mantenerla
-    if (draggingCard && !cartasEnSlots.has(draggingId)) {
-        discardZone.appendChild(draggingCard);
-    }
-    
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
-}
-
-// Configurar listeners para drag & drop en slots
-function setupSlotDropListeners() {
-    if (!G || myIdx < 0) return;
-    
-    const me = G.jugadores[myIdx];
-    if (me.bajado) return; // Si ya está bajado, no permitir más cambios
-    
-    document.querySelectorAll('.building-slot').forEach(slot => {
-        // Eliminar listeners anteriores para evitar duplicados
-        slot.removeEventListener('dragover', handleSlotDragOver);
-        slot.removeEventListener('dragleave', handleSlotDragLeave);
-        slot.removeEventListener('drop', handleSlotDrop);
-        
-        // Agregar nuevos listeners
-        slot.addEventListener('dragover', handleSlotDragOver);
-        slot.addEventListener('dragleave', handleSlotDragLeave);
-        slot.addEventListener('drop', handleSlotDrop);
-    });
-}
-
-function handleSlotDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.classList.add('drop-target');
-}
-
-function handleSlotDragLeave(e) {
-    e.currentTarget.classList.remove('drop-target');
-}
-
-function handleSlotDrop(e) {
-    e.preventDefault();
-    const slot = e.currentTarget;
-    slot.classList.remove('drop-target');
-    
-    if (!selId) {
-        toast('Primero selecciona una carta');
-        return;
-    }
-    
-    const me = G.jugadores[myIdx];
-    const carta = me.mano.find(c => c.id === selId);
-    if (!carta) {
-        toast('Carta no encontrada');
-        return;
-    }
-    
-    const slotIndex = slot.dataset.slotIndex;
-    const slotType = slot.dataset.slotType;
-    
-    // Verificar que la carta no esté ya en otro slot
-    let cartaEnOtroSlot = false;
-    buildingCards.forEach((cards, idx) => {
-        if (cards.includes(selId)) cartaEnOtroSlot = true;
-    });
-    
-    if (cartaEnOtroSlot) {
-        toast('Esta carta ya está en otra jugada');
-        return;
-    }
-    
-    // Obtener o crear el array para este slot
-    if (!buildingCards.has(slotIndex)) {
-        buildingCards.set(slotIndex, []);
-    }
-    
-    const slotCards = buildingCards.get(slotIndex);
-    slotCards.push(selId);
-    
-    // Actualizar UI
-    updateSlotUI(slotIndex, slotCards);
-    
-    // Remover la carta de discard zone
-    const cartaEl = document.querySelector(`.card[data-id="${selId}"]`);
-    if (cartaEl) cartaEl.remove();
-    
-    selId = null;
-    toast(`Carta agregada a ${slotType}`, 'green');
 }
 
 function createCardElement(c, fromSlot = null) {
@@ -1099,9 +906,9 @@ function createCardElement(c, fromSlot = null) {
     }
     el.dataset.id = c.id;
     if (fromSlot !== null) {
-        el.dataset.slot = fromSlot; // Guardar de qué slot viene
+        el.dataset.slot = fromSlot;
     }
-    el.draggable = false; // Nosotros manejamos el drag con DragDrop
+    el.draggable = false;
     
     if (c.comodin) {
         el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
@@ -1123,24 +930,23 @@ function createCardElement(c, fromSlot = null) {
     });
     
     const dragCallbacks = {
-    isPayable,
-    onPagar: id => acPagar(id),
-    onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
-    onReorder: (id, beforeId) => acReorder(id, beforeId),
-    onBuildingDrop: (id, slotIndex, slotType) => {
-        handleBuildingDrop(id, slotIndex, slotType);
-    },
-    onRemoveFromSlot: (id, slotIndex) => {
-        handleRemoveFromSlot(id, slotIndex);
-    },
-    onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType) => {
-        handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType);
-    },
-
-    onReturnToHand: (id, slotIndex) => {
-        handleReturnToHand(id, slotIndex);
-    }
-};
+        isPayable,
+        onPagar: id => acPagar(id),
+        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+        onReorder: (id, beforeId) => acReorder(id, beforeId),
+        onBuildingDrop: (id, slotIndex, slotType) => {
+            handleBuildingDrop(id, slotIndex, slotType);
+        },
+        onRemoveFromSlot: (id, slotIndex) => {
+            handleRemoveFromSlot(id, slotIndex);
+        },
+        onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType) => {
+            handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType);
+        },
+        onReturnToHand: (id, slotIndex) => {
+            handleReturnToHand(id, slotIndex);
+        }
+    };
     
     el.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
@@ -1179,17 +985,16 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
         return;
     }
     
-    // QUITAR la carta de la mano (guardamos una copia)
+    // Quitar la carta de la mano (guardamos el objeto completo)
     const [cartaMovida] = me.mano.splice(cartaIndex, 1);
     
-    // AÑADIR la carta COMPLETA al slot
+    // Añadir la carta completa al slot
     if (!buildingCards.has(slotIndex)) {
         buildingCards.set(slotIndex, []);
     }
     const slotCards = buildingCards.get(slotIndex);
-    slotCards.push(cartaMovida); // Guardamos la carta completa
+    slotCards.push(cartaMovida);
     
-    // Actualizar UI
     updateSlotUI(slotIndex, slotCards);
     renderHand();
     
@@ -1197,7 +1002,6 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
     toast(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`, 'green');
 }
 
-// MODIFICADO: Crear cartas COMPLETAS en los slots
 function updateSlotUI(slotIndex, cards) {
     const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
     if (!slot) return;
@@ -1205,19 +1009,14 @@ function updateSlotUI(slotIndex, cards) {
     const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
     if (!cardsContainer) return;
     
-    // Limpiar contenedor
     cardsContainer.innerHTML = '';
     
-    // Crear cartas COMPLETAS para cada carta en el slot
     cards.forEach(carta => {
         if (!carta) return;
-        
-        // Crear carta completa con createCardElement, pasando el slotIndex
         const cardEl = createCardElement(carta, slotIndex);
         cardsContainer.appendChild(cardEl);
     });
     
-    // Actualizar contador
     const countSpan = slot.querySelector('.building-slot-count');
     const minCards = parseInt(slot.dataset.minCards);
     if (countSpan) {
@@ -1232,7 +1031,6 @@ function updateSlotUI(slotIndex, cards) {
     }
 }
 
-// MODIFICADO: Manejar cuando se arrastra una carta desde un slot
 function handleRemoveFromSlot(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) {
@@ -1240,25 +1038,18 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
         return;
     }
     
-    // Verificar que la carta existe en el slot
     const slotCards = buildingCards.get(slotIndex);
-    if (!slotCards || !slotCards.includes(cartaId)) return;
+    if (!slotCards) return;
     
-    // Remover la carta del slot
-    const index = slotCards.indexOf(cartaId);
+    const index = slotCards.findIndex(c => c.id === cartaId);
     if (index > -1) {
         slotCards.splice(index, 1);
         
-        // Si el slot queda vacío, eliminarlo del mapa
         if (slotCards.length === 0) {
             buildingCards.delete(slotIndex);
         }
         
-        // Actualizar UI del slot (esto elimina la carta visualmente del slot)
         updateSlotUI(slotIndex, slotCards);
-        
-        // IMPORTANTE: Renderizar la mano completa para que la carta
-        // reaparezca en discard-zone
         renderHand();
         
         toast('Carta removida de la jugada', 'green');
@@ -1272,26 +1063,23 @@ function handleReturnToHand(cartaId, slotIndex) {
         return;
     }
     
-    // Obtener las cartas del slot
     const slotCards = buildingCards.get(slotIndex);
     if (!slotCards) return;
     
-    // Buscar la carta COMPLETA en el slot
+    // Buscar la carta completa en el slot
     const cartaIndex = slotCards.findIndex(c => c.id === cartaId);
     if (cartaIndex === -1) return;
     
-    // QUITAR la carta COMPLETA del slot
+    // Quitar la carta completa del slot
     const [cartaDevuelta] = slotCards.splice(cartaIndex, 1);
     
-    // Si el slot queda vacío, eliminarlo
     if (slotCards.length === 0) {
         buildingCards.delete(slotIndex);
     }
     
-    // VOLVER a poner la carta COMPLETA en la mano
+    // Devolver la carta completa a la mano
     me.mano.push(cartaDevuelta);
     
-    // Actualizar UI
     updateSlotUI(slotIndex, slotCards);
     renderHand();
     
@@ -1305,32 +1093,28 @@ function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType)
         return;
     }
     
-    // Obtener cartas del slot origen
     const fromSlotCards = buildingCards.get(fromSlotIndex);
     if (!fromSlotCards) return;
     
-    // Buscar la carta COMPLETA en el slot origen
     const cartaIndex = fromSlotCards.findIndex(c => c.id === cartaId);
     if (cartaIndex === -1) return;
     
-    // QUITAR la carta COMPLETA del slot origen
+    // Quitar la carta completa del slot origen
     const [cartaMovida] = fromSlotCards.splice(cartaIndex, 1);
     
-    // Si el slot origen queda vacío, eliminarlo
     if (fromSlotCards.length === 0) {
         buildingCards.delete(fromSlotIndex);
     } else {
         updateSlotUI(fromSlotIndex, fromSlotCards);
     }
     
-    // AÑADIR la carta COMPLETA al slot destino
+    // Añadir la carta completa al slot destino
     if (!buildingCards.has(toSlotIndex)) {
         buildingCards.set(toSlotIndex, []);
     }
     const toSlotCards = buildingCards.get(toSlotIndex);
     toSlotCards.push(cartaMovida);
     
-    // Actualizar UI del slot destino
     updateSlotUI(toSlotIndex, toSlotCards);
     
     toast(`Carta movida a ${toSlotType}`, 'green');
@@ -1361,14 +1145,12 @@ function renderActions() {
         btns.appendChild(b);
     };
     
-    // Botón para cancelar modo intercambio si está activo
     if (intercambioMode) {
         if (instr) instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
         add('❌ Cancelar Intercambio', 'abtn-red', cancelIntercambio);
         return;
     }
     
-    // Función para verificar si hay destinos para acomodar
     const hasDestForAcomodar = () => {
         if (!me?.bajado) return false;
         if (!selId) return false;
@@ -1397,7 +1179,6 @@ function renderActions() {
         });
     };
     
-    // Función para verificar si hay comodines intercambiables
     const hasComodinesIntercambiables = () => {
         if (!selId) return false;
         if (me?.bajado) return false;
@@ -1455,7 +1236,7 @@ function renderActions() {
         case 'esperando_accion':
             if (!me?.bajado) {
                 if (instr) instr.textContent = selId ? 'Carta seleccionada — págala o intercambia por comodín' : 'Selecciona una carta para pagar o bájate.';
-                if (!me?.bajado) add('🔥 Bajarme', 'abtn-gold', acBajar);
+                add('🔥 Bajarme', 'abtn-gold', acBajar);
                 add('💳 Pagar', selId ? 'abtn-outline' : 'abtn-outline', () => acPagar(selId), !selId);
                 
                 if (selId && hasComodinesIntercambiables()) {

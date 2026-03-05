@@ -184,12 +184,17 @@ const DragDrop = (() => {
     const elementsUnderCursor = document.elementsFromPoint(pt.x, pt.y);
 
     const hz = document.getElementById('discard-zone');
+    
+    // CORREGIDO: Comparación explícita con null para closest
     const isOverDiscard =
       hz &&
-      elementsUnderCursor.some(el => el.id === 'discard-zone' || el.closest('#discard-zone'));
+      elementsUnderCursor.some(el => 
+        el.id === 'discard-zone' || 
+        (el.closest && el.closest('#discard-zone') !== null)
+      );
 
     const destSlot = elementsUnderCursor.find(
-      el => el.classList?.contains('building-slot') || el.closest?.('.building-slot')
+      el => el.classList?.contains('building-slot') || (el.closest && el.closest('.building-slot') !== null)
     );
 
     const buildingSlot = destSlot
@@ -199,7 +204,7 @@ const DragDrop = (() => {
       : null;
 
     const destPile = elementsUnderCursor.find(
-      el => el.classList?.contains('bajada-pile') || el.closest?.('.bajada-pile')
+      el => el.classList?.contains('bajada-pile') || (el.closest && el.closest('.bajada-pile') !== null)
     );
 
     const bajadaPile = destPile
@@ -209,9 +214,14 @@ const DragDrop = (() => {
       : null;
 
     const fw = document.getElementById('fondo-wrap');
+    
+    // CORREGIDO: Comparación explícita con null para closest
     const isOverFondo =
       fw &&
-      elementsUnderCursor.some(el => el.id === 'fondo-wrap' || el.closest('#fondo-wrap'));
+      elementsUnderCursor.some(el => 
+        el.id === 'fondo-wrap' || 
+        (el.closest && el.closest('#fondo-wrap') !== null)
+      );
 
     // ==========================
     // CASO 1: VIENE DE UN SLOT
@@ -244,16 +254,15 @@ const DragDrop = (() => {
 
         if (cbs.onReturnToHand) {
           cbs.onReturnToHand(cid, originalSlotIndex);
+          // CORREGIDO: Return DENTRO del if después de llamar al callback
+          dragId = null;
+          draggingFromSlot = false;
+          originalSlotIndex = null;
+          return;
         }
-
-        dragId = null;
-        draggingFromSlot = false;
-        originalSlotIndex = null;
-        return;
       }
 
       // 1C fallback: quitar del slot
-
       if (cbs.onRemoveFromSlot) {
         cbs.onRemoveFromSlot(cid, originalSlotIndex);
       }

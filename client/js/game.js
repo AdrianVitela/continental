@@ -1167,7 +1167,6 @@ function createCardElement(c, fromSlot = null) {
     return el;
 }
 
-// MODIFICADO: Permitir cualquier combinación durante la construcción
 function handleBuildingDrop(cartaId, slotIndex, slotType) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) {
@@ -1175,13 +1174,17 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
         return;
     }
     
-    const carta = me.mano.find(c => c.id === cartaId);
-    if (!carta) return;
+    // Buscar la carta en la mano
+    const cartaIndex = me.mano.findIndex(c => c.id === cartaId);
+    if (cartaIndex === -1) {
+        toast('Carta no encontrada en la mano');
+        return;
+    }
     
-    // Verificar que la carta no esté ya en otro slot
+    // Verificar que no esté ya en otro slot
     let cartaEnOtroSlot = false;
-    buildingCards.forEach((cards, idx) => {
-        if (cards.includes(cartaId)) cartaEnOtroSlot = true;
+    buildingCards.forEach((cards) => {
+        if (cards.some(c => c.id === cartaId)) cartaEnOtroSlot = true;
     });
     
     if (cartaEnOtroSlot) {
@@ -1189,33 +1192,24 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
         return;
     }
     
-    // Obtener el slot
-    const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
-    if (!slot) return;
+    // QUITAR la carta de la mano (guardamos una copia)
+    const [cartaMovida] = me.mano.splice(cartaIndex, 1);
     
-    // NO validamos aquí - permitimos cualquier combinación durante la construcción
-    // Las validaciones se harán solo al hacer clic en "Bajarme"
-    
-    // Obtener o crear el array para este slot
+    // AÑADIR la carta COMPLETA al slot
     if (!buildingCards.has(slotIndex)) {
         buildingCards.set(slotIndex, []);
     }
-    
     const slotCards = buildingCards.get(slotIndex);
-    slotCards.push(cartaId);
+    slotCards.push(cartaMovida); // Guardamos la carta completa
     
-    // Actualizar UI del slot
+    // Actualizar UI
     updateSlotUI(slotIndex, slotCards);
-    
-    // Remover la carta de discard zone
-    const cartaEl = document.querySelector(`.card[data-id="${cartaId}"]`);
-    if (cartaEl) cartaEl.remove();
+    renderHand();
     
     selId = null;
-    toast(`Carta agregada a ${slotType}`, 'green');
+    toast(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`, 'green');
 }
 
-// MODIFICAR: Actualizar UI del slot (usar createCardElement con fromSlot)
 function updateSlotUI(slotIndex, cards) {
     const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
     if (!slot) return;
@@ -1223,18 +1217,10 @@ function updateSlotUI(slotIndex, cards) {
     const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
     if (!cardsContainer) return;
     
-    const me = G.jugadores[myIdx];
-    
-    cardsContainer.innerHTML = ''; // Limpiar
-    
-    // Crear elementos para cada carta en el slot
-    cards.forEach(cardId => {
-        const carta = me.mano.find(c => c.id === cardId);
-        if (carta) {
-            const cardEl = createCardElement(carta, slotIndex);
-            cardsContainer.appendChild(cardEl);
-        }
-    });
+    // cards ya son objetos de carta COMPLETOS
+    cardsContainer.innerHTML = cards.map(carta => {
+        return carta ? cSm(carta) : '';
+    }).join('');
     
     const countSpan = slot.querySelector('.building-slot-count');
     const minCards = parseInt(slot.dataset.minCards);
@@ -1290,28 +1276,32 @@ function handleReturnToHand(cartaId, slotIndex) {
         return;
     }
     
+    // Obtener las cartas del slot
     const slotCards = buildingCards.get(slotIndex);
-    if (!slotCards || !slotCards.includes(cartaId)) return;
+    if (!slotCards) return;
     
-    // Quitar del slot
-    const index = slotCards.indexOf(cartaId);
-    if (index > -1) {
-        slotCards.splice(index, 1);
-        if (slotCards.length === 0) {
-            buildingCards.delete(slotIndex);
-        }
-        
-        // Actualizar visual del slot
-        updateSlotUI(slotIndex, slotCards);
-        
-        // Re-renderizar TODA la mano → la carta vuelve a sobrantes
-        renderHand();
-        
-        toast('Carta devuelta a sobrantes', 'green');
+    // Buscar la carta COMPLETA en el slot
+    const cartaIndex = slotCards.findIndex(c => c.id === cartaId);
+    if (cartaIndex === -1) return;
+    
+    // QUITAR la carta COMPLETA del slot
+    const [cartaDevuelta] = slotCards.splice(cartaIndex, 1);
+    
+    // Si el slot queda vacío, eliminarlo
+    if (slotCards.length === 0) {
+        buildingCards.delete(slotIndex);
     }
+    
+    // VOLVER a poner la carta COMPLETA en la mano
+    me.mano.push(cartaDevuelta);
+    
+    // Actualizar UI
+    updateSlotUI(slotIndex, slotCards);
+    renderHand();
+    
+    toast(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`, 'green');
 }
 
-// NUEVA FUNCIÓN: Mover carta entre slots
 function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) {
@@ -1319,31 +1309,30 @@ function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType)
         return;
     }
     
-    // Verificar que la carta existe en el slot de origen
+    // Obtener cartas del slot origen
     const fromSlotCards = buildingCards.get(fromSlotIndex);
-    if (!fromSlotCards || !fromSlotCards.includes(cartaId)) return;
+    if (!fromSlotCards) return;
     
-    // Remover del slot origen
-    const index = fromSlotCards.indexOf(cartaId);
-    if (index > -1) {
-        fromSlotCards.splice(index, 1);
-        
-        // Si el slot origen queda vacío, eliminarlo
-        if (fromSlotCards.length === 0) {
-            buildingCards.delete(fromSlotIndex);
-        }
-        
-        // Actualizar UI del slot origen
+    // Buscar la carta COMPLETA en el slot origen
+    const cartaIndex = fromSlotCards.findIndex(c => c.id === cartaId);
+    if (cartaIndex === -1) return;
+    
+    // QUITAR la carta COMPLETA del slot origen
+    const [cartaMovida] = fromSlotCards.splice(cartaIndex, 1);
+    
+    // Si el slot origen queda vacío, eliminarlo
+    if (fromSlotCards.length === 0) {
+        buildingCards.delete(fromSlotIndex);
+    } else {
         updateSlotUI(fromSlotIndex, fromSlotCards);
     }
     
-    // Agregar al slot destino
+    // AÑADIR la carta COMPLETA al slot destino
     if (!buildingCards.has(toSlotIndex)) {
         buildingCards.set(toSlotIndex, []);
     }
-    
     const toSlotCards = buildingCards.get(toSlotIndex);
-    toSlotCards.push(cartaId);
+    toSlotCards.push(cartaMovida);
     
     // Actualizar UI del slot destino
     updateSlotUI(toSlotIndex, toSlotCards);

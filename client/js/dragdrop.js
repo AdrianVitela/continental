@@ -6,6 +6,7 @@ const DragDrop = (() => {
   let dragId = null;
   let dragSource = null; // 'hand' o 'fondo'
   let ghost = null;
+  let draggingFromSlot = false; // Nueva bandera para saber si la carta viene de un slot
 
   // Obtiene coordenadas del evento (mouse o touch)
   function getPoint(e) {
@@ -92,12 +93,23 @@ const DragDrop = (() => {
       fw.style.outline = over ? '2px solid var(--red-hi)' : '';
       fw.style.borderRadius = over ? 'var(--r)' : '';
     }
+    
+    // Resaltar zona de sobrantes cuando se arrastra desde un slot
+    if (draggingFromSlot) {
+      const hz = document.getElementById('discard-zone');
+      if (hz) {
+        const hr = hz.getBoundingClientRect();
+        const overDiscard = mx >= hr.left && mx <= hr.right && my >= hr.top && my <= hr.bottom;
+        hz.classList.toggle('drop-target-sobrantes', overDiscard);
+      }
+    }
   }
 
   // Limpia todos los indicadores visuales
   function cleanDropZones() {
     document.getElementById('discard-zone')?.querySelectorAll('.insert-ghost').forEach(g => g.remove());
     document.getElementById('discard-zone')?.classList.remove('drag-over');
+    document.getElementById('discard-zone')?.classList.remove('drop-target-sobrantes');
     document.querySelectorAll('.bajada-pile').forEach(p => p.classList.remove('drop-target'));
     document.querySelectorAll('.building-slot').forEach(s => s.classList.remove('drop-target'));
     
@@ -106,6 +118,8 @@ const DragDrop = (() => {
       fw.style.outline = ''; 
       fw.style.borderRadius = ''; 
     }
+    
+    draggingFromSlot = false; // Resetear bandera
   }
 
   // Inicia arrastre desde la MANO del jugador
@@ -114,6 +128,10 @@ const DragDrop = (() => {
     
     dragId = cid;
     dragSource = 'hand';
+    
+    // Verificar si la carta viene de un slot
+    draggingFromSlot = el?.dataset.slot !== undefined;
+    
     ghost = mkGhost(el, getPoint(e));
     el.classList.add('dragging');
 
@@ -129,7 +147,10 @@ const DragDrop = (() => {
       const pt = getPoint(ev);
       ghost?.g.remove();
       ghost = null;
+      
+      // Limpiar zonas resaltadas
       cleanDropZones();
+      
       el.classList.remove('dragging');
       _endHandDrag(pt, cid, callbacks);
       
@@ -151,7 +172,7 @@ const DragDrop = (() => {
     const draggedEl = document.querySelector(`.card[data-id="${cid}"]`);
     const fromSlot = draggedEl?.dataset.slot;
     
-    // 0. Si viene de un slot, manejar diferentes casos
+    // Si viene de un slot, manejar diferentes casos
     if (fromSlot !== undefined) {
       // Verificar si se soltó en un building slot (para mover entre slots)
       const destSlot = document.elementFromPoint(pt.x, pt.y)?.closest('.building-slot');
@@ -162,16 +183,25 @@ const DragDrop = (() => {
         const destSlotType = destSlot.dataset.slotType;
         if (cbs.onMoveBetweenSlots) {
           cbs.onMoveBetweenSlots(cid, parseInt(fromSlot), parseInt(destSlotIndex), destSlotType);
-        } else {
-          // Si no hay callback para mover, tratarlo como remover
-          if (cbs.onRemoveFromSlot) {
-            cbs.onRemoveFromSlot(cid, parseInt(fromSlot));
-          }
         }
         dragId = null;
         return;
       } else {
-        // Se soltó fuera de cualquier slot - sacar la carta
+        // Verificar si se soltó en la zona de sobrantes (discard-zone)
+        const hz = document.getElementById('discard-zone');
+        if (hz) {
+          const hr = hz.getBoundingClientRect();
+          if (pt.x >= hr.left && pt.x <= hr.right && pt.y >= hr.top && pt.y <= hr.bottom) {
+            // Se soltó en sobrantes - sacar la carta del slot
+            if (cbs.onRemoveFromSlot) {
+              cbs.onRemoveFromSlot(cid, parseInt(fromSlot));
+              dragId = null;
+              return;
+            }
+          }
+        }
+        
+        // Se soltó fuera de cualquier zona válida - sacar la carta igualmente
         if (cbs.onRemoveFromSlot) {
           cbs.onRemoveFromSlot(cid, parseInt(fromSlot));
           dragId = null;
@@ -240,6 +270,7 @@ const DragDrop = (() => {
     if (e.type === 'touchstart') e.preventDefault();
     
     dragSource = 'fondo';
+    draggingFromSlot = false; // Las cartas del fondo no vienen de slots
     ghost = mkGhost(cardEl, getPoint(e));
     cardEl.style.opacity = '.2';
 

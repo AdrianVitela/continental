@@ -1249,7 +1249,10 @@ function updateSlotUI(slotIndex, cards) {
 // MODIFICADO: Manejar cuando se arrastra una carta desde un slot
 function handleRemoveFromSlot(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
-    if (!me) return;
+    if (!me || me.bajado) {
+        toast('Ya estás bajado, no puedes modificar jugadas');
+        return;
+    }
     
     // Verificar que la carta existe en el slot
     const slotCards = buildingCards.get(slotIndex);
@@ -1268,8 +1271,9 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
         // Actualizar UI del slot (esto elimina la carta visualmente del slot)
         updateSlotUI(slotIndex, slotCards);
         
-        // NO llamar a renderHand() aquí - eso causa el problema
-        // En su lugar, la carta debería aparecer en discard zone cuando soltemos
+        // IMPORTANTE: Renderizar la mano completa para que la carta
+        // reaparezca en discard-zone
+        renderHand();
         
         toast('Carta removida de la jugada', 'green');
     }

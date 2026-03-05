@@ -1148,6 +1148,10 @@ function createCardElement(c, fromSlot = null) {
     },
     onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType) => {
         handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType);
+    },
+
+    onReturnToHand: (id, slotIndex) => {
+        handleReturnToHand(id, slotIndex);
     }
 };
     
@@ -1276,6 +1280,34 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
         renderHand();
         
         toast('Carta removida de la jugada', 'green');
+    }
+}
+
+function handleReturnToHand(cartaId, slotIndex) {
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) {
+        toast('Ya estás bajado, no puedes modificar jugadas', 'red');
+        return;
+    }
+    
+    const slotCards = buildingCards.get(slotIndex);
+    if (!slotCards || !slotCards.includes(cartaId)) return;
+    
+    // Quitar del slot
+    const index = slotCards.indexOf(cartaId);
+    if (index > -1) {
+        slotCards.splice(index, 1);
+        if (slotCards.length === 0) {
+            buildingCards.delete(slotIndex);
+        }
+        
+        // Actualizar visual del slot
+        updateSlotUI(slotIndex, slotCards);
+        
+        // Re-renderizar TODA la mano → la carta vuelve a sobrantes
+        renderHand();
+        
+        toast('Carta devuelta a sobrantes', 'green');
     }
 }
 

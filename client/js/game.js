@@ -291,8 +291,6 @@ function acBajar() {
     cancelIntercambio();
 }
 
-// También agrega esta validación en handleSlotDrop (dentro de la función existente):
-
 function handleSlotDrop(e) {
     e.preventDefault();
     const slot = e.currentTarget;
@@ -314,8 +312,9 @@ function handleSlotDrop(e) {
     const slotType = slot.dataset.slotType;
     const minCards = parseInt(slot.dataset.minCards);
     
-    // Validación: asegurar que tenemos los datos del slot
+    // ⚠️ ¡ESTAS VALIDACIONES SON CRÍTICAS! ⚠️
     if (slotIndex === undefined || slotType === undefined || isNaN(minCards)) {
+        console.error('Slot inválido:', {slotIndex, slotType, minCards});
         toast('Error: Slot inválido');
         return;
     }
@@ -331,10 +330,6 @@ function handleSlotDrop(e) {
         return;
     }
     
-    // Aquí podrías agregar validaciones específicas según el tipo de slot
-    // Por ejemplo, para tercia: todas las cartas deben tener el mismo valor
-    // Para corrida: mismo palo y valores consecutivos
-    
     // Obtener o crear el array para este slot
     if (!buildingCards.has(slotIndex)) {
         buildingCards.set(slotIndex, []);
@@ -342,7 +337,7 @@ function handleSlotDrop(e) {
     
     const slotCards = buildingCards.get(slotIndex);
     
-    // Validación simple: no más de 13 cartas por slot (máximo posible)
+    // Validación: no más de 13 cartas por slot (máximo posible)
     if (slotCards.length >= 13) {
         toast('Demasiadas cartas en este slot');
         return;

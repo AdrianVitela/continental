@@ -162,9 +162,14 @@ const DragDrop = (() => {
         const destSlotType = destSlot.dataset.slotType;
         if (cbs.onMoveBetweenSlots) {
           cbs.onMoveBetweenSlots(cid, parseInt(fromSlot), parseInt(destSlotIndex), destSlotType);
-          dragId = null;
-          return;
+        } else {
+          // Si no hay callback para mover, tratarlo como remover
+          if (cbs.onRemoveFromSlot) {
+            cbs.onRemoveFromSlot(cid, parseInt(fromSlot));
+          }
         }
+        dragId = null;
+        return;
       } else {
         // Se soltó fuera de cualquier slot - sacar la carta
         if (cbs.onRemoveFromSlot) {

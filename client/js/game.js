@@ -1123,18 +1123,20 @@ function createCardElement(c, fromSlot = null) {
     });
     
     const dragCallbacks = {
-        isPayable,
-        onPagar: id => acPagar(id),
-        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
-        onReorder: (id, beforeId) => acReorder(id, beforeId),
-        onBuildingDrop: (id, slotIndex, slotType) => {
-            handleBuildingDrop(id, slotIndex, slotType);
-        },
-        // NUEVO: callback para cuando se arrastra desde un slot
-        onRemoveFromSlot: (id, slotIndex) => {
-            handleRemoveFromSlot(id, slotIndex);
-        }
-    };
+    isPayable,
+    onPagar: id => acPagar(id),
+    onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+    onReorder: (id, beforeId) => acReorder(id, beforeId),
+    onBuildingDrop: (id, slotIndex, slotType) => {
+        handleBuildingDrop(id, slotIndex, slotType);
+    },
+    onRemoveFromSlot: (id, slotIndex) => {
+        handleRemoveFromSlot(id, slotIndex);
+    },
+    onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType) => {
+        handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType);
+    }
+};
     
     el.addEventListener('mousedown', e => {
         if (e.button !== 0) return;
@@ -1253,8 +1255,7 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
         // Actualizar UI del slot
         updateSlotUI(slotIndex, slotCards);
         
-        // La carta volverá a aparecer en discard zone cuando se renderice
-        // Pero necesitamos forzar un render para que aparezca
+        // Forzar render completo para que la carta aparezca en discard zone
         renderHand();
         
         toast('Carta removida de la jugada', 'green');

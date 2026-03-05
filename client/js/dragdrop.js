@@ -139,7 +139,7 @@ const DragDrop = (() => {
     dragSource = 'hand';
     originalCardEl = el;
 
-    draggingFromSlot = el?.dataset.slot !== undefined;
+    draggingFromSlot = el?.hasAttribute('data-slot');
     originalSlotIndex = draggingFromSlot ? parseInt(el.dataset.slot) : null;
 
     ghost = mkGhost(el, getPoint(e));

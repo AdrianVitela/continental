@@ -27,6 +27,9 @@ const REQ = {
     7: { t: 0, c: 3 }
 };
 
+// Valores numéricos para validar secuencias
+const VN = { 'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13 };
+
 let G = null;
 let myIdx = -1;
 let selId = null;
@@ -210,54 +213,119 @@ function acCastigo(acepta) {
     cancelIntercambio();
 }
 
+// MODIFICADO: Validación al bajar
 function acBajar() {
     // Construir las jugadas desde los slots
     const slots = document.querySelectorAll('.building-slot');
     const jugadas = [];
     const cartasUsadas = new Set();
     
-    slots.forEach(slot => {
+    // Primero, validar que cada slot tenga una combinación válida
+    for (const slot of slots) {
         const slotIndex = slot.dataset.slotIndex;
         const slotType = slot.dataset.slotType;
         const cards = buildingCards.get(slotIndex) || [];
         
-        if (cards.length > 0) {
-            // Verificar que las cartas existen en la mano
-            const cartasValidas = cards.filter(cardId => 
-                G.jugadores[myIdx].mano.some(c => c.id === cardId)
-            );
+        if (cards.length === 0) continue; // Slot vacío, no se usa
+        
+        // Obtener las cartas reales de la mano
+        const cartasReales = cards.map(cardId => 
+            G.jugadores[myIdx].mano.find(c => c.id === cardId)
+        ).filter(Boolean);
+        
+        if (cartasReales.length === 0) continue;
+        
+        // VALIDACIÓN SEGÚN TIPO DE SLOT
+        if (slotType === 'tercia') {
+            // Todas deben ser del mismo valor (o comodines)
+            const valores = cartasReales.map(c => c.comodin ? null : c.valor).filter(Boolean);
+            if (valores.length > 0) {
+                const primerValor = valores[0];
+                const todosIguales = valores.every(v => v === primerValor);
+                if (!todosIguales) {
+                    toast(`❌ Error en ${slotType}: todas las cartas deben ser del mismo valor (${primerValor})`);
+                    return;
+                }
+            }
             
-            if (cartasValidas.length > 0) {
-                cartasValidas.forEach(id => cartasUsadas.add(id));
-                jugadas.push({
-                    tipo: slotType,
-                    cartasIds: cartasValidas
-                });
+            // Mínimo 3 cartas
+            if (cartasReales.length < 3) {
+                toast(`❌ Tercia necesita al menos 3 cartas (tienes ${cartasReales.length})`);
+                return;
+            }
+        } else if (slotType === 'corrida') {
+            // Todas deben ser del mismo palo (o comodines)
+            const palos = cartasReales.map(c => c.comodin ? null : c.palo).filter(Boolean);
+            if (palos.length > 0) {
+                const primerPalo = palos[0];
+                const todosIguales = palos.every(p => p === primerPalo);
+                if (!todosIguales) {
+                    toast(`❌ Error en ${slotType}: todas las cartas deben ser del mismo palo (${primerPalo})`);
+                    return;
+                }
+            }
+            
+            // Validar que sea una secuencia válida
+            const valores = cartasReales.map(c => {
+                if (c.comodin) return null;
+                return VN[c.valor] || parseInt(c.valor);
+            }).filter(v => v !== null).sort((a, b) => a - b);
+            
+            if (valores.length >= 2) {
+                // Verificar que no haya duplicados
+                const unicos = new Set(valores);
+                if (unicos.size !== valores.length) {
+                    toast(`❌ Error en corrida: no puede haber valores repetidos`);
+                    return;
+                }
+                
+                // Verificar secuencia (permitiendo huecos que serán llenados con comodines)
+                const comodinesCount = cartasReales.filter(c => c.comodin).length;
+                const huecosNecesarios = (valores[valores.length - 1] - valores[0] + 1) - valores.length;
+                
+                if (huecosNecesarios > comodinesCount) {
+                    toast(`❌ Corrida inválida: faltan ${huecosNecesarios} cartas y solo tienes ${comodinesCount} comodines`);
+                    return;
+                }
+            }
+            
+            // Mínimo 4 cartas
+            if (cartasReales.length < 4) {
+                toast(`❌ Corrida necesita al menos 4 cartas (tienes ${cartasReales.length})`);
+                return;
             }
         }
-    });
+        
+        // Si pasó las validaciones, agregar a jugadas
+        cartasReales.forEach(c => cartasUsadas.add(c.id));
+        jugadas.push({
+            tipo: slotType,
+            cartasIds: cards
+        });
+    }
     
-    // Validar que tenemos las jugadas necesarias
+    // Validar que tenemos las jugadas necesarias según la ronda
     const req = REQ[G.ronda];
     const tercias = jugadas.filter(j => j.tipo === 'tercia').length;
     const corridas = jugadas.filter(j => j.tipo === 'corrida').length;
     
     if (tercias < req.t || corridas < req.c) {
-        toast(`Necesitas ${req.t} tercias (mínimo 3 cartas) y ${req.c} corridas (mínimo 4 cartas)`);
+        toast(`❌ Necesitas ${req.t} tercias y ${req.c} corridas (tienes ${tercias} tercias, ${corridas} corridas)`);
         return;
     }
     
-    // Verificar que no haya cartas repetidas
+    // Verificar que no haya cartas repetidas entre slots
     if (cartasUsadas.size !== jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0)) {
-        toast('Error: Cartas duplicadas en las jugadas');
+        toast('❌ Error: Cartas duplicadas en las jugadas');
         return;
     }
     
-    // Enviar al servidor con las jugadas construidas
-    WS.send({ 
-        type: 'bajar', 
-        jugadas: jugadas
-    });
+    // TODO: Enviar al servidor con las jugadas construidas
+    toast('✅ Jugadas válidas! (simulación - falta conectar con servidor)', 'green');
+    console.log('Jugadas válidas:', jugadas);
+    
+    // Descomentar cuando el servidor esté listo:
+    // WS.send({ type: 'bajar', jugadas: jugadas });
     
     cancelIntercambio();
 }
@@ -883,9 +951,6 @@ function handleSlotDrop(e) {
         return;
     }
     
-    // Aquí podrías agregar validaciones específicas según el tipo de slot
-    // Por ahora, simplemente agregamos la carta al slot
-    
     // Obtener o crear el array para este slot
     if (!buildingCards.has(slotIndex)) {
         buildingCards.set(slotIndex, []);
@@ -895,23 +960,7 @@ function handleSlotDrop(e) {
     slotCards.push(selId);
     
     // Actualizar UI
-    const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
-    if (cardsContainer) {
-        cardsContainer.innerHTML = slotCards.map(cardId => {
-            const c = me.mano.find(c => c.id === cardId);
-            return c ? cSm(c) : '';
-        }).join('');
-    }
-    
-    // Actualizar contador
-    const countSpan = slot.querySelector('.building-slot-count');
-    if (countSpan) {
-        countSpan.textContent = `${slotCards.length}/${minCards}+`;
-        if (slotCards.length >= minCards) {
-            countSpan.classList.add('valid');
-            slot.classList.add('complete');
-        }
-    }
+    updateSlotUI(slotIndex, slotCards);
     
     // Remover la carta de discard zone
     const cartaEl = document.querySelector(`.card[data-id="${selId}"]`);
@@ -955,7 +1004,7 @@ function createCardElement(c) {
         onPagar: id => acPagar(id),
         onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
         onReorder: (id, beforeId) => acReorder(id, beforeId),
-        onBuildingDrop: (id, slotIndex, slotType) => { // NUEVO callback para building slots
+        onBuildingDrop: (id, slotIndex, slotType) => { // Callback para building slots
             handleBuildingDrop(id, slotIndex, slotType);
         }
     };
@@ -972,7 +1021,7 @@ function createCardElement(c) {
     return el;
 }
 
-// NUEVA FUNCIÓN: Manejar drop en building slots
+// MODIFICADO: Permitir cualquier combinación durante la construcción
 function handleBuildingDrop(cartaId, slotIndex, slotType) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) {
@@ -1000,31 +1049,8 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
     
     const minCards = parseInt(slot.dataset.minCards);
     
-    // Aquí puedes agregar validaciones específicas según el tipo de slot
-    // Por ejemplo, para tercias validar que todas tengan el mismo valor
-    if (slotType === 'tercia') {
-        const slotCards = buildingCards.get(slotIndex) || [];
-        if (slotCards.length > 0) {
-            // Verificar que la nueva carta tenga el mismo valor que las existentes
-            const primeraCarta = me.mano.find(c => c.id === slotCards[0]);
-            if (primeraCarta && carta.valor !== primeraCarta.valor) {
-                toast(`Las tercias deben ser del mismo valor (${primeraCarta.valor})`);
-                return;
-            }
-        }
-    }
-    
-    // Para corridas, validar mismo palo
-    if (slotType === 'corrida') {
-        const slotCards = buildingCards.get(slotIndex) || [];
-        if (slotCards.length > 0) {
-            const primeraCarta = me.mano.find(c => c.id === slotCards[0]);
-            if (primeraCarta && carta.palo !== primeraCarta.palo) {
-                toast(`Las corridas deben ser del mismo palo (${primeraCarta.palo})`);
-                return;
-            }
-        }
-    }
+    // NO validamos aquí - permitimos cualquier combinación durante la construcción
+    // Las validaciones se harán solo al hacer clic en "Bajarme"
     
     // Obtener o crear el array para este slot
     if (!buildingCards.has(slotIndex)) {

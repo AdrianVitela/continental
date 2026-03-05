@@ -550,16 +550,26 @@ input[type=text]::placeholder {
    RESPONSIVE DESIGN - MEDIA QUERIES
    ============================================ */
 
-/* Variables de escala para cartas */
 :root {
-  /* Tamaños base (desktop) */
-  --cw: 62px;
-  --ch: 90px;
-  --cw-sm: 40px;
-  --ch-sm: 58px;
-  --card-scale: 1;
-  --hand-gap: 6px;
-  --hand-padding: 8px 10px;
+  --gold: #c8a045;
+  --gold-hi: #e8c870;
+  --gold-dim: #7a5f22;
+  --red: #b83030;
+  --red-hi: #e04040;
+  --felt: #1a3d28;
+  --felt-deep: #0e2419;
+  --text: #f0e8d5;
+  --text-dim: #8a7a60;
+  --text-muted: #5a4e3a;
+  --ink: #111;
+  --sh-card: 0 4px 14px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --cw: 52px;        /* Reducido de 62px */
+  --ch: 76px;        /* Reducido de 90px */
+  --cw-sm: 34px;     /* Reducido de 40px */
+  --ch-sm: 48px;     /* Reducido de 58px */
+  --r: 5px;          /* Reducido de 7px */
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --eout: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* === Laptops pequeñas / tablets grandes (992px - 1200px) === */

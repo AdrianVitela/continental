@@ -368,13 +368,13 @@
   min-height: calc(var(--ch) + 5px);
 }
 
-/* ===== NUEVA ESTRUCTURA DE DOS FILAS ===== */
+/* ===== SECCIÓN DEL JUGADOR (más compacta) ===== */
 .player-section {
   flex-shrink: 0;
   height: auto;
-  min-height: 280px;
+  min-height: 200px; /* Reducido de 280px */
   border-top: 1px solid rgba(200,160,69,.1);
-  padding: 8px 0;
+  padding: 4px 0; /* Reducido padding */
   background: rgba(0,0,0,.2);
   backdrop-filter: blur(5px);
   z-index: 5;
@@ -385,30 +385,36 @@
 
 @media (max-width: 991px) {
   .player-section {
-    min-height: 240px;
+    min-height: 180px; /* Reducido */
   }
 }
 
 @media (max-width: 767px) {
   .player-section {
-    min-height: 200px;
-    padding: 5px 0;
+    min-height: 160px; /* Reducido */
+    padding: 3px 0;
   }
 }
 
-/* Etiquetas de fila */
+@media (max-width: 575px) {
+  .player-section {
+    min-height: 140px; /* Reducido */
+  }
+}
+
+/* Etiquetas de fila más compactas */
 .row-label {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
   max-width: 1200px;
-  margin: 5px auto 2px;
-  padding: 0 15px;
-  font-size: 0.8rem;
+  margin: 2px auto; /* Reducido margen */
+  padding: 0 10px; /* Reducido padding */
+  font-size: 0.7rem; /* Texto más pequeño */
   color: var(--gold);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .row-label span:first-child {
@@ -416,24 +422,24 @@
 }
 
 .row-desc {
-  font-size: 0.7rem;
+  font-size: 0.6rem; /* Más pequeño */
   color: var(--text-dim);
   text-transform: none;
 }
 
-/* FILA 1: Zona de sobrantes (arriba) */
+/* FILA 1: Zona de sobrantes (más compacta) */
 .discard-zone {
   display: flex;
-  gap: var(--hand-gap, 6px);
+  gap: 4px; /* Reducido gap */
   align-items: flex-end;
-  padding: var(--hand-padding, 8px 15px);
+  padding: 4px 10px; /* Reducido padding */
   background: rgba(0,0,0,.15);
   border: 2px dashed rgba(255,255,255,.07);
-  border-radius: 12px;
+  border-radius: 8px; /* Borde más pequeño */
   overflow-x: auto;
   overflow-y: hidden;
   flex-wrap: nowrap;
-  min-height: calc(var(--ch) + 10px);
+  min-height: calc(var(--ch) - 5px); /* Altura reducida */
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -444,29 +450,142 @@
   scrollbar-color: var(--text-muted) rgba(255,255,255,0.1);
 }
 
-/* FILA 2: Fila de construcción (abajo) */
+/* FILA 2: Fila de construcción (más compacta) */
 .building-row {
   display: flex;
-  gap: 20px;
+  gap: 10px; /* Reducido gap */
   justify-content: center;
   width: 100%;
   max-width: 1200px;
-  margin: 5px auto 0;
-  padding: 0 15px;
-  min-height: calc(var(--ch) + 40px);
+  margin: 2px auto 0; /* Reducido margen */
+  padding: 0 10px; /* Reducido padding */
+  min-height: calc(var(--ch) + 15px); /* Altura reducida */
 }
 
-/* Slots de jugadas (lado izquierdo y derecho) */
+/* Slots más compactos */
 .building-slot {
   flex: 1;
-  max-width: 400px;
+  max-width: 350px; /* Reducido max-width */
   display: flex;
   flex-direction: column;
   background: rgba(0,0,0,.2);
   border: 2px solid rgba(200,160,69,.2);
-  border-radius: 12px;
-  padding: 10px;
+  border-radius: 8px; /* Borde más pequeño */
+  padding: 5px; /* Reducido padding */
   transition: all 0.2s ease;
+}
+
+.building-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px; /* Reducido */
+  padding: 0 3px; /* Reducido */
+}
+
+.building-slot-title {
+  font-size: 0.75rem; /* Más pequeño */
+  font-weight: 600;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.building-slot-count {
+  font-size: 0.65rem; /* Más pequeño */
+  color: var(--text-dim);
+  background: rgba(0,0,0,.3);
+  padding: 1px 5px; /* Reducido */
+  border-radius: 8px;
+}
+
+.building-slot-cards {
+  display: flex;
+  gap: 2px; /* Reducido gap */
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: calc(var(--ch) - 15px); /* Altura reducida */
+  padding: 2px; /* Reducido */
+}
+
+.slot-hint {
+  font-size: 0.55rem; /* Más pequeño */
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2px; /* Reducido */
+  border-top: 1px dashed rgba(255,255,255,.1);
+  margin-top: 2px; /* Reducido */
+}
+
+/* Cartas más pequeñas en los slots */
+.building-slot .card-sm {
+  width: calc(var(--cw-sm) - 4px); /* Reducir aún más */
+  height: calc(var(--ch-sm) - 4px);
+  font-size: 0.7rem; /* Texto más pequeño */
+}
+
+.building-slot .card-sm.natural {
+  font-size: 0.7rem;
+}
+
+.building-slot .card-sm.joker-sm {
+  font-size: 0.8rem;
+}
+
+/* Responsive para móviles */
+@media (max-width: 991px) {
+  .building-slot-title {
+    font-size: 0.7rem;
+  }
+  
+  .building-slot-count {
+    font-size: 0.6rem;
+  }
+  
+  .slot-hint {
+    font-size: 0.5rem;
+  }
+  
+  .building-slot .card-sm {
+    width: calc(var(--cw-sm) - 6px);
+    height: calc(var(--ch-sm) - 6px);
+  }
+}
+
+@media (max-width: 767px) {
+  .building-row {
+    flex-direction: column;
+    gap: 5px;
+    align-items: center;
+  }
+  
+  .building-slot {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .row-label {
+    font-size: 0.65rem;
+  }
+  
+  .row-desc {
+    font-size: 0.55rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .building-slot-title {
+    font-size: 0.65rem;
+  }
+  
+  .building-slot-count {
+    font-size: 0.55rem;
+    padding: 1px 4px;
+  }
+  
+  .slot-hint {
+    font-size: 0.45rem;
+  }
 }
 
 .building-slot:hover {

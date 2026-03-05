@@ -274,16 +274,6 @@ function construirJugadas(mano, ronda) {
     terciasUsadas.forEach(t => t.forEach(c => cartasUsadas.add(c.id)));
     corridasUsadas.forEach(c => c.forEach(carta => cartasUsadas.add(carta.id)));
     
-    // Guardar el valor que reemplaza cada comodín
-    [...terciasUsadas, ...corridasUsadas].forEach(jugada => {
-        jugada.forEach(c => {
-            if (c.comodin) {
-                // Temporalmente, guardamos el valor que reemplaza
-                // Esto se actualizará cuando se cree la jugada oficial
-            }
-        });
-    });
-    
     return {
         tercias: terciasUsadas,
         corridas: corridasUsadas,
@@ -331,6 +321,217 @@ function puedeAcomodar(carta, jugada) {
     return jugada.tipo === 'tercia'
         ? puedeAcomodarEnTercia(carta, jugada.cartas)
         : puedeAcomodarEnCorrida(carta, jugada.cartas);
+}
+
+// ═══════════════════════════════════════════════════
+// NUEVAS FUNCIONES DE VALIDACIÓN PARA JUGADAS CONSTRUIDAS
+// ═══════════════════════════════════════════════════
+
+// Validar una tercia (puede estar desordenada)
+function validarTercia(cartas) {
+    if (cartas.length < 3) return false;
+    
+    // Separar normales y comodines
+    const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    
+    // Si solo hay comodines, es válido (mínimo 3)
+    if (normales.length === 0) return cartas.length >= 3;
+    
+    // Verificar que todas las normales sean del mismo valor
+    const primerValor = normales[0].valor;
+    const todosIguales = normales.every(c => c.valor === primerValor);
+    
+    if (!todosIguales) return false;
+    
+    // Verificar que no haya más de 8 cartas del mismo valor
+    // (2 barajas × 4 palos = máximo 8 cartas por valor)
+    if (normales.length > 8) return false;
+    
+    return true;
+}
+
+// Ordenar una corrida correctamente (detectando si es ascendente o descendente)
+function ordenarCorrida(cartas) {
+    // Separar normales y comodines
+    const normales = cartas.filter(c => !c.comodin).map(c => ({
+        ...c,
+        valorNum: VNUM[c.valor]
+    }));
+    
+    const comodines = cartas.filter(c => c.comodin);
+    
+    if (normales.length === 0) return cartas; // Solo comodines
+    
+    // Detectar la dirección de la secuencia
+    // Tomamos una muestra de hasta 3 cartas para decidir
+    const valores = normales.map(c => c.valorNum);
+    
+    // Función para verificar si una secuencia es continua
+    function esSecuenciaContinua(arr) {
+        for (let i = 0; i < arr.length - 1; i++) {
+            if (arr[i + 1] !== arr[i] + 1) return false;
+        }
+        return true;
+    }
+    
+    // Probar orden ascendente
+    const ascendente = [...valores].sort((a, b) => a - b);
+    const esAscendente = esSecuenciaContinua(ascendente);
+    
+    // Probar orden descendente
+    const descendente = [...valores].sort((a, b) => b - a);
+    const esDescendente = esSecuenciaContinua(descendente);
+    
+    // Ordenar según la dirección válida detectada
+    let normalesOrdenadas;
+    if (esAscendente) {
+        normalesOrdenadas = [...normales].sort((a, b) => a.valorNum - b.valorNum);
+    } else if (esDescendente) {
+        normalesOrdenadas = [...normales].sort((a, b) => b.valorNum - a.valorNum);
+    } else {
+        // Si ninguna dirección es continua, ordenamos ascendente por defecto
+        normalesOrdenadas = [...normales].sort((a, b) => a.valorNum - b.valorNum);
+    }
+    
+    // Insertar comodines en los huecos de la secuencia
+    const resultado = [];
+    const valoresOrdenados = normalesOrdenadas.map(c => c.valorNum);
+    
+    // Si hay comodines, intentar insertarlos en los huecos
+    if (comodines.length > 0) {
+        let comodinesRestantes = [...comodines];
+        
+        for (let i = 0; i < normalesOrdenadas.length; i++) {
+            resultado.push(normalesOrdenadas[i]);
+            
+            // Si no es el último, verificar si hay hueco hasta la siguiente carta
+            if (i < normalesOrdenadas.length - 1) {
+                const actual = valoresOrdenados[i];
+                const siguiente = valoresOrdenados[i + 1];
+                const hueco = Math.abs(siguiente - actual) - 1;
+                
+                // Insertar comodines en el hueco
+                for (let j = 0; j < hueco && comodinesRestantes.length > 0; j++) {
+                    resultado.push(comodinesRestantes.shift());
+                }
+            }
+        }
+        
+        // Añadir comodines restantes al final
+        resultado.push(...comodinesRestantes);
+    } else {
+        resultado.push(...normalesOrdenadas);
+    }
+    
+    return resultado;
+}
+
+// Validar una corrida (puede estar desordenada)
+function validarCorrida(cartas) {
+    if (cartas.length < 4) return false;
+    
+    // Separar normales y comodines
+    const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    
+    // Si solo hay comodines, es válido (mínimo 4)
+    if (normales.length === 0) return cartas.length >= 4;
+    
+    // Verificar que todas las normales sean del mismo palo
+    const primerPalo = normales[0].palo;
+    const mismoPalo = normales.every(c => c.palo === primerPalo);
+    
+    if (!mismoPalo) return false;
+    
+    // Obtener valores numéricos
+    const valores = normales.map(c => VNUM[c.valor]);
+    
+    // Función para verificar si una secuencia es continua con posibles comodines
+    function esSecuenciaContinua(vals, comodinesDisponibles) {
+        if (vals.length === 0) return true;
+        
+        for (let i = 0; i < vals.length - 1; i++) {
+            const esperado = vals[i] + 1;
+            const actual = vals[i + 1];
+            
+            if (actual === esperado) {
+                continue;
+            } else if (actual > esperado) {
+                const saltos = actual - esperado;
+                if (comodinesDisponibles >= saltos) {
+                    comodinesDisponibles -= saltos;
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Probar secuencia ascendente
+    const ascendente = [...valores].sort((a, b) => a - b);
+    if (esSecuenciaContinua(ascendente, comodines.length)) {
+        return true;
+    }
+    
+    // Probar secuencia descendente
+    const descendente = [...valores].sort((a, b) => b - a);
+    if (esSecuenciaContinua(descendente, comodines.length)) {
+        return true;
+    }
+    
+    // Caso especial: A puede ser 1 o 14 (después de K)
+    if (valores.includes(1) && valores.includes(13)) {
+        // Probar con A como 14
+        const valoresConAComo14 = valores.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+        if (esSecuenciaContinua(valoresConAComo14, comodines.length)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Validar TODAS las jugadas construidas
+function validarJugadasConstruidas(jugadas) {
+    const resultado = {
+        valido: true,
+        errores: [],
+        jugadasOrdenadas: []
+    };
+    
+    for (let i = 0; i < jugadas.length; i++) {
+        const jugada = jugadas[i];
+        const cartas = jugada.cartas;
+        
+        if (jugada.tipo === 'tercia') {
+            if (!validarTercia(cartas)) {
+                resultado.valido = false;
+                resultado.errores.push(`Tercia ${i+1} inválida`);
+            } else {
+                resultado.jugadasOrdenadas.push({
+                    tipo: 'tercia',
+                    cartas: cartas
+                });
+            }
+        } else if (jugada.tipo === 'corrida') {
+            if (!validarCorrida(cartas)) {
+                resultado.valido = false;
+                resultado.errores.push(`Corrida ${i+1} inválida`);
+            } else {
+                const cartasOrdenadas = ordenarCorrida(cartas);
+                resultado.jugadasOrdenadas.push({
+                    tipo: 'corrida',
+                    cartas: cartasOrdenadas
+                });
+            }
+        }
+    }
+    
+    return resultado;
 }
 
 // ═══════════════════════════════════════════════════
@@ -475,34 +676,73 @@ class GameEngine {
         }
     }
 
-    acBajar(playerId) {
+    acBajar(playerId, jugadasConstruidas) {
         const err = this._checkTurn(playerId, 'esperando_accion');
         if (err) return err;
         if (this.jActivo.bajado) return this._err('Ya te bajaste.');
         
-        const jugadas = construirJugadas(this.jActivo.mano, this.ronda);
-        if (!jugadas) return this._err('No cumples los requisitos.');
+        // Validar que se recibieron jugadas
+        if (!jugadasConstruidas || !Array.isArray(jugadasConstruidas) || jugadasConstruidas.length === 0) {
+            return this._err('No hay jugadas para bajar.');
+        }
         
-        // Registrar las jugadas y guardar valores de comodines
-        jugadas.tercias.forEach(t => {
-            const nuevaJugada = { tipo: 'tercia', cartas: t };
+        // Validar las jugadas construidas por el usuario
+        const validacion = validarJugadasConstruidas(jugadasConstruidas);
+        
+        if (!validacion.valido) {
+            return this._err(validacion.errores.join(', '));
+        }
+        
+        // Verificar que se cumplan los requisitos de la ronda
+        const terciasCount = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
+        const corridasCount = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
+        const req = REQ[this.ronda];
+        
+        if (terciasCount < req.t) {
+            return this._err(`Necesitas ${req.t} tercias (tienes ${terciasCount})`);
+        }
+        
+        if (corridasCount < req.c) {
+            return this._err(`Necesitas ${req.c} corridas (tienes ${corridasCount})`);
+        }
+        
+        // Recolectar IDs de todas las cartas usadas en las jugadas
+        const cartasUsadasIds = new Set();
+        validacion.jugadasOrdenadas.forEach(jugada => {
+            jugada.cartas.forEach(carta => {
+                cartasUsadasIds.add(carta.id);
+            });
+        });
+        
+        // Verificar que todas las cartas usadas están realmente en la mano del jugador
+        for (const cartaId of cartasUsadasIds) {
+            if (!this.jActivo.mano.some(c => c.id === cartaId)) {
+                return this._err(`Carta ${cartaId} no está en tu mano`);
+            }
+        }
+        
+        // Registrar las jugadas ordenadas
+        validacion.jugadasOrdenadas.forEach(jugada => {
+            const nuevaJugada = {
+                tipo: jugada.tipo,
+                cartas: jugada.cartas
+            };
             this.jActivo.jugadas.push(nuevaJugada);
             guardarValorComodin(nuevaJugada);
         });
         
-        jugadas.corridas.forEach(c => {
-            const nuevaJugada = { tipo: 'corrida', cartas: c };
-            this.jActivo.jugadas.push(nuevaJugada);
-            guardarValorComodin(nuevaJugada);
-        });
-        
-        this.jActivo.mano = jugadas.sobrantes;
+        // Quitar las cartas usadas de la mano
+        this.jActivo.mano = this.jActivo.mano.filter(c => !cartasUsadasIds.has(c.id));
         this.jActivo.bajado = true;
+        
         this.addLog(`🔥 ${this.jActivo.nombre} se bajó en ronda ${this.ronda}!`);
         this.lastAction = Date.now();
         
         if (this.jActivo.mano.length === 0) {
-            return this._finRonda(this.turno, { tipo: 'bajar', jugadas: this.jActivo.jugadas });
+            return this._finRonda(this.turno, { 
+                tipo: 'bajar', 
+                jugadas: this.jActivo.jugadas 
+            });
         }
         
         this.estado = 'esperando_pago';
@@ -540,9 +780,6 @@ class GameEngine {
         return this._ok('pagar', { carta, jugadorIdx: prevTurno, nextTurno: this.turno });
     }
 
-    // ═══════════════════════════════════════════════════
-    // NUEVA VERSIÓN: Intercambiar comodín (con validación de bajada)
-    // ═══════════════════════════════════════════════════
     acIntercambiarComodin(playerId, cartaId, origenJugadorIdx, origenJugadaIdx) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
@@ -550,7 +787,6 @@ class GameEngine {
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
         
-        // Solo se puede intercambiar después de haber robado (estado esperando_accion)
         if (this.estado !== 'esperando_accion') {
             return this._err('Debes robar una carta antes de intercambiar.');
         }
@@ -569,26 +805,22 @@ class GameEngine {
         
         const cartaParaIntercambiar = j.mano[cartaEnManoIdx];
         
-        // Verificar si la carta puede reemplazar al comodín
         if (!puedeReemplazarComodin(cartaParaIntercambiar, jugadaOrigen)) {
             return this._err('Esta carta no puede reemplazar al comodín en esa jugada.');
         }
         
-        // SIMULACIÓN: Verificar si después del intercambio puede bajarse
         const manoSimulada = [...j.mano];
-        manoSimulada.splice(cartaEnManoIdx, 1); // Quitar la carta que vamos a intercambiar
-        manoSimulada.push(jugadaOrigen.cartas[comodinIdx]); // Añadir el comodín
+        manoSimulada.splice(cartaEnManoIdx, 1);
+        manoSimulada.push(jugadaOrigen.cartas[comodinIdx]);
         
         if (!puedeBajarse(manoSimulada, this.ronda)) {
             return this._err('Después del intercambio no podrías bajarte. Debes poder bajarte inmediatamente.');
         }
         
-        // Realizar el intercambio
         const comodin = jugadaOrigen.cartas[comodinIdx];
         jugadaOrigen.cartas[comodinIdx] = cartaParaIntercambiar;
         j.mano[cartaEnManoIdx] = comodin;
         
-        // Guardar el nuevo valor que reemplaza el comodín (ahora en la mano del jugador)
         guardarValorComodin({ cartas: [comodin] });
         
         this.addLog(`🔄 ${j.nombre} intercambió ${cartaParaIntercambiar.valor}${cartaParaIntercambiar.palo || ''} por un comodín de ${origen.nombre}.`);
@@ -603,9 +835,6 @@ class GameEngine {
         });
     }
 
-    // ═══════════════════════════════════════════════════
-    // NUEVA VERSIÓN: Acomodar (solo para jugadores que ya se bajaron)
-    // ═══════════════════════════════════════════════════
     acAcomodar(playerId, cartaId, destJugadorIdx, destJugadaIdx) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
@@ -613,7 +842,6 @@ class GameEngine {
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
         
-        // SOLO JUGADORES QUE YA SE BAJARON pueden acomodar
         if (!j.bajado) {
             return this._err('Debes bajarte primero antes de poder acomodar cartas en jugadas de otros.');
         }

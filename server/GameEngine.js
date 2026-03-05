@@ -50,7 +50,7 @@ function mkMazo() {
 }
 
 // ═══════════════════════════════════════════════════
-// FUNCIONES PARA MANEJO DE COMODINES
+// FUNCIONES MEJORADAS PARA MANEJO DE COMODINES
 // ═══════════════════════════════════════════════════
 
 // Determinar qué valor está reemplazando un comodín en una jugada
@@ -62,30 +62,76 @@ function getValorComodinEnJugada(jugada) {
     
     if (jugada.tipo === 'tercia') {
         // En una tercia, el comodín representa el mismo valor que las demás
-        return cartasNormales[0].valor;
+        return {
+            valor: cartasNormales[0].valor,
+            palo: null  // En tercias no importa el palo
+        };
     } else {
         // En una corrida, encontrar el hueco
         const valores = cartasNormales
-            .map(c => VNUM[c.valor])
-            .sort((a, b) => a - b);
+            .map(c => ({ ...c, valorNum: VNUM[c.valor] }))
+            .sort((a, b) => a.valorNum - b.valorNum);
         
-        // Buscar el primer hueco en la secuencia
-        let valorEsperado = valores[0];
-        for (let i = 0; i < valores.length; i++) {
-            if (valores[i] !== valorEsperado) {
-                // Encontramos el hueco
+        // Verificar si es ascendente o descendente
+        const esAscendente = valores.length < 2 || valores[1].valorNum > valores[0].valorNum;
+        
+        if (esAscendente) {
+            // Buscar el primer hueco en la secuencia ascendente
+            let valorEsperado = valores[0].valorNum;
+            for (let i = 0; i < valores.length; i++) {
+                if (valores[i].valorNum !== valorEsperado) {
+                    // Encontramos el hueco
+                    for (const [k, v] of Object.entries(VNUM)) {
+                        if (v === valorEsperado) {
+                            return {
+                                valor: k,
+                                palo: valores[0].palo
+                            };
+                        }
+                    }
+                }
+                valorEsperado++;
+            }
+            
+            // Si no hay hueco interno, el comodín está al final
+            if (valores[valores.length - 1].valorNum < 13) {
+                const valorSiguiente = valores[valores.length - 1].valorNum + 1;
                 for (const [k, v] of Object.entries(VNUM)) {
-                    if (v === valorEsperado) return k;
+                    if (v === valorSiguiente) {
+                        return {
+                            valor: k,
+                            palo: valores[0].palo
+                        };
+                    }
                 }
             }
-            valorEsperado++;
-        }
-        
-        // Si no hay hueco, el comodín está al final
-        if (valores[valores.length - 1] < 13) {
-            const valorSiguiente = valores[valores.length - 1] + 1;
-            for (const [k, v] of Object.entries(VNUM)) {
-                if (v === valorSiguiente) return k;
+        } else {
+            // Secuencia descendente
+            let valorEsperado = valores[0].valorNum;
+            for (let i = 0; i < valores.length; i++) {
+                if (valores[i].valorNum !== valorEsperado) {
+                    for (const [k, v] of Object.entries(VNUM)) {
+                        if (v === valorEsperado) {
+                            return {
+                                valor: k,
+                                palo: valores[0].palo
+                            };
+                        }
+                    }
+                }
+                valorEsperado--;
+            }
+            
+            if (valores[valores.length - 1].valorNum > 1) {
+                const valorSiguiente = valores[valores.length - 1].valorNum - 1;
+                for (const [k, v] of Object.entries(VNUM)) {
+                    if (v === valorSiguiente) {
+                        return {
+                            valor: k,
+                            palo: valores[0].palo
+                        };
+                    }
+                }
             }
         }
     }
@@ -97,13 +143,22 @@ function getValorComodinEnJugada(jugada) {
 function guardarValorComodin(jugada) {
     if (!jugada) return;
     
-    const comodin = jugada.cartas.find(c => c.comodin);
-    if (!comodin) return;
+    const comodines = jugada.cartas.filter(c => c.comodin);
+    if (comodines.length === 0) return;
     
+    // Solo permitimos un comodín por jugada
+    if (comodines.length > 1) {
+        console.warn('Una jugada no puede tener más de un comodín');
+        return;
+    }
+    
+    const comodin = comodines[0];
     const valorReemplazado = getValorComodinEnJugada(jugada);
+    
     if (valorReemplazado) {
-        // Guardamos el valor en el mismo objeto del comodín para referencia futura
-        comodin.valorReemplazado = valorReemplazado;
+        comodin.valorReemplazado = valorReemplazado.valor;
+        comodin.paloReemplazado = valorReemplazado.palo;
+        comodin.jugadaId = jugada.id || Date.now(); // Para identificar la jugada
     }
 }
 
@@ -114,15 +169,36 @@ function puedeReemplazarComodin(carta, jugada) {
     const comodin = jugada.cartas.find(c => c.comodin);
     if (!comodin) return false;
     
-    const valorReemplazado = comodin.valorReemplazado || getValorComodinEnJugada(jugada);
-    if (!valorReemplazado) return false;
+    // Si el comodín no tiene valorReemplazado, calcularlo
+    if (!comodin.valorReemplazado) {
+        guardarValorComodin(jugada);
+    }
+    
+    if (!comodin.valorReemplazado) return false;
     
     if (jugada.tipo === 'tercia') {
-        return carta.valor === valorReemplazado;
+        return carta.valor === comodin.valorReemplazado;
     } else {
-        const cartasNormales = jugada.cartas.filter(c => !c.comodin);
-        if (cartasNormales.length === 0) return true;
-        return carta.palo === cartasNormales[0].palo && carta.valor === valorReemplazado;
+        return carta.palo === comodin.paloReemplazado && 
+               carta.valor === comodin.valorReemplazado;
+    }
+}
+
+// Verificar si se puede intercambiar una carta por un comodín en una jugada bajada
+function puedeIntercambiarComodin(carta, jugadaBajada) {
+    if (carta.comodin) return false;
+    
+    const comodin = jugadaBajada.cartas.find(c => c.comodin);
+    if (!comodin) return false;
+    
+    // Actualizar el valor que reemplaza el comodín
+    guardarValorComodin(jugadaBajada);
+    
+    if (jugadaBajada.tipo === 'tercia') {
+        return carta.valor === comodin.valorReemplazado;
+    } else {
+        return carta.palo === comodin.paloReemplazado && 
+               carta.valor === comodin.valorReemplazado;
     }
 }
 
@@ -191,7 +267,6 @@ function encontrarCorridas(mano) {
         for (let i = 0; i < valores.length; i++) {
             let secuencia = [valores[i]];
             let comodinesUsados = 0;
-            let comodinesIds = [];
             
             for (let j = i + 1; j < valores.length; j++) {
                 const esperado = secuencia[secuencia.length - 1] + 1;
@@ -335,6 +410,9 @@ function validarTercia(cartas) {
     const normales = cartas.filter(c => !c.comodin);
     const comodines = cartas.filter(c => c.comodin);
     
+    // Máximo un comodín por tercia
+    if (comodines.length > 1) return false;
+    
     // Si solo hay comodines, es válido (mínimo 3)
     if (normales.length === 0) return cartas.length >= 3;
     
@@ -345,7 +423,6 @@ function validarTercia(cartas) {
     if (!todosIguales) return false;
     
     // Verificar que no haya más de 8 cartas del mismo valor
-    // (2 barajas × 4 palos = máximo 8 cartas por valor)
     if (normales.length > 8) return false;
     
     return true;
@@ -434,8 +511,11 @@ function validarCorrida(cartas) {
     const normales = cartas.filter(c => !c.comodin);
     const comodines = cartas.filter(c => c.comodin);
     
-    // Si solo hay comodines, es válido (mínimo 4)
-    if (normales.length === 0) return cartas.length >= 4;
+    // Máximo un comodín por corrida
+    if (comodines.length > 1) return false;
+    
+    // Si solo hay comodines, no es válido (necesitamos al menos una normal)
+    if (normales.length === 0) return false;
     
     // Verificar que todas las normales sean del mismo palo
     const primerPalo = normales[0].palo;
@@ -443,50 +523,58 @@ function validarCorrida(cartas) {
     
     if (!mismoPalo) return false;
     
-    // Obtener valores numéricos
-    const valores = normales.map(c => VNUM[c.valor]);
+    // Obtener valores numéricos de las normales
+    const valoresNormales = normales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
     
-    // Función para verificar si una secuencia es continua con posibles comodines
-    function esSecuenciaContinua(vals, comodinesDisponibles) {
-        if (vals.length === 0) return true;
+    // Verificar que no haya valores repetidos
+    const unicos = new Set(valoresNormales);
+    if (unicos.size !== valoresNormales.length) return false;
+    
+    // Función para verificar secuencia con posibles comodines
+    function esSecuenciaValida(vals, numComodines) {
+        if (vals.length === 0) return numComodines >= 4; // Solo comodines
         
+        const minVal = vals[0];
+        const maxVal = vals[vals.length - 1];
+        const totalPosiciones = maxVal - minVal + 1;
+        const huecosNecesarios = totalPosiciones - vals.length;
+        
+        // Si hay más huecos que comodines, no es válido
+        if (huecosNecesarios > numComodines) return false;
+        
+        // Verificar que no haya saltos mayores a 1 (excepto donde van comodines)
+        let comodinesUsados = 0;
         for (let i = 0; i < vals.length - 1; i++) {
-            const esperado = vals[i] + 1;
-            const actual = vals[i + 1];
-            
-            if (actual === esperado) {
-                continue;
-            } else if (actual > esperado) {
-                const saltos = actual - esperado;
-                if (comodinesDisponibles >= saltos) {
-                    comodinesDisponibles -= saltos;
+            const diferencia = vals[i + 1] - vals[i];
+            if (diferencia === 1) continue;
+            if (diferencia > 1) {
+                const huecos = diferencia - 1;
+                if (comodinesUsados + huecos <= numComodines) {
+                    comodinesUsados += huecos;
                 } else {
                     return false;
                 }
-            } else {
-                return false;
             }
         }
+        
         return true;
     }
     
     // Probar secuencia ascendente
-    const ascendente = [...valores].sort((a, b) => a - b);
-    if (esSecuenciaContinua(ascendente, comodines.length)) {
+    if (esSecuenciaValida(valoresNormales, comodines.length)) {
         return true;
     }
     
-    // Probar secuencia descendente
-    const descendente = [...valores].sort((a, b) => b - a);
-    if (esSecuenciaContinua(descendente, comodines.length)) {
+    // Probar secuencia descendente (invertir valores)
+    const valoresDescendente = [...valoresNormales].reverse();
+    if (esSecuenciaValida(valoresDescendente, comodines.length)) {
         return true;
     }
     
     // Caso especial: A puede ser 1 o 14 (después de K)
-    if (valores.includes(1) && valores.includes(13)) {
-        // Probar con A como 14
-        const valoresConAComo14 = valores.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
-        if (esSecuenciaContinua(valoresConAComo14, comodines.length)) {
+    if (valoresNormales.includes(1) && valoresNormales.includes(13)) {
+        const valoresConAComo14 = valoresNormales.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+        if (esSecuenciaValida(valoresConAComo14, comodines.length)) {
             return true;
         }
     }
@@ -505,6 +593,14 @@ function validarJugadasConstruidas(jugadas) {
     for (let i = 0; i < jugadas.length; i++) {
         const jugada = jugadas[i];
         const cartas = jugada.cartas;
+        
+        // Verificar que no haya más de un comodín por jugada
+        const comodines = cartas.filter(c => c.comodin);
+        if (comodines.length > 1) {
+            resultado.valido = false;
+            resultado.errores.push(`Jugada ${i+1} tiene más de un comodín`);
+            continue;
+        }
         
         if (jugada.tipo === 'tercia') {
             if (!validarTercia(cartas)) {
@@ -999,6 +1095,9 @@ class GameEngine {
         return this._ok('pagar', { carta, jugadorIdx: prevTurno, nextTurno: this.turno });
     }
 
+    // ═══════════════════════════════════════════════════
+    // INTERCAMBIO DE COMODINES MEJORADO
+    // ═══════════════════════════════════════════════════
     acIntercambiarComodin(playerId, cartaId, origenJugadorIdx, origenJugadaIdx) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
@@ -1006,6 +1105,7 @@ class GameEngine {
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
         
+        // Solo se puede intercambiar después de haber robado
         if (this.estado !== 'esperando_accion') {
             return this._err('Debes robar una carta antes de intercambiar.');
         }
@@ -1024,23 +1124,34 @@ class GameEngine {
         
         const cartaParaIntercambiar = j.mano[cartaEnManoIdx];
         
-        if (!puedeReemplazarComodin(cartaParaIntercambiar, jugadaOrigen)) {
+        // Verificar si la carta puede reemplazar al comodín
+        if (!puedeIntercambiarComodin(cartaParaIntercambiar, jugadaOrigen)) {
             return this._err('Esta carta no puede reemplazar al comodín en esa jugada.');
         }
         
-        const manoSimulada = [...j.mano];
-        manoSimulada.splice(cartaEnManoIdx, 1);
-        manoSimulada.push(jugadaOrigen.cartas[comodinIdx]);
-        
-        if (!puedeBajarse(manoSimulada, this.ronda)) {
-            return this._err('Después del intercambio no podrías bajarte. Debes poder bajarte inmediatamente.');
+        // Si el jugador NO se ha bajado, verificar que después del intercambio pueda bajarse
+        if (!j.bajado) {
+            const manoSimulada = [...j.mano];
+            manoSimulada.splice(cartaEnManoIdx, 1); // Quitar la carta que vamos a intercambiar
+            manoSimulada.push(jugadaOrigen.cartas[comodinIdx]); // Añadir el comodín
+            
+            if (!puedeBajarse(manoSimulada, this.ronda)) {
+                return this._err('Después del intercambio no podrías bajarte. Debes poder bajarte inmediatamente.');
+            }
         }
         
+        // Realizar el intercambio
         const comodin = jugadaOrigen.cartas[comodinIdx];
         jugadaOrigen.cartas[comodinIdx] = cartaParaIntercambiar;
         j.mano[cartaEnManoIdx] = comodin;
         
-        guardarValorComodin({ cartas: [comodin] });
+        // Limpiar los valores reemplazados del comodín (ahora está en mano)
+        delete comodin.valorReemplazado;
+        delete comodin.paloReemplazado;
+        delete comodin.jugadaId;
+        
+        // Guardar el nuevo valor que reemplaza la carta que entró en la jugada
+        guardarValorComodin(jugadaOrigen);
         
         this.addLog(`🔄 ${j.nombre} intercambió ${cartaParaIntercambiar.valor}${cartaParaIntercambiar.palo || ''} por un comodín de ${origen.nombre}.`);
         this.lastAction = Date.now();
@@ -1051,6 +1162,46 @@ class GameEngine {
             origenJugadaIdx,
             cartaEntregada: cartaParaIntercambiar,
             comodinRecibido: comodin
+        });
+    }
+
+    // ═══════════════════════════════════════════════════
+    // MOVER COMODÍN DENTRO DE UNA JUGADA
+    // ═══════════════════════════════════════════════════
+    acMoverComodin(playerId, jugadaIdx, nuevaPosicion) {
+        const j = this._findPlayer(playerId);
+        if (!j) return this._err('Jugador no encontrado.');
+        
+        const tidx = this.jugadores.indexOf(j);
+        if (tidx !== this.turno) return this._err('No es tu turno.');
+        
+        if (!j.bajado) return this._err('No puedes mover comodines si no te has bajado.');
+        
+        const jugada = j.jugadas[jugadaIdx];
+        if (!jugada) return this._err('Jugada no encontrada.');
+        
+        const comodinIdx = jugada.cartas.findIndex(c => c.comodin);
+        if (comodinIdx === -1) return this._err('No hay comodín en esta jugada.');
+        
+        // Verificar que la nueva posición sea válida
+        if (nuevaPosicion < 0 || nuevaPosicion >= jugada.cartas.length) {
+            return this._err('Posición inválida para el comodín.');
+        }
+        
+        // Mover el comodín a la nueva posición
+        const comodin = jugada.cartas.splice(comodinIdx, 1)[0];
+        jugada.cartas.splice(nuevaPosicion, 0, comodin);
+        
+        // Actualizar el valor que reemplaza
+        guardarValorComodin(jugada);
+        
+        this.addLog(`🔄 ${j.nombre} movió un comodín en su jugada.`);
+        this.lastAction = Date.now();
+        
+        return this._ok('mover_comodin', {
+            jugadorIdx: tidx,
+            jugadaIdx,
+            nuevaPosicion
         });
     }
 
@@ -1108,7 +1259,7 @@ class GameEngine {
         return this._ok('reordenar', { jugadorIdx: this.jugadores.indexOf(j) }, false);
     }
 
-    // Nueva función para que el cliente consulte si puede habilitar el botón
+    // Función para que el cliente consulte si puede habilitar el botón
     puedeBajarCliente(playerId, jugadasConstruidas) {
         const j = this._findPlayer(playerId);
         if (!j) return false;

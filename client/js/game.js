@@ -16,6 +16,17 @@ const REQ_LABELS = {
     7: '3 corridas — sin pagar'
 };
 
+// Mapa de requisitos por ronda (tercias, corridas)
+const REQ = {
+    1: { t: 2, c: 0 },
+    2: { t: 1, c: 1 },
+    3: { t: 0, c: 2 },
+    4: { t: 3, c: 0 },
+    5: { t: 2, c: 1 },
+    6: { t: 1, c: 2 },
+    7: { t: 0, c: 3 }
+};
+
 let G = null;
 let myIdx = -1;
 let selId = null;
@@ -23,6 +34,9 @@ let ackSent = false;
 let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null; // { jugadorIdx, jugadaIdx, cartaId }
+
+// Mapa para tracking de cartas en zonas de construcción
+let buildingCards = new Map(); // slotId -> array de cartas
 
 // Inicialización
 function init() {
@@ -103,24 +117,25 @@ async function handleNewRound() {
     ackSent = false;
     intercambioMode = false;
     selectedComodinInfo = null;
+    buildingCards.clear(); // Limpiar mapa de construcción
     
     const mazoEl = document.getElementById('mazo-wrap');
     await Anim.shuffleAnim(mazoEl);
     
-    const hz = document.getElementById('hand-zone');
-    if (hz && G.jugadores[myIdx]) {
-        await Anim.dealAnim(mazoEl, hz, G.jugadores[myIdx].mano || [], 0);
+    const discardZone = document.getElementById('discard-zone');
+    if (discardZone && G.jugadores[myIdx]) {
+        await Anim.dealAnim(mazoEl, discardZone, G.jugadores[myIdx].mano || [], 0);
     }
 }
 
 async function handleTomarMazo(data) {
     if (data.jugadorIdx === myIdx) {
         const mazoEl = document.getElementById('mazo-wrap');
-        const hz = document.getElementById('hand-zone');
+        const discardZone = document.getElementById('discard-zone');
         await new Promise(r => setTimeout(r, 20));
-        const newCardEl = hz?.querySelector(`.card[data-id="${data.carta?.id}"]`);
-        if (mazoEl && hz && newCardEl) {
-            await Anim.flyToHand(mazoEl, hz, hz.querySelectorAll('.card').length - 1, newCardEl);
+        const newCardEl = discardZone?.querySelector(`.card[data-id="${data.carta?.id}"]`);
+        if (mazoEl && discardZone && newCardEl) {
+            await Anim.flyToHand(mazoEl, discardZone, discardZone.querySelectorAll('.card').length - 1, newCardEl);
         }
     }
 }
@@ -135,9 +150,9 @@ async function handlePagar(data) {
 
 async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
-        const hz = document.getElementById('hand-zone');
+        const discardZone = document.getElementById('discard-zone');
         const bajadas = document.getElementById('table-bajadas');
-        const cardEls = [...(hz?.querySelectorAll('.card') || [])];
+        const cardEls = [...(discardZone?.querySelectorAll('.card') || [])];
         if (cardEls.length && bajadas) await Anim.bajarAnim(cardEls, bajadas);
     }
 }
@@ -196,54 +211,55 @@ function acCastigo(acepta) {
 }
 
 function acBajar() {
-  // En lugar de enviar todo, podemos construir las jugadas desde las zonas
-  const slots = document.querySelectorAll('.building-slot');
-  const jugadas = [];
-  const cartasUsadas = new Set();
-  
-  slots.forEach(slot => {
-    const cards = [...slot.querySelectorAll('.card-sm')].map(c => {
-      // Aquí necesitas obtener el ID real de la carta
-      // Por ahora es un placeholder
-      return { id: c.dataset.id, tipo: slot.dataset.slotType };
-    }).filter(Boolean);
+    // Construir las jugadas desde los slots
+    const slots = document.querySelectorAll('.building-slot');
+    const jugadas = [];
+    const cartasUsadas = new Set();
     
-    const minCards = parseInt(slot.dataset.minCards);
+    slots.forEach(slot => {
+        const slotIndex = slot.dataset.slotIndex;
+        const slotType = slot.dataset.slotType;
+        const cards = buildingCards.get(slotIndex) || [];
+        
+        if (cards.length > 0) {
+            // Verificar que las cartas existen en la mano
+            const cartasValidas = cards.filter(cardId => 
+                G.jugadores[myIdx].mano.some(c => c.id === cardId)
+            );
+            
+            if (cartasValidas.length > 0) {
+                cartasValidas.forEach(id => cartasUsadas.add(id));
+                jugadas.push({
+                    tipo: slotType,
+                    cartasIds: cartasValidas
+                });
+            }
+        }
+    });
     
-    if (cards.length >= minCards) {
-      // Marcar estas cartas como usadas
-      cards.forEach(c => cartasUsadas.add(c.id));
-      
-      jugadas.push({
-        tipo: slot.dataset.slotType,
-        cartasIds: cards.map(c => c.id)
-      });
+    // Validar que tenemos las jugadas necesarias
+    const req = REQ[G.ronda];
+    const tercias = jugadas.filter(j => j.tipo === 'tercia').length;
+    const corridas = jugadas.filter(j => j.tipo === 'corrida').length;
+    
+    if (tercias < req.t || corridas < req.c) {
+        toast(`Necesitas ${req.t} tercias (mínimo 3 cartas) y ${req.c} corridas (mínimo 4 cartas)`);
+        return;
     }
-  });
-  
-  // Validar que tenemos las jugadas necesarias
-  const req = REQ[G.ronda];
-  const tercias = jugadas.filter(j => j.tipo === 'tercia').length;
-  const corridas = jugadas.filter(j => j.tipo === 'corrida').length;
-  
-  if (tercias < req.t || corridas < req.c) {
-    toast(`Necesitas ${req.t} tercias (mínimo 3 cartas) y ${req.c} corridas (mínimo 4 cartas)`);
-    return;
-  }
-  
-  // Verificar que no haya cartas repetidas
-  if (cartasUsadas.size !== jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0)) {
-    toast('Error: Cartas duplicadas en las jugadas');
-    return;
-  }
-  
-  // Enviar al servidor con las jugadas construidas
-  WS.send({ 
-    type: 'bajar', 
-    jugadas: jugadas
-  });
-  
-  cancelIntercambio();
+    
+    // Verificar que no haya cartas repetidas
+    if (cartasUsadas.size !== jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0)) {
+        toast('Error: Cartas duplicadas en las jugadas');
+        return;
+    }
+    
+    // Enviar al servidor con las jugadas construidas
+    WS.send({ 
+        type: 'bajar', 
+        jugadas: jugadas
+    });
+    
+    cancelIntercambio();
 }
 
 function acPagar(cartaId) {
@@ -349,6 +365,8 @@ function acReorder(draggedId, beforeId) {
     const me = G.jugadores[myIdx];
     if (!me) return;
     
+    // Nota: Reordenar ahora es más complejo porque las cartas pueden estar
+    // en diferentes zonas. Por ahora, solo manejamos reorden en discard zone
     const fromIdx = me.mano.findIndex(c => c.id === draggedId);
     if (fromIdx < 0) return;
     
@@ -399,7 +417,7 @@ function render() {
     renderMazo();
     renderFondo(me);
     renderPlayerInfo(me);
-    renderHand();
+    renderHand(); // Esto ahora renderiza ambas filas
     renderActions();
 }
 
@@ -432,7 +450,7 @@ function renderOpponents() {
 }
 
 // ═══════════════════════════════════════════════════
-// RENDER TABLE BAJADAS (ACTUALIZADO)
+// RENDER TABLE BAJADAS
 // ═══════════════════════════════════════════════════
 function renderTableBajadas() {
     const bajEl = document.getElementById('table-bajadas');
@@ -457,10 +475,8 @@ function renderTableBajadas() {
             // Renderizar cartas de la jugada
             const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
-                    // Determinar qué valor está reemplazando este comodín
                     let valorReemplazado = c.valorReemplazado || '?';
                     
-                    // Si es un comodín y estamos en modo intercambio, hacerlo clickeable
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
                         return `<div class="card-sm joker-sm comodin-intercambiable" 
                                      title="Reemplaza a: ${valorReemplazado}"
@@ -485,7 +501,6 @@ function renderTableBajadas() {
                 <div class="bajada-pile-cards">${cardsHtml}</div>
             `;
             
-            // Click para acomodar (solo si el jugador YA ESTA BAJADO y no estamos en modo intercambio)
             if (!intercambioMode && G.jugadores[myIdx]?.bajado) {
                 pile.onclick = () => {
                     if (selId && isMyTurn()) acAcomodar(selId, ji, jugi);
@@ -537,210 +552,425 @@ function renderPlayerInfo(me) {
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
     
     const dot = document.getElementById('pulse-dot');
-    dot.style.display = isMyTurn() ? 'inline-block' : 'none';
+    if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';
     
     document.getElementById('turn-tag').textContent = isMyTurn() ? '' :
         `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
 }
 
-// Renderizar las zonas de construcción según la ronda
-function renderBuildingZones() {
-  if (!G || myIdx < 0) return;
-  
-  const me = G.jugadores[myIdx];
-  const buildingContainer = document.getElementById('building-zones');
-  if (!buildingContainer) return;
-  
-  const req = REQ_LABELS[G.ronda] || '';
-  document.getElementById('building-requirement').textContent = req;
-  
-  const slots = [];
-  
-  // Determinar los slots según la ronda
-  if (G.ronda === 1) { // 2 tercias
-    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
-    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
-  } else if (G.ronda === 2) { // 1 tercia + 1 corrida
-    slots.push({ type: 'tercia', index: 0, title: 'Tercia', cards: [], minCards: 3 });
-    slots.push({ type: 'corrida', index: 0, title: 'Corrida', cards: [], minCards: 4 });
-  } else if (G.ronda === 3) { // 2 corridas
-    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
-    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
-  } else if (G.ronda === 4) { // 3 tercias
-    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
-    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
-    slots.push({ type: 'tercia', index: 2, title: 'Tercia 3', cards: [], minCards: 3 });
-  } else if (G.ronda === 5) { // 2 tercias + 1 corrida
-    slots.push({ type: 'tercia', index: 0, title: 'Tercia 1', cards: [], minCards: 3 });
-    slots.push({ type: 'tercia', index: 1, title: 'Tercia 2', cards: [], minCards: 3 });
-    slots.push({ type: 'corrida', index: 0, title: 'Corrida', cards: [], minCards: 4 });
-  } else if (G.ronda === 6) { // 2 corridas + 1 tercia
-    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
-    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
-    slots.push({ type: 'tercia', index: 0, title: 'Tercia', cards: [], minCards: 3 });
-  } else if (G.ronda === 7) { // 3 corridas
-    slots.push({ type: 'corrida', index: 0, title: 'Corrida 1', cards: [], minCards: 4 });
-    slots.push({ type: 'corrida', index: 1, title: 'Corrida 2', cards: [], minCards: 4 });
-    slots.push({ type: 'corrida', index: 2, title: 'Corrida 3', cards: [], minCards: 4 });
-  }
-  
-  // Si el jugador ya tiene jugadas guardadas, mostrarlas
-  if (me.bajado && me.jugadas?.length) {
-    me.jugadas.forEach((jugada, i) => {
-      if (i < slots.length) {
-        slots[i].cards = jugada.cartas || [];
-      }
-    });
-  }
-  
-  // Renderizar slots
-  buildingContainer.innerHTML = slots.map((slot, i) => {
-    const cardCount = slot.cards.length;
-    const minCards = slot.minCards;
-    const isComplete = slot.type === 'tercia' ? cardCount >= 3 : cardCount >= 4;
+// ═══════════════════════════════════════════════════
+// RENDER DE LAS DOS FILAS (SOBRANTES Y CONSTRUCCIÓN)
+// ═══════════════════════════════════════════════════
+
+// Renderizar la fila de construcción (slots según la ronda)
+function renderBuildingRow() {
+    if (!G || myIdx < 0) return;
     
-    return `
-    <div class="building-slot ${isComplete ? 'complete' : ''}" 
-         data-slot-type="${slot.type}"
-         data-slot-index="${slot.index}"
-         data-min-cards="${minCards}">
-      <div class="building-slot-header">
-        <span class="building-slot-title">${slot.title}</span>
-        <span class="building-slot-count ${cardCount >= minCards ? 'valid' : ''}">
-          ${cardCount}/${minCards}+
-        </span>
-      </div>
-      <div class="building-slot-cards" id="slot-${i}-cards">
-        ${slot.cards.map(c => cSm(c)).join('')}
-      </div>
-      ${slot.type === 'tercia' 
-        ? '<div class="slot-hint">Mínimo 3 cartas del mismo valor</div>' 
-        : '<div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>'}
-    </div>
-  `}).join('');
-  
-  // Agregar event listeners para drop
-  if (!me.bajado && isMyTurn() && G.estado === 'esperando_accion') {
-    document.querySelectorAll('.building-slot').forEach(slot => {
-      slot.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        slot.classList.add('drop-target');
-      });
-      
-      slot.addEventListener('dragleave', () => {
-        slot.classList.remove('drop-target');
-      });
-      
-      slot.addEventListener('drop', (e) => {
-        e.preventDefault();
-        slot.classList.remove('drop-target');
-        
-        if (!selId) {
-          toast('Primero selecciona una carta');
-          return;
-        }
-        
-        const slotType = slot.dataset.slotType;
-        const slotIndex = parseInt(slot.dataset.slotIndex);
-        const minCards = parseInt(slot.dataset.minCards);
-        
-        // Aquí puedes validar si la carta puede ir en ese slot
-        // y guardar temporalmente la intención del jugador
-        
-        const currentCount = slot.querySelectorAll('.card-sm').length;
-        if (currentCount + 1 >= minCards) {
-          slot.classList.add('complete');
-        }
-        
-        toast(`Carta asignada a ${slotType} ${slotIndex + 1}`, 'green');
-      });
-    });
-  }
+    const buildingRow = document.getElementById('building-row');
+    if (!buildingRow) return;
+    
+    const req = REQ_LABELS[G.ronda] || '';
+    const reqEl = document.getElementById('building-requirement');
+    if (reqEl) reqEl.textContent = req;
+    
+    let html = '';
+    
+    // Generar slots según la ronda
+    if (G.ronda === 1) { // 2 tercias
+        html = `
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 1</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="1" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 2</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+        `;
+    } else if (G.ronda === 2) { // 1 tercia + 1 corrida
+        html = `
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="1" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+        `;
+    } else if (G.ronda === 3) { // 2 corridas
+        html = `
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 1</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="1" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 2</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+        `;
+    } else if (G.ronda === 4) { // 3 tercias
+        html = `
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 1</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="1" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 2</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="2" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 3</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-2-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+        `;
+    } else if (G.ronda === 5) { // 2 tercias + 1 corrida
+        html = `
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="0" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 1</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="1" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA 2</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="2" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-2-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+        `;
+    } else if (G.ronda === 6) { // 2 corridas + 1 tercia
+        html = `
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 1</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="1" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 2</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+            <div class="building-slot" data-slot-type="tercia" data-slot-index="2" data-min-cards="3">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">TERCIA</span>
+                    <span class="building-slot-count">0/3+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-2-cards"></div>
+                <div class="slot-hint">Mínimo 3 cartas del mismo valor</div>
+            </div>
+        `;
+    } else if (G.ronda === 7) { // 3 corridas
+        html = `
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="0" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 1</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-0-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="1" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 2</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-1-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+            <div class="building-slot" data-slot-type="corrida" data-slot-index="2" data-min-cards="4">
+                <div class="building-slot-header">
+                    <span class="building-slot-title">CORRIDA 3</span>
+                    <span class="building-slot-count">0/4+</span>
+                </div>
+                <div class="building-slot-cards" id="slot-2-cards"></div>
+                <div class="slot-hint">Mínimo 4 cartas del mismo palo en secuencia</div>
+            </div>
+        `;
+    }
+    
+    buildingRow.innerHTML = html;
+    
+    // Actualizar contadores si hay cartas guardadas
+    updateSlotCounters();
 }
 
-// Modificar renderHand() para incluir las nuevas zonas
+// Actualizar los contadores de los slots
+function updateSlotCounters() {
+    buildingCards.forEach((cards, slotIndex) => {
+        const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
+        if (!slot) return;
+        
+        const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
+        if (cardsContainer) {
+            cardsContainer.innerHTML = cards.map(cardId => {
+                const carta = G.jugadores[myIdx].mano.find(c => c.id === cardId);
+                return carta ? cSm(carta) : '';
+            }).join('');
+        }
+        
+        const countSpan = slot.querySelector('.building-slot-count');
+        const minCards = parseInt(slot.dataset.minCards);
+        if (countSpan) {
+            countSpan.textContent = `${cards.length}/${minCards}+`;
+            if (cards.length >= minCards) {
+                countSpan.classList.add('valid');
+                slot.classList.add('complete');
+            } else {
+                countSpan.classList.remove('valid');
+                slot.classList.remove('complete');
+            }
+        }
+    });
+}
+
+// Renderizar la mano completa (sobrantes + slots)
 function renderHand() {
-  if (!G || myIdx < 0) return;
-  
-  const me = G.jugadores[myIdx];
-  const discardZone = document.getElementById('discard-zone');
-  const buildingContainer = document.getElementById('building-zones');
-  
-  if (!discardZone || !buildingContainer) return;
-  
-  // Limpiar zonas
-  discardZone.innerHTML = '';
-  
-  // Si el jugador ya se bajó, mostrar las jugadas en los slots y sobrantes en discard
-  if (me.bajado) {
-    // Renderizar jugadas en los slots
-    renderBuildingZones();
+    if (!G || myIdx < 0) return;
     
-    // Mostrar sobrantes en discard zone
-    (me.mano || []).forEach(c => {
-      const el = createCardElement(c);
-      discardZone.appendChild(el);
+    const me = G.jugadores[myIdx];
+    const discardZone = document.getElementById('discard-zone');
+    
+    if (!discardZone) return;
+    
+    // Renderizar la fila de construcción
+    renderBuildingRow();
+    
+    // Limpiar zona de sobrantes
+    discardZone.innerHTML = '';
+    
+    // Si el jugador ya se bajó, mostrar solo sobrantes
+    if (me.bajado) {
+        (me.mano || []).forEach(c => {
+            const el = createCardElement(c);
+            discardZone.appendChild(el);
+        });
+    } else {
+        // Aún no se ha bajado - mostrar todas las cartas en sobrantes
+        // pero marcar las que ya están en slots
+        (me.mano || []).forEach(c => {
+            // Verificar si la carta ya está en algún slot
+            let enSlot = false;
+            buildingCards.forEach((cards) => {
+                if (cards.includes(c.id)) enSlot = true;
+            });
+            
+            if (!enSlot) {
+                const el = createCardElement(c);
+                discardZone.appendChild(el);
+            }
+        });
+    }
+    
+    document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+    
+    // Configurar event listeners para los slots
+    setupSlotDropListeners();
+}
+
+// Configurar listeners para drag & drop en slots
+function setupSlotDropListeners() {
+    if (!G || myIdx < 0) return;
+    
+    const me = G.jugadores[myIdx];
+    if (me.bajado) return; // Si ya está bajado, no permitir más cambios
+    
+    document.querySelectorAll('.building-slot').forEach(slot => {
+        // Eliminar listeners anteriores para evitar duplicados
+        slot.removeEventListener('dragover', handleSlotDragOver);
+        slot.removeEventListener('dragleave', handleSlotDragLeave);
+        slot.removeEventListener('drop', handleSlotDrop);
+        
+        // Agregar nuevos listeners
+        slot.addEventListener('dragover', handleSlotDragOver);
+        slot.addEventListener('dragleave', handleSlotDragLeave);
+        slot.addEventListener('drop', handleSlotDrop);
     });
-  } else {
-    // Aún no se ha bajado - todas las cartas en discard zone inicialmente
-    (me.mano || []).forEach(c => {
-      const el = createCardElement(c);
-      discardZone.appendChild(el);
+}
+
+function handleSlotDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drop-target');
+}
+
+function handleSlotDragLeave(e) {
+    e.currentTarget.classList.remove('drop-target');
+}
+
+function handleSlotDrop(e) {
+    e.preventDefault();
+    const slot = e.currentTarget;
+    slot.classList.remove('drop-target');
+    
+    if (!selId) {
+        toast('Primero selecciona una carta');
+        return;
+    }
+    
+    const me = G.jugadores[myIdx];
+    const carta = me.mano.find(c => c.id === selId);
+    if (!carta) {
+        toast('Carta no encontrada');
+        return;
+    }
+    
+    const slotIndex = slot.dataset.slotIndex;
+    const slotType = slot.dataset.slotType;
+    const minCards = parseInt(slot.dataset.minCards);
+    
+    // Verificar que la carta no esté ya en otro slot
+    let cartaEnOtroSlot = false;
+    buildingCards.forEach((cards, idx) => {
+        if (cards.includes(selId)) cartaEnOtroSlot = true;
     });
     
-    // Renderizar slots vacíos
-    renderBuildingZones();
-  }
-  
-  document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+    if (cartaEnOtroSlot) {
+        toast('Esta carta ya está en otra jugada');
+        return;
+    }
+    
+    // Aquí podrías agregar validaciones específicas según el tipo de slot
+    // Por ahora, simplemente agregamos la carta al slot
+    
+    // Obtener o crear el array para este slot
+    if (!buildingCards.has(slotIndex)) {
+        buildingCards.set(slotIndex, []);
+    }
+    
+    const slotCards = buildingCards.get(slotIndex);
+    slotCards.push(selId);
+    
+    // Actualizar UI
+    const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
+    if (cardsContainer) {
+        cardsContainer.innerHTML = slotCards.map(cardId => {
+            const c = me.mano.find(c => c.id === cardId);
+            return c ? cSm(c) : '';
+        }).join('');
+    }
+    
+    // Actualizar contador
+    const countSpan = slot.querySelector('.building-slot-count');
+    if (countSpan) {
+        countSpan.textContent = `${slotCards.length}/${minCards}+`;
+        if (slotCards.length >= minCards) {
+            countSpan.classList.add('valid');
+            slot.classList.add('complete');
+        }
+    }
+    
+    // Remover la carta de discard zone
+    const cartaEl = document.querySelector(`.card[data-id="${selId}"]`);
+    if (cartaEl) cartaEl.remove();
+    
+    selId = null;
+    toast(`Carta agregada a ${slotType}`, 'green');
 }
 
 // Función auxiliar para crear elemento carta
 function createCardElement(c) {
-  const el = document.createElement('div');
-  el.className = 'card' + (c.id === selId ? ' selected' : '');
-  if (intercambioMode && selId && c.id === selId) {
-    el.classList.add('pending-intercambio');
-  }
-  el.dataset.id = c.id;
-  
-  if (c.comodin) {
-    el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
-  } else {
-    const sc = SUIT_CLS[c.palo] || '';
-    el.innerHTML = `
-      <div class="card-face ${sc}">
-        <div class="corner tl">${c.valor}<br>${c.palo}</div>
-        <div class="cv">${c.palo}</div>
-        <div class="cs">${c.valor}</div>
-        <div class="corner br">${c.valor}<br>${c.palo}</div>
-      </div>
-    `;
-  }
-  
-  el.addEventListener('click', () => selCard(c.id));
-  
-  const dragCallbacks = {
-    isPayable,
-    onPagar: id => acPagar(id),
-    onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
-    onReorder: (id, beforeId) => acReorder(id, beforeId),
-  };
-  
-  el.addEventListener('mousedown', e => {
-    if (e.button !== 0) return;
-    DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
-  });
-  
-  el.addEventListener('touchstart', e => {
-    DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
-  }, { passive: false });
-  
-  return el;
+    const el = document.createElement('div');
+    el.className = 'card' + (c.id === selId ? ' selected' : '');
+    if (intercambioMode && selId && c.id === selId) {
+        el.classList.add('pending-intercambio');
+    }
+    el.dataset.id = c.id;
+    el.draggable = false; // Nosotros manejamos el drag con DragDrop
+    
+    if (c.comodin) {
+        el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+    } else {
+        const sc = SUIT_CLS[c.palo] || '';
+        el.innerHTML = `
+            <div class="card-face ${sc}">
+                <div class="corner tl">${c.valor}<br>${c.palo}</div>
+                <div class="cv">${c.palo}</div>
+                <div class="cs">${c.valor}</div>
+                <div class="corner br">${c.valor}<br>${c.palo}</div>
+            </div>
+        `;
+    }
+    
+    el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selCard(c.id);
+    });
+    
+    const dragCallbacks = {
+        isPayable,
+        onPagar: id => acPagar(id),
+        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
+        onReorder: (id, beforeId) => acReorder(id, beforeId),
+    };
+    
+    el.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
+    });
+    
+    el.addEventListener('touchstart', e => {
+        DragDrop.startHandDrag(e, el, c.id, dragCallbacks);
+    }, { passive: false });
+    
+    return el;
 }
 
 // ═══════════════════════════════════════════════════
-// RENDER ACTIONS (ACTUALIZADO)
+// RENDER ACTIONS
 // ═══════════════════════════════════════════════════
 function renderActions() {
     if (!G || myIdx < 0) return;
@@ -751,10 +981,11 @@ function renderActions() {
     const instr = document.getElementById('instr');
     const cb = document.getElementById('castigo-banner');
     
-    cb.style.display = 'none';
-    btns.innerHTML = '';
+    if (cb) cb.style.display = 'none';
+    if (btns) btns.innerHTML = '';
     
     const add = (txt, cls, fn, dis = false) => {
+        if (!btns) return;
         const b = document.createElement('button');
         b.className = `abtn ${cls}`;
         b.textContent = txt;
@@ -765,21 +996,21 @@ function renderActions() {
     
     // Botón para cancelar modo intercambio si está activo
     if (intercambioMode) {
-        instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
+        if (instr) instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
         add('❌ Cancelar Intercambio', 'abtn-red', cancelIntercambio);
         return;
     }
     
-    // Función para verificar si hay destinos para acomodar (solo para jugadores que YA BAJARON)
+    // Función para verificar si hay destinos para acomodar
     const hasDestForAcomodar = () => {
-        if (!me?.bajado) return false; // SOLO si ya bajaste
+        if (!me?.bajado) return false;
         if (!selId) return false;
         
         const carta = me?.mano?.find(c => c.id === selId);
         if (!carta) return false;
         
         return G.jugadores.some((j, ji) => {
-            if (!j.bajado || ji === myIdx) return false; // Solo jugadores bajados
+            if (!j.bajado || ji === myIdx) return false;
             return j.jugadas?.some(jug => {
                 if (jug.tipo === 'tercia') {
                     if (carta.comodin) return true;
@@ -802,12 +1033,11 @@ function renderActions() {
     // Función para verificar si hay comodines intercambiables
     const hasComodinesIntercambiables = () => {
         if (!selId) return false;
-        if (me?.bajado) return false; // Si ya bajaste, no necesitas intercambiar
+        if (me?.bajado) return false;
         
         const carta = me?.mano?.find(c => c.id === selId);
         if (!carta || carta.comodin) return false;
         
-        // Buscar comodines en jugadas de otros jugadores
         return G.jugadores.some((j, ji) => {
             if (!j.bajado || ji === myIdx) return false;
             return j.jugadas?.some(jug => {
@@ -817,13 +1047,13 @@ function renderActions() {
     };
     
     if (!myTurn) {
-        instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+        if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
         
-        if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx) {
+        if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
             const top = G.fondo_top;
             cb.style.display = 'block';
             cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}?`;
-            instr.textContent = 'Tienes prioridad de castigo.';
+            if (instr) instr.textContent = 'Tienes prioridad de castigo.';
             add('✅ Sí, castigarme', 'abtn-green', () => acCastigo(true));
             add('❌ No', 'abtn-red', () => acCastigo(false));
         }
@@ -832,7 +1062,7 @@ function renderActions() {
     
     switch (G.estado) {
         case 'esperando_robo':
-            instr.textContent = me?.bajado
+            if (instr) instr.textContent = me?.bajado
                 ? `${me.nombre} (bajado) — roba del mazo.`
                 : `Tu turno — toma del fondo o roba del mazo.`;
             if (!me?.bajado) add('📥 Tomar Fondo', 'abtn-gold', acFondo, !G.fondo_top);
@@ -843,26 +1073,24 @@ function renderActions() {
             const jc = G.jugadores[G.castigo_idx];
             const top = G.fondo_top;
             
-            if (G.castigo_idx === myIdx) {
+            if (G.castigo_idx === myIdx && cb) {
                 cb.style.display = 'block';
                 cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-                instr.textContent = 'Tienes prioridad de castigo.';
+                if (instr) instr.textContent = 'Tienes prioridad de castigo.';
                 add('✅ Sí', 'abtn-green', () => acCastigo(true));
                 add('❌ No', 'abtn-red', () => acCastigo(false));
             } else {
-                instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+                if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
             }
             break;
         }
         
         case 'esperando_accion':
             if (!me?.bajado) {
-                // NO HAS BAJADO - puedes pagar, bajar o intercambiar
-                instr.textContent = selId ? 'Carta seleccionada — págala o intercambia por comodín' : 'Selecciona una carta para pagar o bájate.';
+                if (instr) instr.textContent = selId ? 'Carta seleccionada — págala o intercambia por comodín' : 'Selecciona una carta para pagar o bájate.';
                 if (!me?.bajado) add('🔥 Bajarme', 'abtn-gold', acBajar);
                 add('💳 Pagar', selId ? 'abtn-outline' : 'abtn-outline', () => acPagar(selId), !selId);
                 
-                // Botón de intercambio (solo si no has bajado y tienes una carta seleccionada)
                 if (selId && hasComodinesIntercambiables()) {
                     add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
                         toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
@@ -871,8 +1099,7 @@ function renderActions() {
                     });
                 }
             } else {
-                // YA ESTAS BAJADO - puedes acomodar
-                instr.textContent = selId ? 'Carta seleccionada — acomódala en jugadas de otros' : 'Selecciona una carta para acomodar.';
+                if (instr) instr.textContent = selId ? 'Carta seleccionada — acomódala en jugadas de otros' : 'Selecciona una carta para acomodar.';
                 add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
                 if (hasDestForAcomodar()) {
                     add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
@@ -882,10 +1109,10 @@ function renderActions() {
             
         case 'esperando_pago':
             if (!me?.bajado) {
-                instr.textContent = 'Selecciona una carta para pagar al fondo.';
+                if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
             } else {
-                instr.textContent = 'Selecciona una carta para acomodar o pagar.';
+                if (instr) instr.textContent = 'Selecciona una carta para acomodar o pagar.';
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
                 if (hasDestForAcomodar()) {
                     add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
@@ -894,7 +1121,8 @@ function renderActions() {
             break;
     }
     
-    document.getElementById('log-line').textContent = G.log?.[G.log.length - 1] || '';
+    const logLine = document.getElementById('log-line');
+    if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || '';
 }
 
 // Helpers para renderizar cartas
@@ -934,6 +1162,9 @@ function cSm(c) {
 
 // Modales
 function showModalRonda(ganadorIdx, puntos) {
+    const modal = document.getElementById('modal-ronda');
+    if (!modal) return;
+    
     document.getElementById('mr-title').textContent = `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`;
     document.getElementById('mr-msg').textContent = G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!';
     document.getElementById('mr-scores').innerHTML = G.jugadores.map((j, i) => `
@@ -944,10 +1175,13 @@ function showModalRonda(ganadorIdx, puntos) {
     `).join('');
     
     ackSent = false;
-    document.getElementById('modal-ronda').classList.add('show');
+    modal.classList.add('show');
 }
 
 function showModalJuego(jugadores) {
+    const modal = document.getElementById('modal-juego');
+    if (!modal) return;
+    
     const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);
     
     document.getElementById('mj-scores').innerHTML = sorted.map((j, i) => `
@@ -957,11 +1191,13 @@ function showModalJuego(jugadores) {
         </div>
     `).join('');
     
-    document.getElementById('modal-juego').classList.add('show');
+    modal.classList.add('show');
 }
 
 function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
+    if (!t) return;
+    
     t.textContent = msg;
     t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' : 
                          type === 'yellow' ? 'rgba(200,160,69,.9)' : 

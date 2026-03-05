@@ -368,11 +368,11 @@
   min-height: calc(var(--ch) + 5px);
 }
 
-/* ===== SECCIÓN DEL JUGADOR (altura fija, SIEMPRE visible) ===== */
+/* ===== NUEVA ESTRUCTURA DE DOS FILAS ===== */
 .player-section {
   flex-shrink: 0;
-  height: 160px;
-  min-height: 160px;
+  height: auto;
+  min-height: 280px;
   border-top: 1px solid rgba(200,160,69,.1);
   padding: 8px 0;
   background: rgba(0,0,0,.2);
@@ -385,23 +385,205 @@
 
 @media (max-width: 991px) {
   .player-section {
-    height: 140px;
-    min-height: 140px;
+    min-height: 240px;
   }
 }
 
 @media (max-width: 767px) {
   .player-section {
-    height: 120px;
-    min-height: 120px;
+    min-height: 200px;
     padding: 5px 0;
   }
 }
 
+/* Etiquetas de fila */
+.row-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 5px auto 2px;
+  padding: 0 15px;
+  font-size: 0.8rem;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.row-label span:first-child {
+  font-weight: 600;
+}
+
+.row-desc {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  text-transform: none;
+}
+
+/* FILA 1: Zona de sobrantes (arriba) */
+.discard-zone {
+  display: flex;
+  gap: var(--hand-gap, 6px);
+  align-items: flex-end;
+  padding: var(--hand-padding, 8px 15px);
+  background: rgba(0,0,0,.15);
+  border: 2px dashed rgba(255,255,255,.07);
+  border-radius: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  min-height: calc(var(--ch) + 10px);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  
+  /* Scroll suave */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--text-muted) rgba(255,255,255,0.1);
+}
+
+/* FILA 2: Fila de construcción (abajo) */
+.building-row {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 5px auto 0;
+  padding: 0 15px;
+  min-height: calc(var(--ch) + 40px);
+}
+
+/* Slots de jugadas (lado izquierdo y derecho) */
+.building-slot {
+  flex: 1;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0,0,0,.2);
+  border: 2px solid rgba(200,160,69,.2);
+  border-radius: 12px;
+  padding: 10px;
+  transition: all 0.2s ease;
+}
+
+.building-slot:hover {
+  border-color: var(--gold);
+  background: rgba(200,160,69,.1);
+}
+
+.building-slot.drop-target {
+  border-color: #2ecc71;
+  background: rgba(46,204,113,.1);
+  box-shadow: 0 0 12px rgba(46,204,113,.3);
+}
+
+.building-slot.complete {
+  border-color: #2ecc71;
+  background: rgba(46,204,113,.1);
+}
+
+.building-slot.complete .building-slot-title {
+  color: #2ecc71;
+}
+
+.building-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 0 5px;
+}
+
+.building-slot-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.building-slot-count {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  background: rgba(0,0,0,.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.building-slot-count.valid {
+  color: #2ecc71;
+  background: rgba(46,204,113,.2);
+}
+
+.building-slot-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: calc(var(--ch) - 5px);
+  padding: 5px;
+}
+
+.slot-hint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 5px;
+  border-top: 1px dashed rgba(255,255,255,.1);
+  margin-top: 5px;
+}
+
+/* Responsive */
+@media (max-width: 991px) {
+  .building-slot-title {
+    font-size: 0.8rem;
+  }
+  
+  .building-slot-count {
+    font-size: 0.7rem;
+  }
+  
+  .slot-hint {
+    font-size: 0.6rem;
+  }
+}
+
+@media (max-width: 767px) {
+  .building-row {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  
+  .building-slot {
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  .row-label {
+    font-size: 0.7rem;
+  }
+  
+  .row-desc {
+    font-size: 0.6rem;
+  }
+}
+
 @media (max-width: 575px) {
-  .player-section {
-    height: 110px;
-    min-height: 110px;
+  .building-slot-title {
+    font-size: 0.7rem;
+  }
+  
+  .building-slot-count {
+    font-size: 0.6rem;
+    padding: 1px 6px;
+  }
+  
+  .slot-hint {
+    font-size: 0.55rem;
   }
 }
 
@@ -966,7 +1148,7 @@
       </div>
     </div>
 
-    <!-- JUGADOR (con zonas de construcción) -->
+    <!-- JUGADOR (con dos filas: sobrantes arriba, jugadas abajo) -->
 <div class="player-section">
   <div class="player-header">
     <div class="player-label">
@@ -977,23 +1159,19 @@
     <span id="hand-count"></span>
   </div>
   
-  <!-- ZONA SUPERIOR: Sobrantes / Descarte -->
-  <div class="hand-zone-container">
-    <div class="hand-zone-label">
-      <span>📦 Sobrantes</span>
-      <span class="hand-zone-desc">Cartas que no usarás en jugadas</span>
-    </div>
-    <div class="hand-zone discard-zone" id="discard-zone"></div>
+  <!-- FILA 1: Sobrantes / Descarte (arriba) -->
+  <div class="row-label">
+    <span>📦 CARTAS SOBRANTES</span>
+    <span class="row-desc">Arrastra aquí las cartas que no uses</span>
   </div>
+  <div class="hand-zone discard-zone" id="discard-zone"></div>
   
-  <!-- ZONA INFERIOR: Construcción de jugadas (dinámica según ronda) -->
-  <div class="hand-zone-container">
-    <div class="hand-zone-label">
-      <span>🔨 Construyendo jugadas</span>
-      <span class="hand-zone-desc" id="building-requirement"></span>
-    </div>
-    <div class="building-zones" id="building-zones"></div>
+  <!-- FILA 2: Construcción de jugadas (abajo, dividida según ronda) -->
+  <div class="row-label">
+    <span>🔨 JUGADAS EN CONSTRUCCIÓN</span>
+    <span class="row-desc" id="building-requirement"></span>
   </div>
+  <div class="building-row" id="building-row"></div>
 </div>
 
   <!-- ACCIONES -->

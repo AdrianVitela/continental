@@ -188,16 +188,20 @@ const DragDrop = (() => {
 
   function _endHandDrag(pt, cid, cbs) {
 
-    const elementsUnderCursor = document.elementsFromPoint(pt.x, pt.y);
-
     const hz = document.getElementById('discard-zone');
 
-    const isOverDiscard =
-      hz &&
-      elementsUnderCursor.some(el =>
-        el.id === 'discard-zone' ||
-        (el.closest && el.closest('#discard-zone') !== null)
-      );
+    // Detección por coordenadas rectangulares (más fiable que elementsFromPoint
+    // cuando hay elementos superpuestos como building-slot sobre discard-zone)
+    function rectHit(el) {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom;
+    }
+
+    const isOverDiscard = hz && rectHit(hz);
+
+    // Para slots y bajadas sí usamos elementsFromPoint (no se superponen con discard-zone)
+    const elementsUnderCursor = document.elementsFromPoint(pt.x, pt.y);
 
     const destSlot = elementsUnderCursor.find(
       el => el.classList?.contains('building-slot') || (el.closest && el.closest('.building-slot') !== null)
@@ -220,13 +224,7 @@ const DragDrop = (() => {
       : null;
 
     const fw = document.getElementById('fondo-wrap');
-
-    const isOverFondo =
-      fw &&
-      elementsUnderCursor.some(el =>
-        el.id === 'fondo-wrap' ||
-        (el.closest && el.closest('#fondo-wrap') !== null)
-      );
+    const isOverFondo = fw && rectHit(fw);
 
     // ==========================
     // CASO 1: VIENE DE UN SLOT
@@ -234,7 +232,19 @@ const DragDrop = (() => {
 
     if (draggingFromSlot && originalSlotIndex !== null) {
 
-      // 1A: mover entre slots (solo si es un slot DIFERENTE)
+      // 1A: devolver a sobrantes PRIMERO — tiene prioridad sobre slots
+      // (el discard-zone puede estar "debajo" del building-slot en el DOM)
+      if (isOverDiscard) {
+        if (cbs.onReturnToHand) {
+          cbs.onReturnToHand(cid, originalSlotIndex);
+        }
+        dragId = null;
+        draggingFromSlot = false;
+        originalSlotIndex = null;
+        return;
+      }
+
+      // 1B: mover entre slots (solo si es un slot DIFERENTE)
       if (buildingSlot) {
         const destSlotIndex = parseInt(buildingSlot.dataset.slotIndex);
 
@@ -261,18 +271,7 @@ const DragDrop = (() => {
         return;
       }
 
-      // 1B: devolver a la mano (soltó sobre discard-zone)
-      if (isOverDiscard) {
-        if (cbs.onReturnToHand) {
-          cbs.onReturnToHand(cid, originalSlotIndex);
-        }
-        dragId = null;
-        draggingFromSlot = false;
-        originalSlotIndex = null;
-        return;
-      }
-
-      // FIX 3: Fallback — soltó en lugar inválido, NO mover la carta, solo limpiar estado
+      // Fallback — soltó en lugar inválido, no mover la carta
       dragId = null;
       draggingFromSlot = false;
       originalSlotIndex = null;

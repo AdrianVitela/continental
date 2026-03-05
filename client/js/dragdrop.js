@@ -1,4 +1,4 @@
-// dragdrop.js - Arrastrar y soltar: reordenar mano, fondo→mano, mano→fondo, mano→bajada
+// dragdrop.js - Arrastrar y soltar: reordenar mano, fondo→mano, mano→fondo, mano→bajada, mano→building slots
 
 'use strict';
 
@@ -37,7 +37,7 @@ const DragDrop = (() => {
 
   // Muestra un indicador visual de dónde se insertará la carta en la mano
   function showInsertGhost(mx, my) {
-    const hz = document.getElementById('hand-zone');
+    const hz = document.getElementById('discard-zone'); // Cambiado de 'hand-zone' a 'discard-zone'
     if (!hz) return;
     
     hz.querySelectorAll('.insert-ghost').forEach(g => g.remove());
@@ -68,11 +68,23 @@ const DragDrop = (() => {
 
   // Resalta las zonas donde se puede soltar la carta
   function highlightDropZones(mx, my, isPayable) {
-    document.querySelectorAll('.bajada-pile').forEach(p => {
-      const r = p.getBoundingClientRect();
-      p.classList.toggle('drop-target', mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom);
+    // Resaltar building slots (para construcción de jugadas)
+    document.querySelectorAll('.building-slot').forEach(slot => {
+      const r = slot.getBoundingClientRect();
+      slot.classList.toggle('drop-target', 
+        mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom
+      );
     });
     
+    // Resaltar bajadas de otros jugadores (para acomodar)
+    document.querySelectorAll('.bajada-pile').forEach(p => {
+      const r = p.getBoundingClientRect();
+      p.classList.toggle('drop-target', 
+        mx >= r.left && mx <= r.right && my >= r.top && my <= r.bottom
+      );
+    });
+    
+    // Resaltar fondo (para pagar)
     const fw = document.getElementById('fondo-wrap');
     if (fw && isPayable) {
       const r = fw.getBoundingClientRect();
@@ -84,9 +96,10 @@ const DragDrop = (() => {
 
   // Limpia todos los indicadores visuales
   function cleanDropZones() {
-    document.getElementById('hand-zone')?.querySelectorAll('.insert-ghost').forEach(g => g.remove());
-    document.getElementById('hand-zone')?.classList.remove('drag-over');
+    document.getElementById('discard-zone')?.querySelectorAll('.insert-ghost').forEach(g => g.remove());
+    document.getElementById('discard-zone')?.classList.remove('drag-over');
     document.querySelectorAll('.bajada-pile').forEach(p => p.classList.remove('drop-target'));
+    document.querySelectorAll('.building-slot').forEach(s => s.classList.remove('drop-target'));
     
     const fw = document.getElementById('fondo-wrap');
     if (fw) { 
@@ -134,7 +147,21 @@ const DragDrop = (() => {
 
   // Maneja el fin del arrastre desde la mano
   function _endHandDrag(pt, cid, cbs) {
-    // 1. Soltó en una pila de bajada → acomodar carta
+    // 1. Soltó en un BUILDING SLOT (para construir jugada)
+    const buildingSlot = document.elementFromPoint(pt.x, pt.y)?.closest('.building-slot');
+    if (buildingSlot) {
+      const slotIndex = buildingSlot.dataset.slotIndex;
+      const slotType = buildingSlot.dataset.slotType;
+      if (cbs.onBuildingDrop) {
+        cbs.onBuildingDrop(cid, slotIndex, slotType);
+      } else {
+        console.warn('No onBuildingDrop callback provided');
+      }
+      dragId = null;
+      return;
+    }
+
+    // 2. Soltó en una pila de bajada (para acomodar carta en jugada de otro)
     const pile = document.elementFromPoint(pt.x, pt.y)?.closest('.bajada-pile');
     if (pile) {
       cbs.onAcomodar?.(cid, parseInt(pile.dataset.pi), parseInt(pile.dataset.ji));
@@ -142,7 +169,7 @@ const DragDrop = (() => {
       return;
     }
 
-    // 2. Soltó en la zona del fondo → pagar
+    // 3. Soltó en la zona del fondo (para pagar)
     const fw = document.getElementById('fondo-wrap');
     if (fw) {
       const r = fw.getBoundingClientRect();
@@ -153,18 +180,17 @@ const DragDrop = (() => {
       }
     }
 
-    // 3. Soltó dentro de la mano → reordenar
-    const hz = document.getElementById('hand-zone');
+    // 4. Soltó dentro de la mano (para reordenar)
+    const hz = document.getElementById('discard-zone');
     if (hz) {
       const hr = hz.getBoundingClientRect();
       if (pt.x >= hr.left && pt.x <= hr.right && pt.y >= hr.top && pt.y <= hr.bottom) {
         const cards = [...hz.querySelectorAll('.card:not(.dragging)')];
-        let insertIdx = Infinity;
+        let insertIdx = cards.length;
         for (let i = 0; i < cards.length; i++) {
           const r = cards[i].getBoundingClientRect();
           if (pt.x < r.left + r.width / 2) {
-            const tid = parseInt(cards[i].dataset.id);
-            insertIdx = tid;
+            insertIdx = i;
             break;
           }
         }
@@ -173,6 +199,8 @@ const DragDrop = (() => {
         return;
       }
     }
+    
+    // Si no soltó en ninguna zona válida, no hacer nada
     dragId = null;
   }
 
@@ -213,7 +241,7 @@ const DragDrop = (() => {
 
   // Maneja el fin del arrastre desde el fondo
   function _endFondoDrag(pt, cbs) {
-    const hz = document.getElementById('hand-zone');
+    const hz = document.getElementById('discard-zone');
     if (!hz) return;
     
     const hr = hz.getBoundingClientRect();

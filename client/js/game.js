@@ -36,7 +36,7 @@ let intercambioMode = false;
 let selectedComodinInfo = null; // { jugadorIdx, jugadaIdx, cartaId }
 
 // Mapa para tracking de cartas en zonas de construcción
-let buildingCards = new Map(); // slotId -> array de cartas
+let buildingCards = new Map(); // slotIndex -> array de cartas
 
 // Inicialización
 function init() {
@@ -365,19 +365,19 @@ function acReorder(draggedId, beforeId) {
     const me = G.jugadores[myIdx];
     if (!me) return;
     
-    // Nota: Reordenar ahora es más complejo porque las cartas pueden estar
-    // en diferentes zonas. Por ahora, solo manejamos reorden en discard zone
+    // Reordenar en discard zone
     const fromIdx = me.mano.findIndex(c => c.id === draggedId);
     if (fromIdx < 0) return;
     
-    let toIdx = beforeId === Infinity
-        ? me.mano.length - 1
-        : me.mano.findIndex(c => c.id === beforeId);
-    if (toIdx < 0) toIdx = me.mano.length - 1;
+    // beforeId puede ser un índice o Infinity
+    let toIdx = beforeId;
+    if (beforeId === Infinity || beforeId >= me.mano.length) {
+        toIdx = me.mano.length - 1;
+    }
     
     const newOrder = [...me.mano];
     const [moved] = newOrder.splice(fromIdx, 1);
-    newOrder.splice(toIdx < fromIdx ? toIdx : toIdx - 1, 0, moved);
+    newOrder.splice(toIdx, 0, moved);
     
     me.mano = newOrder;
     renderHand();
@@ -955,6 +955,9 @@ function createCardElement(c) {
         onPagar: id => acPagar(id),
         onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
         onReorder: (id, beforeId) => acReorder(id, beforeId),
+        onBuildingDrop: (id, slotIndex, slotType) => { // NUEVO callback para building slots
+            handleBuildingDrop(id, slotIndex, slotType);
+        }
     };
     
     el.addEventListener('mousedown', e => {
@@ -967,6 +970,108 @@ function createCardElement(c) {
     }, { passive: false });
     
     return el;
+}
+
+// NUEVA FUNCIÓN: Manejar drop en building slots
+function handleBuildingDrop(cartaId, slotIndex, slotType) {
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) {
+        toast('Ya estás bajado, no puedes construir más jugadas');
+        return;
+    }
+    
+    const carta = me.mano.find(c => c.id === cartaId);
+    if (!carta) return;
+    
+    // Verificar que la carta no esté ya en otro slot
+    let cartaEnOtroSlot = false;
+    buildingCards.forEach((cards, idx) => {
+        if (cards.includes(cartaId)) cartaEnOtroSlot = true;
+    });
+    
+    if (cartaEnOtroSlot) {
+        toast('Esta carta ya está en otra jugada');
+        return;
+    }
+    
+    // Obtener el slot
+    const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
+    if (!slot) return;
+    
+    const minCards = parseInt(slot.dataset.minCards);
+    
+    // Aquí puedes agregar validaciones específicas según el tipo de slot
+    // Por ejemplo, para tercias validar que todas tengan el mismo valor
+    if (slotType === 'tercia') {
+        const slotCards = buildingCards.get(slotIndex) || [];
+        if (slotCards.length > 0) {
+            // Verificar que la nueva carta tenga el mismo valor que las existentes
+            const primeraCarta = me.mano.find(c => c.id === slotCards[0]);
+            if (primeraCarta && carta.valor !== primeraCarta.valor) {
+                toast(`Las tercias deben ser del mismo valor (${primeraCarta.valor})`);
+                return;
+            }
+        }
+    }
+    
+    // Para corridas, validar mismo palo
+    if (slotType === 'corrida') {
+        const slotCards = buildingCards.get(slotIndex) || [];
+        if (slotCards.length > 0) {
+            const primeraCarta = me.mano.find(c => c.id === slotCards[0]);
+            if (primeraCarta && carta.palo !== primeraCarta.palo) {
+                toast(`Las corridas deben ser del mismo palo (${primeraCarta.palo})`);
+                return;
+            }
+        }
+    }
+    
+    // Obtener o crear el array para este slot
+    if (!buildingCards.has(slotIndex)) {
+        buildingCards.set(slotIndex, []);
+    }
+    
+    const slotCards = buildingCards.get(slotIndex);
+    slotCards.push(cartaId);
+    
+    // Actualizar UI del slot
+    updateSlotUI(slotIndex, slotCards);
+    
+    // Remover la carta de discard zone
+    const cartaEl = document.querySelector(`.card[data-id="${cartaId}"]`);
+    if (cartaEl) cartaEl.remove();
+    
+    selId = null;
+    toast(`Carta agregada a ${slotType}`, 'green');
+}
+
+// NUEVA FUNCIÓN: Actualizar UI del slot
+function updateSlotUI(slotIndex, cards) {
+    const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
+    if (!slot) return;
+    
+    const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
+    if (!cardsContainer) return;
+    
+    const me = G.jugadores[myIdx];
+    
+    cardsContainer.innerHTML = cards.map(cardId => {
+        const carta = me.mano.find(c => c.id === cardId);
+        return carta ? cSm(carta) : '';
+    }).join('');
+    
+    const countSpan = slot.querySelector('.building-slot-count');
+    const minCards = parseInt(slot.dataset.minCards);
+    if (countSpan) {
+        countSpan.textContent = `${cards.length}/${minCards}+`;
+        if (cards.length >= minCards) {
+            countSpan.classList.add('valid');
+            slot.classList.add('complete');
+        } else {
+            countSpan.classList.remove('valid');
+            slot.classList.remove('complete');
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════

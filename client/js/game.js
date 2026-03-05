@@ -935,8 +935,9 @@ function renderBuildingRow() {
     
     buildingRow.innerHTML = html;
     
-    // Actualizar contadores si hay cartas guardadas
-    updateSlotCounters();
+    buildingCards.forEach((cards, slotIndex) => {
+        updateSlotUI(slotIndex, cards);
+    });
 }
 
 // Actualizar los contadores de los slots
@@ -968,7 +969,6 @@ function updateSlotCounters() {
     });
 }
 
-// Renderizar la mano completa (sobrantes + slots)
 function renderHand() {
     if (!G || myIdx < 0) return;
     
@@ -977,52 +977,39 @@ function renderHand() {
     
     if (!discardZone) return;
     
-    // Guardar referencia a la carta que se está arrastrando (si existe)
+    // Guardar referencia a la carta que se está arrastrando
     const draggingCard = document.querySelector('.card.dragging');
     const draggingId = draggingCard?.dataset.id;
     
-    // Renderizar la fila de construcción
+    // Renderizar la fila de construcción (esto llamará a updateSlotUI para cada slot)
     renderBuildingRow();
     
-    // Limpiar zona de sobrantes (pero mantener la carta arrastrada si existe)
-    const cardsToKeep = draggingCard ? [draggingCard] : [];
+    // Limpiar zona de sobrantes
     discardZone.innerHTML = '';
     
-    // Si el jugador ya se bajó, mostrar solo sobrantes
-    if (me.bajado) {
-        (me.mano || []).forEach(c => {
-            // No recrear la carta que se está arrastrando
-            if (c.id !== draggingId) {
-                const el = createCardElement(c);
-                discardZone.appendChild(el);
-            }
+    // Recopilar TODAS las cartas que están en slots para excluirlas
+    const cartasEnSlots = new Set();
+    buildingCards.forEach(cards => {
+        cards.forEach(carta => {
+            if (carta && carta.id) cartasEnSlots.add(carta.id);
         });
-    } else {
-        // Aún no se ha bajado - mostrar todas las cartas en sobrantes
-        // pero marcar las que ya están en slots
-        (me.mano || []).forEach(c => {
-            // Verificar si la carta ya está en algún slot
-            let enSlot = false;
-            buildingCards.forEach((cards) => {
-                if (cards.includes(c.id)) enSlot = true;
-            });
-            
-            if (!enSlot && c.id !== draggingId) {
-                const el = createCardElement(c);
-                discardZone.appendChild(el);
-            }
-        });
-    }
+    });
     
-    // Si había una carta arrastrada, mantenerla
-    if (draggingCard) {
+    // Mostrar solo las cartas que NO están en slots
+    (me.mano || []).forEach(c => {
+        // Si la carta NO está en un slot Y no es la que se está arrastrando
+        if (!cartasEnSlots.has(c.id) && c.id !== draggingId) {
+            const el = createCardElement(c);
+            discardZone.appendChild(el);
+        }
+    });
+    
+    // Si había una carta arrastrada y no está en slots, mantenerla
+    if (draggingCard && !cartasEnSlots.has(draggingId)) {
         discardZone.appendChild(draggingCard);
     }
     
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
-    
-    // Configurar event listeners para los slots
-    setupSlotDropListeners();
 }
 
 // Configurar listeners para drag & drop en slots
@@ -1210,6 +1197,7 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
     toast(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`, 'green');
 }
 
+// MODIFICADO: Crear cartas COMPLETAS en los slots
 function updateSlotUI(slotIndex, cards) {
     const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
     if (!slot) return;
@@ -1217,11 +1205,19 @@ function updateSlotUI(slotIndex, cards) {
     const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
     if (!cardsContainer) return;
     
-    // cards ya son objetos de carta COMPLETOS
-    cardsContainer.innerHTML = cards.map(carta => {
-        return carta ? cSm(carta) : '';
-    }).join('');
+    // Limpiar contenedor
+    cardsContainer.innerHTML = '';
     
+    // Crear cartas COMPLETAS para cada carta en el slot
+    cards.forEach(carta => {
+        if (!carta) return;
+        
+        // Crear carta completa con createCardElement, pasando el slotIndex
+        const cardEl = createCardElement(carta, slotIndex);
+        cardsContainer.appendChild(cardEl);
+    });
+    
+    // Actualizar contador
     const countSpan = slot.querySelector('.building-slot-count');
     const minCards = parseInt(slot.dataset.minCards);
     if (countSpan) {

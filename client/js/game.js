@@ -210,15 +210,24 @@ function acCastigo(acepta) {
     cancelIntercambio();
 }
 
+// Reemplaza la función acBajar() completa con esta versión mejorada:
+
 function acBajar() {
     // Construir las jugadas desde los slots
     const slots = document.querySelectorAll('.building-slot');
     const jugadas = [];
     const cartasUsadas = new Set();
     
+    // Verificar que cada slot tenga los datos necesarios
     slots.forEach(slot => {
         const slotIndex = slot.dataset.slotIndex;
         const slotType = slot.dataset.slotType;
+        
+        if (slotIndex === undefined || slotType === undefined) {
+            console.warn('Slot sin atributos:', slot);
+            return;
+        }
+        
         const cards = buildingCards.get(slotIndex) || [];
         
         if (cards.length > 0) {
@@ -242,15 +251,35 @@ function acBajar() {
     const tercias = jugadas.filter(j => j.tipo === 'tercia').length;
     const corridas = jugadas.filter(j => j.tipo === 'corrida').length;
     
+    // Mostrar mensaje más claro
     if (tercias < req.t || corridas < req.c) {
-        toast(`Necesitas ${req.t} tercias (mínimo 3 cartas) y ${req.c} corridas (mínimo 4 cartas)`);
+        const faltanTercias = req.t - tercias;
+        const faltanCorridas = req.c - corridas;
+        let mensaje = 'Te falta';
+        if (faltanTercias > 0) mensaje += ` ${faltanTercias} tercia(s)`;
+        if (faltanCorridas > 0) mensaje += ` ${faltanCorridas} corrida(s)`;
+        mensaje += ' para bajarte';
+        
+        toast(mensaje);
         return;
     }
     
     // Verificar que no haya cartas repetidas
-    if (cartasUsadas.size !== jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0)) {
+    const totalCartas = jugadas.reduce((acc, j) => acc + j.cartasIds.length, 0);
+    if (cartasUsadas.size !== totalCartas) {
         toast('Error: Cartas duplicadas en las jugadas');
         return;
+    }
+    
+    // Verificar que cada jugada tenga el mínimo requerido
+    for (const jugada of jugadas) {
+        const slot = Array.from(slots).find(s => s.dataset.slotType === jugada.tipo);
+        const minCards = slot ? parseInt(slot.dataset.minCards) : (jugada.tipo === 'tercia' ? 3 : 4);
+        
+        if (jugada.cartasIds.length < minCards) {
+            toast(`Cada ${jugada.tipo} necesita al menos ${minCards} cartas`);
+            return;
+        }
     }
     
     // Enviar al servidor con las jugadas construidas
@@ -262,15 +291,90 @@ function acBajar() {
     cancelIntercambio();
 }
 
-function acPagar(cartaId) {
-    const id = cartaId || selId;
-    if (!id) {
-        toast('Selecciona una carta para pagar.');
+// También agrega esta validación en handleSlotDrop (dentro de la función existente):
+
+function handleSlotDrop(e) {
+    e.preventDefault();
+    const slot = e.currentTarget;
+    slot.classList.remove('drop-target');
+    
+    if (!selId) {
+        toast('Primero selecciona una carta');
         return;
     }
-    WS.send({ type: 'pagar', cartaId: id });
+    
+    const me = G.jugadores[myIdx];
+    const carta = me.mano.find(c => c.id === selId);
+    if (!carta) {
+        toast('Carta no encontrada');
+        return;
+    }
+    
+    const slotIndex = slot.dataset.slotIndex;
+    const slotType = slot.dataset.slotType;
+    const minCards = parseInt(slot.dataset.minCards);
+    
+    // Validación: asegurar que tenemos los datos del slot
+    if (slotIndex === undefined || slotType === undefined || isNaN(minCards)) {
+        toast('Error: Slot inválido');
+        return;
+    }
+    
+    // Verificar que la carta no esté ya en otro slot
+    let cartaEnOtroSlot = false;
+    buildingCards.forEach((cards, idx) => {
+        if (cards.includes(selId)) cartaEnOtroSlot = true;
+    });
+    
+    if (cartaEnOtroSlot) {
+        toast('Esta carta ya está en otra jugada');
+        return;
+    }
+    
+    // Aquí podrías agregar validaciones específicas según el tipo de slot
+    // Por ejemplo, para tercia: todas las cartas deben tener el mismo valor
+    // Para corrida: mismo palo y valores consecutivos
+    
+    // Obtener o crear el array para este slot
+    if (!buildingCards.has(slotIndex)) {
+        buildingCards.set(slotIndex, []);
+    }
+    
+    const slotCards = buildingCards.get(slotIndex);
+    
+    // Validación simple: no más de 13 cartas por slot (máximo posible)
+    if (slotCards.length >= 13) {
+        toast('Demasiadas cartas en este slot');
+        return;
+    }
+    
+    slotCards.push(selId);
+    
+    // Actualizar UI
+    const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
+    if (cardsContainer) {
+        cardsContainer.innerHTML = slotCards.map(cardId => {
+            const c = me.mano.find(c => c.id === cardId);
+            return c ? cSm(c) : '';
+        }).join('');
+    }
+    
+    // Actualizar contador
+    const countSpan = slot.querySelector('.building-slot-count');
+    if (countSpan) {
+        countSpan.textContent = `${slotCards.length}/${minCards}+`;
+        if (slotCards.length >= minCards) {
+            countSpan.classList.add('valid');
+            slot.classList.add('complete');
+        }
+    }
+    
+    // Remover la carta de discard zone
+    const cartaEl = document.querySelector(`.card[data-id="${selId}"]`);
+    if (cartaEl) cartaEl.remove();
+    
     selId = null;
-    cancelIntercambio();
+    toast(`Carta agregada a ${slotType}`, 'green');
 }
 
 function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx) {

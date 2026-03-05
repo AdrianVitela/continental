@@ -263,8 +263,8 @@ const DragDrop = (() => {
       }
 
       // 1C fallback: quitar del slot
-      if (cbs.onRemoveFromSlot) {
-        cbs.onRemoveFromSlot(cid, originalSlotIndex);
+      if (cbs.onReturnToHand) {
+        cbs.onReturnToHand(cid, originalSlotIndex);
       }
 
       dragId = null;

@@ -1063,6 +1063,9 @@ function handleReturnToHand(cartaId, slotIndex) {
         return;
     }
     
+    // Normalizar a string — dragdrop.js manda parseInt (número), el Map usa strings del dataset
+    slotIndex = String(slotIndex);
+    
     const slotCards = buildingCards.get(slotIndex);
     if (!slotCards) return;
     
@@ -1092,6 +1095,10 @@ function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType)
         toast('Ya estás bajado, no puedes modificar jugadas');
         return;
     }
+    
+    // Normalizar a string — dragdrop.js manda parseInt (números), el Map usa strings del dataset
+    fromSlotIndex = String(fromSlotIndex);
+    toSlotIndex = String(toSlotIndex);
     
     const fromSlotCards = buildingCards.get(fromSlotIndex);
     if (!fromSlotCards) return;

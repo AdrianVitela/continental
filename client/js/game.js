@@ -1091,14 +1091,16 @@ function handleSlotDrop(e) {
     toast(`Carta agregada a ${slotType}`, 'green');
 }
 
-// Función auxiliar para crear elemento carta
-function createCardElement(c) {
+function createCardElement(c, fromSlot = null) {
     const el = document.createElement('div');
     el.className = 'card' + (c.id === selId ? ' selected' : '');
     if (intercambioMode && selId && c.id === selId) {
         el.classList.add('pending-intercambio');
     }
     el.dataset.id = c.id;
+    if (fromSlot !== null) {
+        el.dataset.slot = fromSlot; // Guardar de qué slot viene
+    }
     el.draggable = false; // Nosotros manejamos el drag con DragDrop
     
     if (c.comodin) {
@@ -1125,8 +1127,12 @@ function createCardElement(c) {
         onPagar: id => acPagar(id),
         onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
         onReorder: (id, beforeId) => acReorder(id, beforeId),
-        onBuildingDrop: (id, slotIndex, slotType) => { // Callback para building slots
+        onBuildingDrop: (id, slotIndex, slotType) => {
             handleBuildingDrop(id, slotIndex, slotType);
+        },
+        // NUEVO: callback para cuando se arrastra desde un slot
+        onRemoveFromSlot: (id, slotIndex) => {
+            handleRemoveFromSlot(id, slotIndex);
         }
     };
     
@@ -1190,7 +1196,7 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
     toast(`Carta agregada a ${slotType}`, 'green');
 }
 
-// NUEVA FUNCIÓN: Actualizar UI del slot
+// MODIFICAR: Actualizar UI del slot (usar createCardElement con fromSlot)
 function updateSlotUI(slotIndex, cards) {
     const slot = document.querySelector(`.building-slot[data-slot-index="${slotIndex}"]`);
     if (!slot) return;
@@ -1200,10 +1206,16 @@ function updateSlotUI(slotIndex, cards) {
     
     const me = G.jugadores[myIdx];
     
-    cardsContainer.innerHTML = cards.map(cardId => {
+    cardsContainer.innerHTML = ''; // Limpiar
+    
+    // Crear elementos para cada carta en el slot
+    cards.forEach(cardId => {
         const carta = me.mano.find(c => c.id === cardId);
-        return carta ? cSm(carta) : '';
-    }).join('');
+        if (carta) {
+            const cardEl = createCardElement(carta, slotIndex);
+            cardsContainer.appendChild(cardEl);
+        }
+    });
     
     const countSpan = slot.querySelector('.building-slot-count');
     const minCards = parseInt(slot.dataset.minCards);
@@ -1216,6 +1228,36 @@ function updateSlotUI(slotIndex, cards) {
             countSpan.classList.remove('valid');
             slot.classList.remove('complete');
         }
+    }
+}
+
+// NUEVA FUNCIÓN: Manejar cuando se arrastra una carta desde un slot
+function handleRemoveFromSlot(cartaId, slotIndex) {
+    const me = G.jugadores[myIdx];
+    if (!me) return;
+    
+    // Verificar que la carta existe en el slot
+    const slotCards = buildingCards.get(slotIndex);
+    if (!slotCards || !slotCards.includes(cartaId)) return;
+    
+    // Remover la carta del slot
+    const index = slotCards.indexOf(cartaId);
+    if (index > -1) {
+        slotCards.splice(index, 1);
+        
+        // Si el slot queda vacío, eliminarlo del mapa
+        if (slotCards.length === 0) {
+            buildingCards.delete(slotIndex);
+        }
+        
+        // Actualizar UI del slot
+        updateSlotUI(slotIndex, slotCards);
+        
+        // La carta volverá a aparecer en discard zone cuando se renderice
+        // Pero necesitamos forzar un render para que aparezca
+        renderHand();
+        
+        toast('Carta removida de la jugada', 'green');
     }
 }
 

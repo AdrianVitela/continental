@@ -37,7 +37,7 @@ const DragDrop = (() => {
 
   // Muestra un indicador visual de dónde se insertará la carta en la mano
   function showInsertGhost(mx, my) {
-    const hz = document.getElementById('discard-zone'); // Cambiado de 'hand-zone' a 'discard-zone'
+    const hz = document.getElementById('discard-zone');
     if (!hz) return;
     
     hz.querySelectorAll('.insert-ghost').forEach(g => g.remove());
@@ -147,15 +147,41 @@ const DragDrop = (() => {
 
   // Maneja el fin del arrastre desde la mano
   function _endHandDrag(pt, cid, cbs) {
-    // 1. Soltó en un BUILDING SLOT (para construir jugada)
+    // Verificar si la carta viene de un slot (tiene dataset.slot)
+    const draggedEl = document.querySelector(`.card[data-id="${cid}"]`);
+    const fromSlot = draggedEl?.dataset.slot;
+    
+    // 0. Si viene de un slot, manejar diferentes casos
+    if (fromSlot !== undefined) {
+      // Verificar si se soltó en un building slot (para mover entre slots)
+      const destSlot = document.elementFromPoint(pt.x, pt.y)?.closest('.building-slot');
+      
+      if (destSlot) {
+        // Se soltó en otro slot - mover de un slot a otro
+        const destSlotIndex = destSlot.dataset.slotIndex;
+        const destSlotType = destSlot.dataset.slotType;
+        if (cbs.onMoveBetweenSlots) {
+          cbs.onMoveBetweenSlots(cid, parseInt(fromSlot), parseInt(destSlotIndex), destSlotType);
+          dragId = null;
+          return;
+        }
+      } else {
+        // Se soltó fuera de cualquier slot - sacar la carta
+        if (cbs.onRemoveFromSlot) {
+          cbs.onRemoveFromSlot(cid, parseInt(fromSlot));
+          dragId = null;
+          return;
+        }
+      }
+    }
+    
+    // 1. Soltó en un BUILDING SLOT (para construir jugada) - solo si NO viene de un slot
     const buildingSlot = document.elementFromPoint(pt.x, pt.y)?.closest('.building-slot');
-    if (buildingSlot) {
+    if (buildingSlot && fromSlot === undefined) {
       const slotIndex = buildingSlot.dataset.slotIndex;
       const slotType = buildingSlot.dataset.slotType;
       if (cbs.onBuildingDrop) {
         cbs.onBuildingDrop(cid, slotIndex, slotType);
-      } else {
-        console.warn('No onBuildingDrop callback provided');
       }
       dragId = null;
       return;
@@ -180,9 +206,9 @@ const DragDrop = (() => {
       }
     }
 
-    // 4. Soltó dentro de la mano (para reordenar)
+    // 4. Soltó dentro de la mano (para reordenar) - solo si NO viene de un slot
     const hz = document.getElementById('discard-zone');
-    if (hz) {
+    if (hz && fromSlot === undefined) {
       const hr = hz.getBoundingClientRect();
       if (pt.x >= hr.left && pt.x <= hr.right && pt.y >= hr.top && pt.y <= hr.bottom) {
         const cards = [...hz.querySelectorAll('.card:not(.dragging)')];

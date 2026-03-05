@@ -416,16 +416,25 @@ function validarTercia(cartas) {
     // Si solo hay comodines, es válido (mínimo 3)
     if (normales.length === 0) return cartas.length >= 3;
     
-    // Verificar que todas las normales sean del mismo valor
-    const primerValor = normales[0].valor;
-    const todosIguales = normales.every(c => c.valor === primerValor);
+    // Encontrar el valor que más se repite
+    const conteo = {};
+    normales.forEach(c => {
+        conteo[c.valor] = (conteo[c.valor] || 0) + 1;
+    });
     
-    if (!todosIguales) return false;
+    let maxFrecuencia = 0;
+    let valorMayoritario = null;
+    for (const [valor, freq] of Object.entries(conteo)) {
+        if (freq > maxFrecuencia) {
+            maxFrecuencia = freq;
+            valorMayoritario = valor;
+        }
+    }
     
-    // Verificar que no haya más de 8 cartas del mismo valor
-    if (normales.length > 8) return false;
+    // Verificar que las cartas del valor mayoritario + comodines sean al menos 3
+    const cartasDelMismoValor = normales.filter(c => c.valor === valorMayoritario).length + comodines.length;
     
-    return true;
+    return cartasDelMismoValor >= 3;
 }
 
 // Ordenar una corrida correctamente (detectando si es ascendente o descendente)
@@ -691,10 +700,30 @@ function terciaCompleta(cartas) {
     if (cartas.length < 3) return false;
     
     const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    
+    // Si solo hay comodines, no es válido (necesita al menos una normal)
     if (normales.length === 0) return false;
     
-    const primerValor = normales[0].valor;
-    return normales.every(c => c.valor === primerValor);
+    // Encontrar el valor que más se repite
+    const conteo = {};
+    normales.forEach(c => {
+        conteo[c.valor] = (conteo[c.valor] || 0) + 1;
+    });
+    
+    let maxFrecuencia = 0;
+    let valorMayoritario = null;
+    for (const [valor, freq] of Object.entries(conteo)) {
+        if (freq > maxFrecuencia) {
+            maxFrecuencia = freq;
+            valorMayoritario = valor;
+        }
+    }
+    
+    // Una tercia está completa si hay al menos 3 cartas del mismo valor (normales + comodines)
+    const cartasDelMismoValor = normales.filter(c => c.valor === valorMayoritario).length + comodines.length;
+    
+    return cartasDelMismoValor >= 3;
 }
 
 // Verifica si una tercia está casi completa (2 cartas del mismo valor + posibilidad)
@@ -706,13 +735,29 @@ function terciaCasiCompleta(cartas) {
     
     if (normales.length === 0) return false;
     
-    const primerValor = normales[0].valor;
-    const mismoValor = normales.every(c => c.valor === primerValor);
+    // Encontrar el valor que más se repite
+    const conteo = {};
+    normales.forEach(c => {
+        conteo[c.valor] = (conteo[c.valor] || 0) + 1;
+    });
     
-    if (!mismoValor) return false;
+    let maxFrecuencia = 0;
+    let valorMayoritario = null;
+    for (const [valor, freq] of Object.entries(conteo)) {
+        if (freq > maxFrecuencia) {
+            maxFrecuencia = freq;
+            valorMayoritario = valor;
+        }
+    }
     
-    if (normales.length === 2 && comodines.length >= 1) return true;
-    if (normales.length === 2) return true;
+    // Caso 1: 2 normales del mismo valor + al menos 1 comodín
+    if (maxFrecuencia === 2 && comodines.length >= 1) return true;
+    
+    // Caso 2: 2 normales del mismo valor + posibilidad de tercera normal
+    if (maxFrecuencia === 2 && cartas.length >= 2) return true;
+    
+    // Caso 3: 1 normal + 1 comodín + posibilidad de otra carta
+    if (maxFrecuencia === 1 && comodines.length >= 1 && cartas.length >= 2) return true;
     
     return false;
 }
@@ -742,10 +787,12 @@ function puedeHabilitarBajar(jugadasConstruidas, req) {
         }
     });
     
+    // Caso 1: Todas las jugadas requeridas están completas
     if (terciasCompletas >= req.t && corridasCompletas >= req.c) {
         return true;
     }
     
+    // Caso 2: Todas menos una están completas, y esa última está casi completa
     const totalCompletas = terciasCompletas + corridasCompletas;
     const totalRequeridas = req.t + req.c;
     

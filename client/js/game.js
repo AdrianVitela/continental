@@ -63,6 +63,7 @@ function slotTerciaValido(cards) {
 }
 
 // Corrida completamente válida: ≥4 cartas, mismo palo, en secuencia (con máx 1 comodín)
+// El As puede valer 1 (A-2-3-4) o 14 (J-Q-K-A), pero no cruza (Q-K-A-2 inválido)
 function slotCorridaValido(cards) {
     if (cards.length < 4) return false;
     const normales = cards.filter(c => !c.comodin);
@@ -71,16 +72,28 @@ function slotCorridaValido(cards) {
     if (comodines.length > 1) return false;
     const palo = normales[0].palo;
     if (!normales.every(c => c.palo === palo)) return false;
-    const vals = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
-    if (new Set(vals).size !== vals.length) return false;
-    let huecos = 0;
-    for (let i = 0; i < vals.length - 1; i++) {
-        const diff = vals[i + 1] - vals[i];
-        if (diff === 1) continue;
-        if (diff === 2) { huecos++; continue; }
-        return false;
+    if (new Set(normales.map(c => c.valor)).size !== normales.length) return false;
+
+    function esSecuenciaValida(vals, numComodines) {
+        let huecos = 0;
+        for (let i = 0; i < vals.length - 1; i++) {
+            const diff = vals[i + 1] - vals[i];
+            if (diff === 1) continue;
+            if (diff === 2) { huecos++; continue; }
+            return false; // hueco de más de 1 sin comodín disponible
+        }
+        return huecos <= numComodines;
     }
-    return huecos <= comodines.length;
+
+    const valsNorm = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
+    if (esSecuenciaValida(valsNorm, comodines.length)) return true;
+
+    // Probar A como 14 si hay As
+    if (valsNorm.includes(1)) {
+        const valsA14 = valsNorm.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+        if (esSecuenciaValida(valsA14, comodines.length)) return true;
+    }
+    return false;
 }
 
 // Tercia "casi completa": ≥3 cartas, al menos 2 del mismo valor (la tercera puede ser cualquiera)
@@ -287,6 +300,17 @@ function slotsListosParaBajar() {
     }
 
     const totalSlots = defs.length;
+
+    // Ronda 7: TODAS las cartas deben estar en slots (0 sobrantes)
+    // No aplica el "caso 2" (casi-completo) — todo debe estar dentro
+    if (G.ronda === 7) {
+        if (completos !== totalSlots) return false;
+        // Verificar que NO queden cartas en sobrantes (mano vacía excepto las que están en slots)
+        const cartasEnSlots = new Set();
+        buildingCards.forEach(cards => cards.forEach(c => { if (c?.id) cartasEnSlots.add(c.id); }));
+        const sobrantes = (me.mano || []).filter(c => !cartasEnSlots.has(c.id));
+        return sobrantes.length === 0;
+    }
 
     // Caso 1: todos los slots están completos
     if (completos === totalSlots) return true;

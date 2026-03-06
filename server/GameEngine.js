@@ -59,24 +59,48 @@ function getValorComodinEnJugada(jugada) {
     if (jugada.tipo === 'tercia') {
         return { valor: cartasNormales[0].valor, palo: null };
     } else {
+        // Determinar si el As vale 1 o 14 según el contexto de la corrida
+        const valsRaw = cartasNormales.map(c => VNUM[c.valor]);
+        const tieneAs = valsRaw.includes(1);
+        const tieneCartasAltas = valsRaw.some(v => v >= 11);
+        const useA14 = tieneAs && tieneCartasAltas && !valsRaw.includes(2);
+
         const valores = cartasNormales
-            .map(c => ({ ...c, valorNum: VNUM[c.valor] }))
+            .map(c => ({ ...c, valorNum: (c.valor === 'A' && useA14) ? 14 : VNUM[c.valor] }))
             .sort((a, b) => a.valorNum - b.valorNum);
 
+        const palo = valores[0].palo;
+
+        const VNUM_R = {'1':'A','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'J','12':'Q','13':'K','14':'A'};
+
+        // Sabemos que hay exactamente 1 comodín — calcular longitud total esperada
+        // La secuencia con comodín debe ser continua: encontrar dónde encaja el comodín
+        // Intentar: joker al inicio, al final, o en cada hueco interno
+        const numComodin = jugada.cartas.filter(c => c.comodin).length;
+
+        // Verificar hueco interno (joker en medio)
         let valorEsperado = valores[0].valorNum;
         for (let i = 0; i < valores.length; i++) {
             if (valores[i].valorNum !== valorEsperado) {
-                for (const [k, v] of Object.entries(VNUM)) {
-                    if (v === valorEsperado) return { valor: k, palo: valores[0].palo };
-                }
+                return { valor: VNUM_R[String(valorEsperado)] || '?', palo };
             }
             valorEsperado++;
         }
-        if (valores[valores.length - 1].valorNum < 13) {
+
+        // Sin hueco interno → joker al inicio o al final
+        // Determinar por posición real en cartas (el comodín estaba antes o después)
+        const posComodin = jugada.cartas.findIndex(c => c.comodin);
+        const posUltimaNormal = jugada.cartas.map((c,i) => c.comodin ? -1 : i).filter(i => i >= 0).pop();
+        const posFirstNormal = jugada.cartas.findIndex(c => !c.comodin);
+
+        if (posComodin < posFirstNormal) {
+            // Joker está antes de la primera carta normal → reemplaza carta anterior
+            const ante = valores[0].valorNum - 1;
+            if (ante >= 1) return { valor: VNUM_R[String(ante)] || '?', palo };
+        } else {
+            // Joker está después de la última carta normal → reemplaza carta siguiente
             const sig = valores[valores.length - 1].valorNum + 1;
-            for (const [k, v] of Object.entries(VNUM)) {
-                if (v === sig) return { valor: k, palo: valores[0].palo };
-            }
+            if (sig <= 14) return { valor: VNUM_R[String(sig)] || '?', palo };
         }
     }
     return null;
@@ -222,9 +246,57 @@ function puedeAcomodarEnCorrida(carta, corrida) {
     const cartasNormales = corrida.filter(c => !c.comodin);
     if (cartasNormales.length === 0) return true;
     if (carta.palo !== cartasNormales[0].palo) return false;
-    const valores = cartasNormales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
+
+    // Detectar si la corrida usa A como 14 (contiene K pero no 2 entre sus extremos)
+    const valoresNum = cartasNormales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
     const valorCarta = VNUM[carta.valor];
-    return valorCarta === valores[0] - 1 || valorCarta === valores[valores.length - 1] + 1;
+
+    // Probar con A=1
+    if (valorCarta === valoresNum[0] - 1 || valorCarta === valoresNum[valoresNum.length - 1] + 1) return true;
+
+    // Probar con A=14 (la corrida tiene As como 14)
+    if (valoresNum.includes(1)) {
+        const valoresA14 = valoresNum.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+        const valCarta14 = valorCarta === 1 ? 14 : valorCarta;
+        if (valCarta14 === valoresA14[0] - 1 || valCarta14 === valoresA14[valoresA14.length - 1] + 1) return true;
+    }
+    return false;
+}
+
+// Ordena las cartas de una corrida de menor a mayor (A puede ser 1 o 14 según contexto)
+function ordenarCorridaAcomodada(cartas) {
+    const normales = cartas.filter(c => !c.comodin);
+    const comodines = cartas.filter(c => c.comodin);
+    if (normales.length === 0) return cartas;
+
+    const valsNorm = normales.map(c => VNUM[c.valor]);
+    const tieneAs = valsNorm.includes(1);
+    const tieneCartasAltas = valsNorm.some(v => v >= 11); // J, Q, K
+
+    // Decidir si el As va como 1 o 14
+    const useA14 = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
+
+    const normalesConNum = normales.map(c => ({
+        ...c,
+        _num: (c.valor === 'A' && useA14) ? 14 : VNUM[c.valor]
+    })).sort((a, b) => a._num - b._num);
+
+    // Intercalar comodines en los huecos
+    const resultado = [];
+    let comodinesRestantes = [...comodines];
+    for (let i = 0; i < normalesConNum.length; i++) {
+        resultado.push(normalesConNum[i]);
+        if (i < normalesConNum.length - 1) {
+            const hueco = normalesConNum[i + 1]._num - normalesConNum[i]._num - 1;
+            for (let k = 0; k < hueco && comodinesRestantes.length > 0; k++) {
+                resultado.push(comodinesRestantes.shift());
+            }
+        }
+    }
+    resultado.push(...comodinesRestantes);
+    // Limpiar propiedad temporal
+    resultado.forEach(c => delete c._num);
+    return resultado;
 }
 
 function puedeAcomodar(carta, jugada) {
@@ -303,7 +375,8 @@ function validarCorrida(cartas) {
     }
 
     if (esSecuenciaValida(vals, comodines.length)) return true;
-    if (vals.includes(1) && vals.includes(13)) {
+    // Probar A como 14 (J-Q-K-A) si hay un As — no requiere que también haya K
+    if (vals.includes(1)) {
         const con14 = vals.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
         if (esSecuenciaValida(con14, comodines.length)) return true;
     }
@@ -517,6 +590,19 @@ class GameEngine {
         if (terciasCount < req.t) return this._err(`Necesitas ${req.t} tercia(s) (tienes ${terciasCount})`);
         if (corridasCount < req.c) return this._err(`Necesitas ${req.c} corrida(s) (tienes ${corridasCount})`);
 
+        // ── Ronda 7: no se puede bajar con cartas en sobrantes ──
+        if (this.ronda === 7) {
+            const cartasEnJugadas = new Set();
+            jugadasConstruidas.forEach(jug => jug.cartas.forEach(c => cartasEnJugadas.add(c.id)));
+            const sobrantes = this.jActivo.mano.filter(c => !cartasEnJugadas.has(c.id));
+            if (sobrantes.length > 0) {
+                this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
+                this.jActivo.puedeBajar = false;
+                this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre}: ronda 7 requiere 0 sobrantes. Penalizado 2 turnos.`);
+                return this._err(`¡BAJADA EN FALSO! En la ronda 7 debes meter TODAS tus cartas en las jugadas. Te quedan ${sobrantes.length} carta(s) en sobrantes. Castigado 2 turnos.`);
+            }
+        }
+
         // ── Todo válido: registrar jugadas y quitar cartas de la mano ──
         const cartasUsadasIds = new Set();
         validacion.jugadasOrdenadas.forEach(jugada => jugada.cartas.forEach(c => cartasUsadasIds.add(c.id)));
@@ -686,6 +772,11 @@ class GameEngine {
         const carta = j.mano[cidx];
         if (!puedeAcomodar(carta, jug)) return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
         jug.cartas.push(carta);
+        // Si es corrida, reordenar de menor a mayor y recalcular valor del comodín
+        if (jug.tipo === 'corrida') {
+            jug.cartas = ordenarCorridaAcomodada(jug.cartas);
+            guardarValorComodin(jug); // recalcula qué reemplaza el joker tras el reordenamiento
+        }
         j.mano.splice(cidx, 1);
         this.addLog(`🃏 ${j.nombre} acomodó en jugada de ${dest.nombre}.`);
         this.lastAction = Date.now();

@@ -603,30 +603,51 @@ class GameEngine {
         }
 
         // Si el jugador aún no se bajó, verificar que DESPUÉS del intercambio pueda bajarse
-        // usando las jugadas que tiene armadas en sus slots (enviadas por el cliente)
         if (!j.bajado) {
             if (!jugadasEnSlots || jugadasEnSlots.length === 0) {
                 return this._err('Debes tener jugadas armadas en los slots para poder intercambiar.');
             }
 
-            // Simular: la carta sale de la mano, el comodín entra a la mano
             const comodinRecibido = jugadaOrigen.cartas[comodinIdx];
-            const manoSimulada = [...j.mano];
-            manoSimulada.splice(cartaEnManoIdx, 1);
-            manoSimulada.push(comodinRecibido);
 
-            // Construir jugadas simuladas: reemplazar la carta que sale por el comodín en los slots
-            const jugadasSimuladas = jugadasEnSlots.map(jug => ({
+            // Construir jugadas simuladas:
+            // - La carta que se entrega puede estar en un slot → reemplazarla por el comodín en ese slot
+            // - O la carta está en sobrantes → el comodín va a sobrantes y puede completar un slot casi-completo
+            let jugadasSimuladas = jugadasEnSlots.map(jug => ({
                 ...jug,
-                cartas: jug.cartas.map(c => c.id === cartaId ? comodinRecibido : c)
+                cartas: jug.cartas.map(c => c.id === cartaId ? { ...comodinRecibido } : c)
             }));
 
-            // Validar que esas jugadas simuladas cumplan los requisitos de la ronda
-            const validacion = validarJugadasConstruidas(jugadasSimuladas);
-            if (!validacion.valido) {
-                return this._err('Con el intercambio, tus jugadas en los slots no serían válidas para bajarte.');
+            // Si la carta NO estaba en ningún slot (estaba en sobrantes),
+            // intentar agregar el comodín al slot que le falta exactamente 1 carta
+            const cartaEnSlot = jugadasEnSlots.some(jug => jug.cartas.some(c => c.id === cartaId));
+            if (!cartaEnSlot) {
+                // Buscar el slot casi-completo (válido si agregamos el comodín)
+                let comodinUsado = false;
+                jugadasSimuladas = jugadasEnSlots.map(jug => {
+                    if (comodinUsado) return jug;
+                    const cartasConComodin = [...jug.cartas, { ...comodinRecibido }];
+                    const esValidaConComodin = jug.tipo === 'tercia'
+                        ? validarTercia(cartasConComodin)
+                        : validarCorrida(cartasConComodin);
+                    const esValidaSin = jug.tipo === 'tercia'
+                        ? validarTercia(jug.cartas)
+                        : validarCorrida(jug.cartas);
+                    // Solo agregar el comodín al primer slot que lo necesita
+                    if (!esValidaSin && esValidaConComodin) {
+                        comodinUsado = true;
+                        return { ...jug, cartas: cartasConComodin };
+                    }
+                    return jug;
+                });
             }
+
+            // Validar que las jugadas simuladas cumplan los requisitos
+            const validacion = validarJugadasConstruidas(jugadasSimuladas);
             const req = REQ[this.ronda];
+            if (!validacion.valido) {
+                return this._err('Con el intercambio, tus jugadas no serían válidas para bajarte.');
+            }
             const tercias = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
             const corridas = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
             if (tercias < req.t || corridas < req.c) {

@@ -140,6 +140,10 @@ function slotCorridaCasiCompleta(cards) {
 // DETECCIÓN AUTOMÁTICA DE INTERCAMBIOS POSIBLES
 // ═══════════════════════════════════════════════════
 
+// Map para guardar intercambios posibles indexados por clave "jugadorIdx-jugadaIdx-comodinId"
+// Evita pasar JSON en atributos onclick del HTML
+const _intercambiosCache = new Map();
+
 // Detecta qué cartas de la mano pueden intercambiarse con qué jokers de la mesa,
 // considerando que después del intercambio el jugador pueda bajarse inmediatamente.
 // Retorna array de { cartaId, cartaValor, cartaPalo, jugadorIdx, jugadaIdx, comodinId }
@@ -221,7 +225,7 @@ function detectarIntercambiosPosibles() {
                 const puedebajar = terciasOk >= req.t && corridasOk >= req.c;
                 if (!puedebajar) return;
 
-                intercambios.push({
+                const icObj = {
                     cartaId: carta.id,
                     cartaValor: carta.valor,
                     cartaPalo: carta.palo,
@@ -229,7 +233,10 @@ function detectarIntercambiosPosibles() {
                     jugadaIdx: jugi,
                     comodinId: comodin.id,
                     jugadasSimuladas,
-                });
+                };
+                const icKey = `${ji}-${jugi}-${comodin.id}`;
+                _intercambiosCache.set(icKey, icObj);
+                intercambios.push(icObj);
             });
         });
     });
@@ -591,7 +598,15 @@ function activarModoIntercambio(jugadorIdx, jugadaIdx, comodinId) {
 function cancelIntercambio() {
     intercambioMode = false;
     selectedComodinInfo = null;
+    _intercambiosCache.clear();
     render();
+}
+
+// Intercambio desde key (usado por onclick del HTML para evitar JSON en atributos)
+function ejecutarIntercambioDesdeKey(key) {
+    const intercambio = _intercambiosCache.get(key);
+    if (!intercambio) { toast('Intercambio no disponible, vuelve a intentar.'); return; }
+    ejecutarIntercambioDirecto(intercambio);
 }
 
 // Intercambio directo: el sistema detectó que puedes intercambiar carta X por joker Y
@@ -611,12 +626,19 @@ function ejecutarIntercambioDirecto(intercambio) {
     const carta = `${intercambio.cartaValor}${intercambio.cartaPalo}`;
     toast(`🔄 Intercambiando ${carta} por el Joker…`, 'green');
 
-    // Construir jugadasEnSlots actuales
+    // Construir jugadasEnSlots — incluir TODOS los slots con cartas
+    // El servidor simulará dónde encaja mejor el comodín recibido
     const defs = getSlotDefsRonda(G.ronda);
     const jugadasEnSlots = [];
     for (const def of defs) {
         const cards = buildingCards.get(def.index) || [];
         if (cards.length > 0) jugadasEnSlots.push({ tipo: def.type, cartas: cards.filter(Boolean) });
+    }
+
+    // Si no hay ningún slot con cartas, no se puede intercambiar
+    if (jugadasEnSlots.length === 0) {
+        toast('Arma tus jugadas en los slots antes de intercambiar.', 'red');
+        return;
     }
 
     WS.send({
@@ -751,10 +773,11 @@ function renderTableBajadas() {
                         ic => ic.jugadorIdx === ji && ic.jugadaIdx === jugi && ic.comodinId === c.id
                     );
                     if (intercPosible) {
+                        const icKey = `${ji}-${jugi}-${c.id}`;
                         return `<div class="card-sm joker-sm comodin-intercambiable joker-highlight"
                                      title="🔄 Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker"
-                                     data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
-                                     onclick="event.stopPropagation(); window.ejecutarIntercambioDirecto(${JSON.stringify(intercPosible)})">
+                                     data-ic-key="${icKey}"
+                                     onclick="event.stopPropagation(); window.ejecutarIntercambioDesdeKey('${icKey}')">
                                      🃏<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
                                      <small style="font-size:7px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
                     }
@@ -1272,5 +1295,6 @@ window.toast = toast;
 window.activarModoIntercambio = activarModoIntercambio;
 window.cancelIntercambio = cancelIntercambio;
 window.ejecutarIntercambioDirecto = ejecutarIntercambioDirecto;
+window.ejecutarIntercambioDesdeKey = ejecutarIntercambioDesdeKey;
 
 document.addEventListener('DOMContentLoaded', init);

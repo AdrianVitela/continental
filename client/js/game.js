@@ -39,20 +39,101 @@ let buildingCards = new Map(); // slotIndex (string) -> array de cartas completa
 
 // ═══════════════════════════════════════════════════
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
-// Solo verifica mínimo de cartas — el servidor valida correctamente.
-// Así las bajadas en falso llegan al servidor y son penalizadas.
+//
+// El botón se habilita si:
+//   Caso 1: TODOS los slots están completos y válidos
+//   Caso 2: Todos menos UNO están completos, y ese uno está "casi completo"
+//           (le falta 1 carta para ser válido)
+//
+// "Casi completo" para tercia:  ≥3 cartas, mayoría del mismo valor (2 iguales + cualquiera)
+// "Casi completo" para corrida: ≥4 cartas, mismo palo, secuencia con máximo 1 hueco extra
+//
+// NUNCA valida estrictamente — las bajadas en falso pasan al servidor para ser penalizadas.
 // ═══════════════════════════════════════════════════
 
+// Tercia completamente válida: ≥3 cartas, todas del mismo valor (con máx 1 comodín)
 function slotTerciaValido(cards) {
-    // Mínimo 3 cartas con al menos 1 normal
     if (cards.length < 3) return false;
-    return cards.filter(c => !c.comodin).length >= 1;
+    const normales = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c => c.comodin);
+    if (normales.length === 0) return false;
+    if (comodines.length > 1) return false;
+    const valorBase = normales[0].valor;
+    return normales.every(c => c.valor === valorBase);
 }
 
+// Corrida completamente válida: ≥4 cartas, mismo palo, en secuencia (con máx 1 comodín)
 function slotCorridaValido(cards) {
-    // Mínimo 4 cartas con al menos 1 normal
     if (cards.length < 4) return false;
-    return cards.filter(c => !c.comodin).length >= 1;
+    const normales = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c => c.comodin);
+    if (normales.length === 0) return false;
+    if (comodines.length > 1) return false;
+    const palo = normales[0].palo;
+    if (!normales.every(c => c.palo === palo)) return false;
+    const vals = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
+    if (new Set(vals).size !== vals.length) return false;
+    let huecos = 0;
+    for (let i = 0; i < vals.length - 1; i++) {
+        const diff = vals[i + 1] - vals[i];
+        if (diff === 1) continue;
+        if (diff === 2) { huecos++; continue; }
+        return false;
+    }
+    return huecos <= comodines.length;
+}
+
+// Tercia "casi completa": ≥3 cartas, al menos 2 del mismo valor (la tercera puede ser cualquiera)
+// Ejemplo: 4,4,8 → casi completa (hay 2 cuatros, falta un 4)
+function slotTerciaCasiCompleta(cards) {
+    if (cards.length < 3) return false;
+    const normales = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c => c.comodin);
+    if (normales.length === 0) return false;
+    if (comodines.length > 1) return false;
+    // Con comodín: 1 normal + 1 comodín ya forma casi-tercia si hay una 3ra carta de cualquier valor
+    if (comodines.length === 1 && normales.length >= 2) return true;
+    // Sin comodín: necesita al menos 2 del mismo valor
+    const conteo = {};
+    normales.forEach(c => { conteo[c.valor] = (conteo[c.valor] || 0) + 1; });
+    return Object.values(conteo).some(n => n >= 2);
+}
+
+// Corrida "casi completa": ≥4 cartas, mismo palo, secuencia con máximo 1 hueco extra
+// Ejemplo: 2,3,5,6 → casi completa (falta el 4), 10,J,K,A → casi completa (falta Q)
+function slotCorridaCasiCompleta(cards) {
+    if (cards.length < 4) return false;
+    const normales = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c => c.comodin);
+    if (normales.length === 0) return false;
+    if (comodines.length > 1) return false;
+    const palo = normales[0].palo;
+    if (!normales.every(c => c.palo === palo)) return false;
+    if (new Set(normales.map(c => c.valor)).size !== normales.length) return false;
+
+    function contarHuecos(vals) {
+        let h = 0;
+        for (let i = 0; i < vals.length - 1; i++) {
+            const diff = vals[i + 1] - vals[i];
+            if (diff >= 2) h += diff - 1;
+        }
+        return h;
+    }
+
+    const valsNorm = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
+
+    // Probar A como 1
+    const h1 = contarHuecos(valsNorm);
+    if ((h1 - comodines.length) === 1) return true;
+
+    // Probar A como 14 si hay un As
+    if (valsNorm.includes(1)) {
+        const valsA14 = valsNorm.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
+        const h2 = contarHuecos(valsA14);
+        if ((h2 - comodines.length) === 1) return true;
+    }
+
+    return false;
 }
 
 // Retorna true si todos los slots requeridos por la ronda son válidos
@@ -82,16 +163,30 @@ function slotsListosParaBajar() {
     const req = REQ[G.ronda];
     const defs = getSlotDefsRonda(G.ronda);
 
-    let terciasOk = 0;
-    let corridasOk = 0;
+    // Evaluar cada slot: completo, casi-completo, o insuficiente
+    let completos = 0;
+    let casiCompletos = 0;
+    let insuficientes = 0;
 
     for (const def of defs) {
         const cards = buildingCards.get(def.index) || [];
-        if (def.type === 'tercia' && slotTerciaValido(cards)) terciasOk++;
-        if (def.type === 'corrida' && slotCorridaValido(cards)) corridasOk++;
+        const esCompleto = def.type === 'tercia' ? slotTerciaValido(cards) : slotCorridaValido(cards);
+        const esCasi    = def.type === 'tercia' ? slotTerciaCasiCompleta(cards) : slotCorridaCasiCompleta(cards);
+
+        if (esCompleto)       completos++;
+        else if (esCasi)      casiCompletos++;
+        else                  insuficientes++;
     }
 
-    return terciasOk >= req.t && corridasOk >= req.c;
+    const totalSlots = defs.length;
+
+    // Caso 1: todos los slots están completos
+    if (completos === totalSlots) return true;
+
+    // Caso 2: todos menos uno están completos, y ese uno está casi completo
+    if (completos === totalSlots - 1 && casiCompletos >= 1 && insuficientes === 0) return true;
+
+    return false;
 }
 
 // ═══════════════════════════════════════════════════

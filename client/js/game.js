@@ -136,6 +136,107 @@ function slotCorridaCasiCompleta(cards) {
     return false;
 }
 
+// ═══════════════════════════════════════════════════
+// DETECCIÓN AUTOMÁTICA DE INTERCAMBIOS POSIBLES
+// ═══════════════════════════════════════════════════
+
+// Detecta qué cartas de la mano pueden intercambiarse con qué jokers de la mesa,
+// considerando que después del intercambio el jugador pueda bajarse inmediatamente.
+// Retorna array de { cartaId, cartaValor, cartaPalo, jugadorIdx, jugadaIdx, comodinId }
+function detectarIntercambiosPosibles() {
+    if (!G || myIdx < 0) return [];
+    if (!isMyTurn() || G.estado !== 'esperando_accion') return [];
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) return [];
+
+    const intercambios = [];
+
+    G.jugadores.forEach((jOrigen, ji) => {
+        if (!jOrigen.bajado || ji === myIdx) return;
+        jOrigen.jugadas?.forEach((jug, jugi) => {
+            const comodin = jug.cartas.find(c => c.comodin);
+            if (!comodin) return;
+
+            // La carta que reemplaza el joker
+            const valorNecesario = comodin.valorReemplazado;
+            const paloNecesario = comodin.paloReemplazado; // null para tercias
+
+            // Buscar en la mano del jugador (incluyendo cartas en sobrantes, no en slots)
+            const cartasEnSlots = new Set();
+            buildingCards.forEach(cards => cards.forEach(c => cartasEnSlots.add(c.id)));
+
+            me.mano.forEach(carta => {
+                if (carta.comodin) return;
+                if (cartasEnSlots.has(carta.id)) return; // ya está en un slot
+
+                // ¿Esta carta puede reemplazar al joker?
+                const encaja = jug.tipo === 'tercia'
+                    ? carta.valor === valorNecesario
+                    : carta.valor === valorNecesario && carta.palo === paloNecesario;
+
+                if (!encaja) return;
+
+                // ¿Con el comodín recibido + slots actuales puede bajarse?
+                // Simular: carta sale de mano, comodín entra a mano
+                // Construir jugadas simuladas reemplazando la carta por el comodín en los slots
+                const defs = getSlotDefsRonda(G.ronda);
+                const jugadasSimuladas = [];
+                let comodinUsadoEnSlot = false;
+
+                for (const def of defs) {
+                    const cards = buildingCards.get(def.index) || [];
+                    if (cards.length === 0) continue;
+                    // Si la carta que se va está en este slot, reemplazarla por el comodín
+                    const tieneLaCarta = cards.some(c => c.id === carta.id);
+                    let cartasSlot = cards;
+                    if (tieneLaCarta) {
+                        cartasSlot = cards.map(c => c.id === carta.id ? { ...comodin, comodin: true } : c);
+                        comodinUsadoEnSlot = true;
+                    }
+                    jugadasSimuladas.push({ tipo: def.type, cartas: cartasSlot.filter(Boolean) });
+                }
+
+                // Si la carta está en sobrantes (no en slots), el comodín va a sobrantes
+                // En ese caso verificar si con el comodín en sobrantes + slots actuales puede bajarse
+                if (!comodinUsadoEnSlot) {
+                    // El comodín iría a sobrantes — verificar si los slots actuales ya están listos
+                    // o si el comodín puede completar un slot casi-completo
+                    for (const def of defs) {
+                        const cards = buildingCards.get(def.index) || [];
+                        jugadasSimuladas.push({ tipo: def.type, cartas: cards.filter(Boolean) });
+                    }
+                }
+
+                // Validar que las jugadas simuladas sean suficientes
+                const req = REQ[G.ronda];
+                let terciasOk = 0, corridasOk = 0;
+
+                for (let i = 0; i < jugadasSimuladas.length; i++) {
+                    const js = jugadasSimuladas[i];
+                    if (!js.cartas || js.cartas.length === 0) continue;
+                    if (js.tipo === 'tercia' && slotTerciaValido(js.cartas)) terciasOk++;
+                    if (js.tipo === 'corrida' && slotCorridaValido(js.cartas)) corridasOk++;
+                }
+
+                const puedebajar = terciasOk >= req.t && corridasOk >= req.c;
+                if (!puedebajar) return;
+
+                intercambios.push({
+                    cartaId: carta.id,
+                    cartaValor: carta.valor,
+                    cartaPalo: carta.palo,
+                    jugadorIdx: ji,
+                    jugadaIdx: jugi,
+                    comodinId: comodin.id,
+                    jugadasSimuladas,
+                });
+            });
+        });
+    });
+
+    return intercambios;
+}
+
 // Retorna true si todos los slots requeridos por la ronda son válidos
 // Definición de slots por ronda: { index, type }
 function getSlotDefsRonda(ronda) {
@@ -445,16 +546,15 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
     if (!isMyTurn()) { toast('No es tu turno.'); return; }
     if (G.estado !== 'esperando_accion') { toast('Debes robar una carta primero antes de intercambiar.'); return; }
 
-    buildingCards.forEach((cards, slotIndex) => {
-        const index = cards.findIndex(c => c.id === cartaId);
-        if (index > -1) {
-            cards.splice(index, 1);
-            if (cards.length === 0) buildingCards.delete(slotIndex);
-            updateSlotUI(slotIndex, cards);
-        }
-    });
+    // Construir jugadasEnSlots para que el servidor pueda validar si podrá bajarse
+    const defs = getSlotDefsRonda(G.ronda);
+    const jugadasEnSlots = [];
+    for (const def of defs) {
+        const cards = buildingCards.get(def.index) || [];
+        if (cards.length > 0) jugadasEnSlots.push({ tipo: def.type, cartas: cards.filter(Boolean) });
+    }
 
-    WS.send({ type: 'intercambiar_comodin', cartaId, origenJugadorIdx, origenJugadaIdx });
+    WS.send({ type: 'intercambiar_comodin', cartaId, origenJugadorIdx, origenJugadaIdx, jugadasEnSlots });
     selId = null;
     cancelIntercambio();
 }
@@ -479,6 +579,42 @@ function cancelIntercambio() {
     intercambioMode = false;
     selectedComodinInfo = null;
     render();
+}
+
+// Intercambio directo: el sistema detectó que puedes intercambiar carta X por joker Y
+// Se llama al hacer clic en el joker resaltado en la mesa
+function ejecutarIntercambioDirecto(intercambio) {
+    if (!isMyTurn() || G.estado !== 'esperando_accion') {
+        toast('Solo puedes intercambiar en tu turno después de robar.');
+        return;
+    }
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) {
+        toast('Ya te bajaste, usa acomodar.');
+        return;
+    }
+
+    // Confirmar al usuario
+    const carta = `${intercambio.cartaValor}${intercambio.cartaPalo}`;
+    toast(`🔄 Intercambiando ${carta} por el Joker…`, 'green');
+
+    // Construir jugadasEnSlots actuales
+    const defs = getSlotDefsRonda(G.ronda);
+    const jugadasEnSlots = [];
+    for (const def of defs) {
+        const cards = buildingCards.get(def.index) || [];
+        if (cards.length > 0) jugadasEnSlots.push({ tipo: def.type, cartas: cards.filter(Boolean) });
+    }
+
+    WS.send({
+        type: 'intercambiar_comodin',
+        cartaId: intercambio.cartaId,
+        origenJugadorIdx: intercambio.jugadorIdx,
+        origenJugadaIdx: intercambio.jugadaIdx,
+        jugadasEnSlots,
+    });
+    selId = null;
+    cancelIntercambio();
 }
 
 function confirmarIntercambio() {
@@ -587,17 +723,35 @@ function renderTableBajadas() {
             if (intercambioMode) pile.classList.add('intercambio-mode');
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
+            // Detectar intercambios posibles para resaltar jokers
+            const intercambiosPosibles = (!me?.bajado && isMyTurn() && G.estado === 'esperando_accion')
+                ? detectarIntercambiosPosibles()
+                : [];
+
             const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
                     const vr = c.valorReemplazado || '?';
+                    const vrPalo = c.paloReemplazado ? c.paloReemplazado : '';
+                    // ¿Hay un intercambio posible con este joker concreto?
+                    const intercPosible = intercambiosPosibles.find(
+                        ic => ic.jugadorIdx === ji && ic.jugadaIdx === jugi && ic.comodinId === c.id
+                    );
+                    if (intercPosible) {
+                        return `<div class="card-sm joker-sm comodin-intercambiable joker-highlight"
+                                     title="🔄 Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker"
+                                     data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
+                                     onclick="event.stopPropagation(); window.ejecutarIntercambioDirecto(${JSON.stringify(intercPosible)})">
+                                     🃏<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
+                                     <small style="font-size:7px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
+                    }
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
                         return `<div class="card-sm joker-sm comodin-intercambiable"
-                                     title="Reemplaza a: ${vr}"
+                                     title="Reemplaza a: ${vr}${vrPalo}"
                                      data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
                                      onclick="event.stopPropagation(); window.activarModoIntercambio(${ji}, ${jugi}, '${c.id}')">
-                                     🃏<small style="font-size:8px;display:block;">=${vr}</small></div>`;
+                                     🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                     }
-                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}">🃏<small style="font-size:8px;display:block;">=${vr}</small></div>`;
+                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}">🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                 }
                 return cSm(c);
             }).join('');
@@ -974,7 +1128,16 @@ function renderActions() {
                 }
                 add('🔥 Bajarme', 'abtn-gold', acBajar, !listoParaBajar);
                 add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
-                if (selId && hasComodinesIntercambiables()) {
+
+                // Detectar intercambios posibles automáticamente
+                const intercambiosPosibles = detectarIntercambiosPosibles();
+                if (intercambiosPosibles.length > 0) {
+                    const ic = intercambiosPosibles[0];
+                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => {
+                        ejecutarIntercambioDirecto(ic);
+                    });
+                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte!`;
+                } else if (selId && hasComodinesIntercambiables()) {
                     add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
                         toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
                         intercambioMode = true;
@@ -1094,5 +1257,6 @@ window.ackRonda = ackRonda;
 window.toast = toast;
 window.activarModoIntercambio = activarModoIntercambio;
 window.cancelIntercambio = cancelIntercambio;
+window.ejecutarIntercambioDirecto = ejecutarIntercambioDirecto;
 
 document.addEventListener('DOMContentLoaded', init);

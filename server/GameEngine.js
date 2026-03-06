@@ -581,7 +581,9 @@ class GameEngine {
         return this._ok('pagar', { carta, jugadorIdx: prevTurno, nextTurno: this.turno });
     }
 
-    acIntercambiarComodin(playerId, cartaId, origenJugadorIdx, origenJugadaIdx) {
+    // jugadasEnSlots: array de {tipo, cartas} que el cliente tiene armadas en sus slots
+    // Si el jugador aún no se bajó, verificamos que con el comodín recibido + jugadasEnSlots pueda bajarse
+    acIntercambiarComodin(playerId, cartaId, origenJugadorIdx, origenJugadaIdx, jugadasEnSlots = []) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
         const tidx = this.jugadores.indexOf(j);
@@ -599,14 +601,40 @@ class GameEngine {
         if (!puedeIntercambiarComodin(cartaParaIntercambiar, jugadaOrigen)) {
             return this._err('Esta carta no puede reemplazar al comodín en esa jugada.');
         }
+
+        // Si el jugador aún no se bajó, verificar que DESPUÉS del intercambio pueda bajarse
+        // usando las jugadas que tiene armadas en sus slots (enviadas por el cliente)
         if (!j.bajado) {
+            if (!jugadasEnSlots || jugadasEnSlots.length === 0) {
+                return this._err('Debes tener jugadas armadas en los slots para poder intercambiar.');
+            }
+
+            // Simular: la carta sale de la mano, el comodín entra a la mano
+            const comodinRecibido = jugadaOrigen.cartas[comodinIdx];
             const manoSimulada = [...j.mano];
             manoSimulada.splice(cartaEnManoIdx, 1);
-            manoSimulada.push(jugadaOrigen.cartas[comodinIdx]);
-            if (!puedeBajarse(manoSimulada, this.ronda)) {
-                return this._err('Después del intercambio no podrías bajarte. Debes poder bajarte inmediatamente.');
+            manoSimulada.push(comodinRecibido);
+
+            // Construir jugadas simuladas: reemplazar la carta que sale por el comodín en los slots
+            const jugadasSimuladas = jugadasEnSlots.map(jug => ({
+                ...jug,
+                cartas: jug.cartas.map(c => c.id === cartaId ? comodinRecibido : c)
+            }));
+
+            // Validar que esas jugadas simuladas cumplan los requisitos de la ronda
+            const validacion = validarJugadasConstruidas(jugadasSimuladas);
+            if (!validacion.valido) {
+                return this._err('Con el intercambio, tus jugadas en los slots no serían válidas para bajarte.');
+            }
+            const req = REQ[this.ronda];
+            const tercias = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
+            const corridas = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
+            if (tercias < req.t || corridas < req.c) {
+                return this._err('Con el intercambio aún no cumplirías los requisitos para bajarte.');
             }
         }
+
+        // Ejecutar el intercambio
         const comodin = jugadaOrigen.cartas[comodinIdx];
         jugadaOrigen.cartas[comodinIdx] = cartaParaIntercambiar;
         j.mano[cartaEnManoIdx] = comodin;

@@ -73,12 +73,7 @@ function getValorComodinEnJugada(jugada) {
 
         const VNUM_R = {'1':'A','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'J','12':'Q','13':'K','14':'A'};
 
-        // Sabemos que hay exactamente 1 comodín — calcular longitud total esperada
-        // La secuencia con comodín debe ser continua: encontrar dónde encaja el comodín
-        // Intentar: joker al inicio, al final, o en cada hueco interno
-        const numComodin = jugada.cartas.filter(c => c.comodin).length;
-
-        // Verificar hueco interno (joker en medio)
+        // Verificar hueco interno (joker en medio de la secuencia)
         let valorEsperado = valores[0].valorNum;
         for (let i = 0; i < valores.length; i++) {
             if (valores[i].valorNum !== valorEsperado) {
@@ -87,21 +82,30 @@ function getValorComodinEnJugada(jugada) {
             valorEsperado++;
         }
 
-        // Sin hueco interno → joker al inicio o al final
-        // Determinar por posición real en cartas (el comodín estaba antes o después)
-        const posComodin = jugada.cartas.findIndex(c => c.comodin);
-        const posUltimaNormal = jugada.cartas.map((c,i) => c.comodin ? -1 : i).filter(i => i >= 0).pop();
-        const posFirstNormal = jugada.cartas.findIndex(c => !c.comodin);
+        // Sin hueco interno → el joker está en un extremo
+        // Determinar por la posición del joker en el array ordenado original
+        const minVal = valores[0].valorNum;
+        const maxVal = valores[valores.length - 1].valorNum;
+        const ante = minVal - 1;
+        const sig  = maxVal + 1;
 
-        if (posComodin < posFirstNormal) {
-            // Joker está antes de la primera carta normal → reemplaza carta anterior
-            const ante = valores[0].valorNum - 1;
-            if (ante >= 1) return { valor: VNUM_R[String(ante)] || '?', palo };
-        } else {
-            // Joker está después de la última carta normal → reemplaza carta siguiente
-            const sig = valores[valores.length - 1].valorNum + 1;
-            if (sig <= 14) return { valor: VNUM_R[String(sig)] || '?', palo };
+        // Buscar posición del joker respecto a las cartas normales en el array original
+        const idxJoker = jugada.cartas.findIndex(c => c.comodin);
+        // Calcular la posición "numérica" del joker en la secuencia ordenada
+        // Comparar con los índices de las cartas normales ordenadas
+        const idxsNormalesEnOriginal = jugada.cartas
+            .map((c, i) => c.comodin ? -1 : i)
+            .filter(i => i >= 0);
+        const jokerAntesDeAlgunaNormal = idxJoker < Math.min(...idxsNormalesEnOriginal);
+        const jokerDespuesDeTodasNormales = idxJoker > Math.max(...idxsNormalesEnOriginal);
+
+        if (jokerAntesDeAlgunaNormal && ante >= 1) {
+            return { valor: VNUM_R[String(ante)] || '?', palo };
         }
+        if ((jokerDespuesDeTodasNormales || !jokerAntesDeAlgunaNormal) && sig <= 14) {
+            return { valor: VNUM_R[String(sig)] || '?', palo };
+        }
+        if (ante >= 1) return { valor: VNUM_R[String(ante)] || '?', palo };
     }
     return null;
 }
@@ -244,23 +248,37 @@ function puedeAcomodarEnTercia(carta, tercia) {
 function puedeAcomodarEnCorrida(carta, corrida) {
     if (carta.comodin) return !corrida.some(c => c.comodin);
     const cartasNormales = corrida.filter(c => !c.comodin);
+    const comodin = corrida.find(c => c.comodin);
     if (cartasNormales.length === 0) return true;
     if (carta.palo !== cartasNormales[0].palo) return false;
 
-    // Detectar si la corrida usa A como 14 (contiene K pero no 2 entre sus extremos)
-    const valoresNum = cartasNormales.map(c => VNUM[c.valor]).sort((a, b) => a - b);
-    const valorCarta = VNUM[carta.valor];
+    // Construir lista completa de valores ocupados (normales + lo que cubre el joker)
+    const valsNorm = cartasNormales.map(c => VNUM[c.valor]);
+    const tieneAs = valsNorm.includes(1);
+    const tieneCartasAltas = valsNorm.some(v => v >= 11);
+    const useA14 = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
 
-    // Probar con A=1
-    if (valorCarta === valoresNum[0] - 1 || valorCarta === valoresNum[valoresNum.length - 1] + 1) return true;
+    const valsConA = valsNorm.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
 
-    // Probar con A=14 (la corrida tiene As como 14)
-    if (valoresNum.includes(1)) {
-        const valoresA14 = valoresNum.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
-        const valCarta14 = valorCarta === 1 ? 14 : valorCarta;
-        if (valCarta14 === valoresA14[0] - 1 || valCarta14 === valoresA14[valoresA14.length - 1] + 1) return true;
+    // Si hay joker, agregar su valor cubierto a los valores ocupados
+    const valsOcupados = [...valsConA];
+    if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
+        const vComodin = VNUM[comodin.valorReemplazado];
+        if (vComodin) valsOcupados.push(vComodin === 1 && useA14 ? 14 : vComodin);
+        valsOcupados.sort((a, b) => a - b);
     }
-    return false;
+
+    const valorCarta = VNUM[carta.valor];
+    const valCarta = (valorCarta === 1 && useA14) ? 14 : valorCarta;
+
+    // La carta solo puede ir al inicio o al final de la secuencia completa (incluyendo joker)
+    const minVal = valsOcupados[0];
+    const maxVal = valsOcupados[valsOcupados.length - 1];
+
+    // Verificar que no sea un valor ya ocupado
+    if (valsOcupados.includes(valCarta)) return false;
+
+    return valCarta === minVal - 1 || valCarta === maxVal + 1;
 }
 
 // Ordena las cartas de una corrida de menor a mayor (A puede ser 1 o 14 según contexto)
@@ -690,54 +708,56 @@ class GameEngine {
 
         // Si el jugador aún no se bajó, verificar que DESPUÉS del intercambio pueda bajarse
         if (!j.bajado) {
-            if (!jugadasEnSlots || jugadasEnSlots.length === 0) {
-                return this._err('Debes tener jugadas armadas en los slots para poder intercambiar.');
-            }
-
             const comodinRecibido = jugadaOrigen.cartas[comodinIdx];
-
-            // Construir jugadas simuladas:
-            // - La carta que se entrega puede estar en un slot → reemplazarla por el comodín en ese slot
-            // - O la carta está en sobrantes → el comodín va a sobrantes y puede completar un slot casi-completo
-            let jugadasSimuladas = jugadasEnSlots.map(jug => ({
-                ...jug,
-                cartas: jug.cartas.map(c => c.id === cartaId ? { ...comodinRecibido } : c)
-            }));
-
-            // Si la carta NO estaba en ningún slot (estaba en sobrantes),
-            // intentar agregar el comodín al slot que le falta exactamente 1 carta
-            const cartaEnSlot = jugadasEnSlots.some(jug => jug.cartas.some(c => c.id === cartaId));
-            if (!cartaEnSlot) {
-                // Buscar el slot casi-completo (válido si agregamos el comodín)
-                let comodinUsado = false;
-                jugadasSimuladas = jugadasEnSlots.map(jug => {
-                    if (comodinUsado) return jug;
-                    const cartasConComodin = [...jug.cartas, { ...comodinRecibido }];
-                    const esValidaConComodin = jug.tipo === 'tercia'
-                        ? validarTercia(cartasConComodin)
-                        : validarCorrida(cartasConComodin);
-                    const esValidaSin = jug.tipo === 'tercia'
-                        ? validarTercia(jug.cartas)
-                        : validarCorrida(jug.cartas);
-                    // Solo agregar el comodín al primer slot que lo necesita
-                    if (!esValidaSin && esValidaConComodin) {
-                        comodinUsado = true;
-                        return { ...jug, cartas: cartasConComodin };
-                    }
-                    return jug;
-                });
-            }
-
-            // Validar que las jugadas simuladas cumplan los requisitos
-            const validacion = validarJugadasConstruidas(jugadasSimuladas);
             const req = REQ[this.ronda];
-            if (!validacion.valido) {
-                return this._err('Con el intercambio, tus jugadas no serían válidas para bajarte.');
-            }
-            const tercias = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
-            const corridas = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
-            if (tercias < req.t || corridas < req.c) {
-                return this._err('Con el intercambio aún no cumplirías los requisitos para bajarte.');
+
+            // Si el cliente envió sus slots armados, usarlos para validar
+            if (jugadasEnSlots && jugadasEnSlots.length > 0) {
+                // Construir jugadas simuladas reemplazando la carta por el comodín
+                let jugadasSimuladas = jugadasEnSlots.map(jug => ({
+                    ...jug,
+                    cartas: jug.cartas.map(c => c.id === cartaId ? { ...comodinRecibido } : c)
+                }));
+
+                // Si la carta NO estaba en ningún slot (estaba en sobrantes),
+                // agregar el comodín al primer slot que lo necesita
+                const cartaEnSlot = jugadasEnSlots.some(jug => jug.cartas.some(c => c.id === cartaId));
+                if (!cartaEnSlot) {
+                    let comodinUsado = false;
+                    jugadasSimuladas = jugadasEnSlots.map(jug => {
+                        if (comodinUsado) return jug;
+                        const cartasConComodin = [...jug.cartas, { ...comodinRecibido }];
+                        const esValidaConComodin = jug.tipo === 'tercia'
+                            ? validarTercia(cartasConComodin)
+                            : validarCorrida(cartasConComodin);
+                        const esValidaSin = jug.tipo === 'tercia'
+                            ? validarTercia(jug.cartas)
+                            : validarCorrida(jug.cartas);
+                        if (!esValidaSin && esValidaConComodin) {
+                            comodinUsado = true;
+                            return { ...jug, cartas: cartasConComodin };
+                        }
+                        return jug;
+                    });
+                }
+
+                const validacion = validarJugadasConstruidas(jugadasSimuladas);
+                if (!validacion.valido) {
+                    return this._err('Con el intercambio, tus jugadas no serían válidas para bajarte.');
+                }
+                const tercias = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
+                const corridas = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
+                if (tercias < req.t || corridas < req.c) {
+                    return this._err('Con el intercambio aún no cumplirías los requisitos para bajarte.');
+                }
+            } else {
+                // Fallback: el cliente no envió slots (GameRoom desactualizado)
+                // Simular con la mano completa: carta sale, comodín entra, verificar si puede bajarse
+                const manoSimulada = j.mano.filter(c => c.id !== cartaId);
+                manoSimulada.push({ ...comodinRecibido });
+                if (!puedeBajarse(manoSimulada, this.ronda)) {
+                    return this._err('Con el intercambio no podrías bajarte con las cartas en tu mano.');
+                }
             }
         }
 

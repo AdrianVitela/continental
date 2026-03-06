@@ -214,13 +214,29 @@ function detectarIntercambiosPosibles() {
                 }
 
                 // Si la carta está en sobrantes (no en slots), el comodín va a sobrantes
-                // En ese caso verificar si con el comodín en sobrantes + slots actuales puede bajarse
+                // Simular que el comodín completa el primer slot que lo necesite
                 if (!comodinUsadoEnSlot) {
-                    // El comodín iría a sobrantes — verificar si los slots actuales ya están listos
-                    // o si el comodín puede completar un slot casi-completo
+                    // Intentar agregar el comodín al primer slot casi-completo que lo acepte
+                    let comodinAsignado = false;
                     for (const def of defs) {
-                        const cards = buildingCards.get(def.index) || [];
-                        jugadasSimuladas.push({ tipo: def.type, cartas: cards.filter(Boolean) });
+                        const slotCards = buildingCards.get(def.index) || [];
+                        if (comodinAsignado) {
+                            jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) });
+                            continue;
+                        }
+                        const conComodin = [...slotCards, { ...comodin, comodin: true }];
+                        const valido = def.type === 'tercia'
+                            ? slotTerciaValido(conComodin)
+                            : slotCorridaValido(conComodin);
+                        const sinComodin = def.type === 'tercia'
+                            ? slotTerciaValido(slotCards)
+                            : slotCorridaValido(slotCards);
+                        if (!sinComodin && valido) {
+                            jugadasSimuladas.push({ tipo: def.type, cartas: conComodin });
+                            comodinAsignado = true;
+                        } else {
+                            jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) });
+                        }
                     }
                 }
 

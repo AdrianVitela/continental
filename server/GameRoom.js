@@ -111,7 +111,8 @@ class GameRoom {
           playerId, 
           msg.cartaId, 
           msg.origenJugadorIdx, 
-          msg.origenJugadaIdx
+          msg.origenJugadaIdx,
+          msg.jugadasEnSlots
         ); 
         break;
       case 'ack_fin_ronda':

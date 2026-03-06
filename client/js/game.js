@@ -988,11 +988,13 @@ function handleReturnToHand(cartaId, slotIndex) {
     if (slotCards.length === 0) {
         buildingCards.delete(slotIndex);
     }
+
+    // ✅ FIX: solo añadir a la mano si no está ya (evita duplicación tras state_update del servidor)
+    const yaEnMano = me.mano.some(c => c.id === cartaDevuelta.id);
+    if (!yaEnMano) {
+        me.mano.push(cartaDevuelta);
+    }
     
-    // Devolver la carta completa a la mano
-    me.mano.push(cartaDevuelta);
-    
-    updateSlotUI(slotIndex, slotCards);
     renderHand();
     
     toast(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`, 'green');

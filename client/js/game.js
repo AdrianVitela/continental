@@ -326,11 +326,21 @@ function setupSocketEvents() {
     WS.on('error', ({ msg }) => {
         toast(msg, 'red');
 
-        // Si fue bajada en falso, devolver cartas de slots a la mano del jugador
-        if (msg && msg.includes('BAJADA EN FALSO')) {
+        // Cuando el servidor rechaza una bajada (por cualquier motivo),
+        // las cartas en buildingCards deben volver a sobrantes porque el servidor
+        // nunca las quitó de la mano — sin esto se duplican en la UI
+        const esBajada = msg && (
+            msg.includes('BAJADA EN FALSO') ||
+            msg.includes('Tercia') ||
+            msg.includes('Corrida') ||
+            msg.includes('Necesitas') ||
+            msg.includes('no está en tu mano') ||
+            msg.includes('No hay jugadas')
+        );
+
+        if (esBajada && buildingCards.size > 0) {
             const me = G?.jugadores?.[myIdx];
             if (me) {
-                // Mover todas las cartas de buildingCards de vuelta a la mano
                 buildingCards.forEach((cards) => {
                     cards.forEach(carta => {
                         if (carta && !me.mano.some(c => c.id === carta.id)) {
@@ -339,8 +349,11 @@ function setupSocketEvents() {
                     });
                 });
                 buildingCards.clear();
+
+                if (msg.includes('BAJADA EN FALSO')) {
+                    toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
+                }
                 render();
-                toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
             }
         }
     });
@@ -724,7 +737,8 @@ function renderTableBajadas() {
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
             // Detectar intercambios posibles para resaltar jokers
-            const intercambiosPosibles = (!me?.bajado && isMyTurn() && G.estado === 'esperando_accion')
+            const _me = G.jugadores[myIdx];
+            const intercambiosPosibles = (!_me?.bajado && isMyTurn() && G.estado === 'esperando_accion')
                 ? detectarIntercambiosPosibles()
                 : [];
 

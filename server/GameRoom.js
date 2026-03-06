@@ -95,7 +95,7 @@ class GameRoom {
         result = this.engine.acCastigo(playerId, msg.acepta);
         break;
       case 'bajar':
-        result = this.engine.acBajar(playerId);
+        result = this.engine.acBajar(playerId, msg.jugadas);
         break;
       case 'pagar':
         result = this.engine.acPagar(playerId, msg.cartaId);

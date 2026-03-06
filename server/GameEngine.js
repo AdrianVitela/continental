@@ -497,26 +497,16 @@ class GameEngine {
         const validacion = validarJugadasConstruidas(jugadasConstruidas);
 
         if (!validacion.valido) {
-            // Determinar si es bajada en falso (corrida con palos mezclados o valores incoherentes)
-            const esBajadaFalso = jugadasConstruidas.some(j => {
-                if (j.tipo !== 'corrida') return false;
-                const normales = j.cartas.filter(c => !c.comodin);
-                if (normales.length < 2) return false;
-                const primerPalo = normales[0].palo;
-                return normales.some(c => c.palo !== primerPalo);
-            });
-
-            if (esBajadaFalso) {
-                // Aplicar penalización
-                this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
-                this.jActivo.puedeBajar = false;
-                this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre} mezclópalos en una corrida. Penalizado 2 turnos.`);
-                // Las cartas se quedan en la mano (nunca se removieron)
-                return this._err('¡BAJADA EN FALSO! Mezclaste palos en una corrida. Castigado 2 turnos sin bajar.');
-            }
-
-            // Error de validación normal (no es bajada en falso)
-            return this._err(validacion.errores.join(', '));
+            // BAJADA EN FALSO: cualquier jugada inválida cuenta como bajada en falso
+            // Las cartas nunca salieron de la mano del servidor, así que solo penalizamos
+            this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
+            this.jActivo.puedeBajar = false;
+            const motivo = validacion.errores.join(', ');
+            this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre}: ${motivo}. Penalizado 2 turnos.`);
+            // Devolver las cartas de los slots a la mano del jugador
+            // (el servidor no las quitó, pero el cliente las tiene en slots — 
+            //  el state_update con error las resincronizará vía el estado del servidor)
+            return this._err(`¡BAJADA EN FALSO! ${motivo}. Castigado 2 turnos sin bajar.`);
         }
 
         // ── Verificar requisitos de la ronda ──

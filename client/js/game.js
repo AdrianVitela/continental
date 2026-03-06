@@ -39,39 +39,20 @@ let buildingCards = new Map(); // slotIndex (string) -> array de cartas completa
 
 // ═══════════════════════════════════════════════════
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
+// Solo verifica mínimo de cartas — el servidor valida correctamente.
+// Así las bajadas en falso llegan al servidor y son penalizadas.
 // ═══════════════════════════════════════════════════
 
 function slotTerciaValido(cards) {
+    // Mínimo 3 cartas con al menos 1 normal
     if (cards.length < 3) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
-    if (comodines.length > 1) return false;
-    if (normales.length === 0) return false;
-    const valorBase = normales[0].valor;
-    return normales.every(c => c.valor === valorBase);
+    return cards.filter(c => !c.comodin).length >= 1;
 }
 
 function slotCorridaValido(cards) {
+    // Mínimo 4 cartas con al menos 1 normal
     if (cards.length < 4) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
-    if (comodines.length > 1) return false;
-    if (normales.length === 0) return false;
-    // Mismo palo
-    const palo = normales[0].palo;
-    if (!normales.every(c => c.palo === palo)) return false;
-    // Sin duplicados
-    const valores = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
-    if (new Set(valores).size !== valores.length) return false;
-    // Verificar secuencia permitiendo huecos cubiertos por comodines
-    let huecos = 0;
-    for (let i = 0; i < valores.length - 1; i++) {
-        const diff = valores[i + 1] - valores[i];
-        if (diff === 1) continue;
-        if (diff === 2) { huecos += 1; continue; }
-        return false; // salto > 2: imposible cubrir con un solo comodín
-    }
-    return huecos <= comodines.length;
+    return cards.filter(c => !c.comodin).length >= 1;
 }
 
 // Retorna true si todos los slots requeridos por la ronda son válidos
@@ -146,7 +127,27 @@ function setupSocketEvents() {
 
     WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
     WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));
-    WS.on('error', ({ msg }) => toast(msg));
+    WS.on('error', ({ msg }) => {
+        toast(msg, 'red');
+
+        // Si fue bajada en falso, devolver cartas de slots a la mano del jugador
+        if (msg && msg.includes('BAJADA EN FALSO')) {
+            const me = G?.jugadores?.[myIdx];
+            if (me) {
+                // Mover todas las cartas de buildingCards de vuelta a la mano
+                buildingCards.forEach((cards) => {
+                    cards.forEach(carta => {
+                        if (carta && !me.mano.some(c => c.id === carta.id)) {
+                            me.mano.push(carta);
+                        }
+                    });
+                });
+                buildingCards.clear();
+                render();
+                toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
+            }
+        }
+    });
 }
 
 // ═══════════════════════════════════════════════════

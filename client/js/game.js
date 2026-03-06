@@ -280,29 +280,34 @@ function acCastigo(acepta) {
 }
 
 function acBajar() {
+    console.log('[BAJAR] buildingCards:', [...buildingCards.entries()]);
+    console.log('[BAJAR] G.ronda:', G?.ronda, '| slotsListos:', slotsListosParaBajar());
+
     if (!slotsListosParaBajar()) {
         toast('❌ Completa las jugadas requeridas en los slots antes de bajarte');
         return;
     }
 
-    // Construir jugadas desde buildingCards usando las defs de ronda (sin depender del DOM)
     const defs = getSlotDefsRonda(G.ronda);
+    console.log('[BAJAR] defs ronda:', defs);
     const jugadas = [];
 
     for (const def of defs) {
         const cards = buildingCards.get(def.index) || [];
+        console.log(`[BAJAR] slot ${def.index} (${def.type}):`, cards);
         if (cards.length === 0) continue;
         const cartasReales = cards.filter(Boolean);
         if (cartasReales.length === 0) continue;
         jugadas.push({ tipo: def.type, cartas: cartasReales });
     }
 
+    console.log('[BAJAR] jugadas a enviar:', JSON.stringify(jugadas));
+
     if (jugadas.length === 0) {
         toast('❌ No hay cartas en los slots de construcción');
         return;
     }
 
-    console.log('Enviando jugadas al servidor:', jugadas);
     WS.send({ type: 'bajar', jugadas });
     cancelIntercambio();
 }

@@ -75,6 +75,22 @@ function slotCorridaValido(cards) {
 }
 
 // Retorna true si todos los slots requeridos por la ronda son válidos
+// Definición de slots por ronda: { index, type }
+function getSlotDefsRonda(ronda) {
+    const T = i => ({ index: String(i), type: 'tercia' });
+    const C = i => ({ index: String(i), type: 'corrida' });
+    const map = {
+        1: [T(0), T(1)],
+        2: [T(0), C(1)],
+        3: [C(0), C(1)],
+        4: [T(0), T(1), T(2)],
+        5: [T(0), T(1), C(2)],
+        6: [C(0), C(1), T(2)],
+        7: [C(0), C(1), C(2)],
+    };
+    return map[ronda] || [];
+}
+
 function slotsListosParaBajar() {
     if (!G || myIdx < 0) return false;
     const me = G.jugadores[myIdx];
@@ -83,18 +99,15 @@ function slotsListosParaBajar() {
     if (me.penalizacion?.activa) return false;
 
     const req = REQ[G.ronda];
-    const slots = document.querySelectorAll('.building-slot');
+    const defs = getSlotDefsRonda(G.ronda);
 
     let terciasOk = 0;
     let corridasOk = 0;
 
-    for (const slot of slots) {
-        const slotIndex = slot.dataset.slotIndex;
-        const slotType = slot.dataset.slotType;
-        const cards = buildingCards.get(slotIndex) || [];
-
-        if (slotType === 'tercia' && slotTerciaValido(cards)) terciasOk++;
-        if (slotType === 'corrida' && slotCorridaValido(cards)) corridasOk++;
+    for (const def of defs) {
+        const cards = buildingCards.get(def.index) || [];
+        if (def.type === 'tercia' && slotTerciaValido(cards)) terciasOk++;
+        if (def.type === 'corrida' && slotCorridaValido(cards)) corridasOk++;
     }
 
     return terciasOk >= req.t && corridasOk >= req.c;
@@ -272,17 +285,16 @@ function acBajar() {
         return;
     }
 
-    const slots = document.querySelectorAll('.building-slot');
+    // Construir jugadas desde buildingCards usando las defs de ronda (sin depender del DOM)
+    const defs = getSlotDefsRonda(G.ronda);
     const jugadas = [];
 
-    for (const slot of slots) {
-        const slotIndex = slot.dataset.slotIndex;
-        const slotType = slot.dataset.slotType;
-        const cards = buildingCards.get(slotIndex) || [];
+    for (const def of defs) {
+        const cards = buildingCards.get(def.index) || [];
         if (cards.length === 0) continue;
         const cartasReales = cards.filter(Boolean);
         if (cartasReales.length === 0) continue;
-        jugadas.push({ tipo: slotType, cartas: cartasReales });
+        jugadas.push({ tipo: def.type, cartas: cartasReales });
     }
 
     if (jugadas.length === 0) {

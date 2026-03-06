@@ -792,11 +792,11 @@ class GameEngine {
         const carta = j.mano[cidx];
         if (!puedeAcomodar(carta, jug)) return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
         jug.cartas.push(carta);
-        // Si es corrida, reordenar de menor a mayor y recalcular valor del comodín
+        // Reordenar corridas de menor a mayor; recalcular valorReemplazado del joker en ambos tipos
         if (jug.tipo === 'corrida') {
             jug.cartas = ordenarCorridaAcomodada(jug.cartas);
-            guardarValorComodin(jug); // recalcula qué reemplaza el joker tras el reordenamiento
         }
+        guardarValorComodin(jug); // siempre recalcular: cubre tercia Y corrida
         j.mano.splice(cidx, 1);
         this.addLog(`🃏 ${j.nombre} acomodó en jugada de ${dest.nombre}.`);
         this.lastAction = Date.now();

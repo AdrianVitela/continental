@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>Continental - Mesa de Juego</title>
   <link rel="stylesheet" href="css/style.css">
 
@@ -14,7 +14,9 @@
   display: flex;
   flex-direction: column;
   z-index: 1;
+  /* dvh respeta la barra del navegador móvil; 100vh como fallback */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--felt-deep);
 }
@@ -86,14 +88,16 @@
   padding: 5px 10px;
   text-align: center;
   min-width: 80px;
+  position: relative;
+  overflow: visible !important;
 }
-.opp.turn { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,160,69,.25); }
+.opp.turn   { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,160,69,.25); }
 .opp.bajado { border-color: #2a8a4a; }
-.opp-name { font-size: .68rem; color: var(--text-dim); margin-bottom: 4px; }
-.opp-backs { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
+.opp-name   { font-size: .68rem; color: var(--text-dim); margin-bottom: 4px; }
+.opp-backs  { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
 .cback-xs {
   width: 12px; height: 17px; border-radius: 2px;
-  background: linear-gradient(135deg,#1a3680,#0d2050);
+  background: linear-gradient(135deg, #1a3680, #0d2050);
   border: 1px solid rgba(255,255,255,.15);
 }
 
@@ -169,9 +173,9 @@
 }
 .mazo-wrap:hover { transform: translateY(-2px); }
 .mazo-wrap .cback { position: absolute; }
-.mazo-wrap .cback:nth-child(1) { top:3px; left:3px; }
-.mazo-wrap .cback:nth-child(2) { top:2px; left:2px; }
-.mazo-wrap .cback:nth-child(3) { top:0; left:0; }
+.mazo-wrap .cback:nth-child(1) { top: 3px; left: 3px; }
+.mazo-wrap .cback:nth-child(2) { top: 2px; left: 2px; }
+.mazo-wrap .cback:nth-child(3) { top: 0;   left: 0; }
 .mazo-count { font-size: 0.52rem; color: var(--text-dim); }
 
 .deck-clickable-hint {
@@ -206,6 +210,8 @@
   padding: 0 10px;
   font-size: 0.75rem;
   min-height: 20px;
+  position: relative;
+  overflow: visible !important;
 }
 
 .player-label { display: flex; gap: 5px; align-items: center; color: var(--gold-hi); }
@@ -219,9 +225,9 @@
 /* ETIQUETAS DE FILA — CENTRADAS */
 .row-label {
   display: flex;
-  justify-content: center;    /* FIX: centrado */
+  justify-content: center;
   align-items: center;
-  gap: 8px;                   /* FIX: separación interna */
+  gap: 8px;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -237,8 +243,8 @@
 .discard-zone {
   display: flex;
   gap: 3px;
-  align-items: center;        /* FIX: centrado vertical */
-  justify-content: center;    /* FIX: centrado horizontal */
+  align-items: center;
+  justify-content: center;
   padding: 2px 10px;
   background: rgba(0,0,0,.15);
   border: 2px dashed rgba(255,255,255,.07);
@@ -286,7 +292,7 @@
 }
 .building-slot:hover { border-color: var(--gold); background: rgba(200,160,69,.08); }
 .building-slot.drop-target { border-color: #2ecc71; background: rgba(46,204,113,.1); }
-.building-slot.complete { border-color: #2ecc71; background: rgba(46,204,113,.08); }
+.building-slot.complete    { border-color: #2ecc71; background: rgba(46,204,113,.08); }
 .building-slot.complete .building-slot-title { color: #2ecc71; }
 
 .building-slot-header {
@@ -313,17 +319,19 @@
 /* ===== ACTION BAR ===== */
 .action-bar {
   flex-shrink: 0;
-  background: rgba(12, 22, 12, 0.92);
+  background: rgba(12,22,12,.92);
   border-top: 1px solid rgba(200,160,69,.25);
   backdrop-filter: blur(12px);
   padding: 6px 12px 8px;
+  /* padding-bottom extra para la barra de gestos de iOS/Android */
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
   width: 100%;
   z-index: 50;
-  box-shadow: 0 -4px 16px rgba(0,0,0,0.5);
+  box-shadow: 0 -4px 16px rgba(0,0,0,.5);
 }
 
 .action-btns {
@@ -334,46 +342,46 @@
 .abtn {
   padding: 8px 16px; border-radius: 24px; border: 1px solid;
   font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-  transition: all 0.18s ease; box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  transition: all 0.18s ease; box-shadow: 0 3px 8px rgba(0,0,0,.3);
   text-transform: uppercase; letter-spacing: 0.4px; font-family: 'Outfit', sans-serif;
 }
-.abtn:hover { transform: translateY(-2px); }
+.abtn:hover  { transform: translateY(-2px); }
 .abtn:active { transform: none; }
 .abtn-gold {
   background: linear-gradient(135deg, #d4a84a, #b87d30);
   border-color: var(--gold-hi); color: #1a0e00;
-  text-shadow: 0 1px 2px rgba(255,255,200,0.4);
+  text-shadow: 0 1px 2px rgba(255,255,200,.4);
 }
-.abtn-gold:hover { background: linear-gradient(135deg, #e8c870, #d4a84a); box-shadow: 0 6px 14px rgba(200,160,69,0.4); }
-.abtn-outline { background: rgba(35,45,35,0.85); border-color: var(--gold-dim); color: var(--text); }
-.abtn-outline:hover { background: rgba(70,85,60,0.9); border-color: var(--gold); color: var(--gold-hi); }
-.abtn-green { background: rgba(25,90,45,0.9); border-color: #2ecc71; color: #a0ffb0; }
-.abtn-green:hover { background: rgba(35,125,65,0.95); border-color: #4de88a; }
-.abtn-red { background: rgba(120,35,35,0.9); border-color: var(--red-hi); color: #ffb0b0; }
-.abtn-red:hover { background: rgba(165,55,55,0.95); border-color: #ff8080; }
-.abtn:disabled { opacity: 0.28; cursor: not-allowed; transform: none !important; pointer-events: none; }
+.abtn-gold:hover { background: linear-gradient(135deg, #e8c870, #d4a84a); box-shadow: 0 6px 14px rgba(200,160,69,.4); }
+.abtn-outline { background: rgba(35,45,35,.85); border-color: var(--gold-dim); color: var(--text); }
+.abtn-outline:hover { background: rgba(70,85,60,.9); border-color: var(--gold); color: var(--gold-hi); }
+.abtn-green { background: rgba(25,90,45,.9); border-color: #2ecc71; color: #a0ffb0; }
+.abtn-green:hover { background: rgba(35,125,65,.95); border-color: #4de88a; }
+.abtn-red { background: rgba(120,35,35,.9); border-color: var(--red-hi); color: #ffb0b0; }
+.abtn-red:hover { background: rgba(165,55,55,.95); border-color: #ff8080; }
+.abtn:disabled { opacity: .28; cursor: not-allowed; transform: none !important; pointer-events: none; }
 
 .instr {
   font-size: 0.75rem; color: var(--gold-hi);
-  padding: 5px 14px; background: rgba(0,0,0,0.55);
+  padding: 5px 14px; background: rgba(0,0,0,.55);
   border-left: 3px solid var(--gold); border-radius: 0 6px 6px 0;
   max-width: 640px; width: 100%; text-align: center; font-weight: 500; line-height: 1.3;
 }
 
 .castigo-banner {
-  background: rgba(140,50,30,0.92); border: 2px solid #ff8040; border-radius: 32px;
+  background: rgba(140,50,30,.92); border: 2px solid #ff8040; border-radius: 32px;
   padding: 7px 18px; font-size: 0.85rem; font-weight: 600; color: #ffd0a0;
   max-width: 640px; width: 100%; text-align: center;
-  box-shadow: 0 0 18px rgba(255,128,0,0.3); animation: pulse-gold 1.5s infinite;
+  box-shadow: 0 0 18px rgba(255,128,0,.3); animation: pulse-gold 1.5s infinite;
 }
 @keyframes pulse-gold {
-  0%,100% { box-shadow: 0 0 18px rgba(255,128,0,0.3); }
-  50% { box-shadow: 0 0 30px rgba(255,160,0,0.55); }
+  0%,100% { box-shadow: 0 0 18px rgba(255,128,0,.3); }
+  50%      { box-shadow: 0 0 30px rgba(255,160,0,.55); }
 }
 
 .log-line {
   font-size: 0.6rem; color: var(--text-muted); max-width: 640px; width: 100%;
-  text-align: center; background: rgba(0,0,0,0.25); padding: 2px 10px; border-radius: 16px;
+  text-align: center; background: rgba(0,0,0,.25); padding: 2px 10px; border-radius: 16px;
 }
 .turn-tag { font-size: 0.62rem; color: var(--text-dim); }
 
@@ -401,7 +409,7 @@
 /* ===== ANIMACIONES ===== */
 @keyframes pulse {
   0%,100% { opacity:1; transform:scale(1); }
-  50% { opacity:0.4; transform:scale(0.65); }
+  50%      { opacity:.4; transform:scale(.65); }
 }
 @keyframes fadeUp {
   from { opacity:0; transform:translateY(14px); }
@@ -415,9 +423,8 @@
 #chat-toggle {
   position: fixed;
   right: 14px;
-  bottom: 80px;
-  width: 40px;
-  height: 40px;
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  width: 40px; height: 40px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1a3d28, #0e2419);
   border: 1px solid rgba(200,160,69,.4);
@@ -425,9 +432,7 @@
   font-size: 1.1rem;
   cursor: pointer;
   z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 14px rgba(0,0,0,.5);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -436,7 +441,7 @@
 #chat-panel {
   position: fixed;
   right: 14px;
-  bottom: 130px;
+  bottom: calc(130px + env(safe-area-inset-bottom, 0px));
   width: 240px;
   background: linear-gradient(160deg, rgba(14,36,25,.97), rgba(8,20,14,.97));
   border: 1px solid rgba(200,160,69,.22);
@@ -461,9 +466,7 @@
   max-height: 130px;
   overflow-y: auto;
   padding: 6px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  display: flex; flex-direction: column; gap: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--gold-dim) transparent;
 }
@@ -475,7 +478,7 @@
   animation: fadeUp 0.18s var(--eout) both;
 }
 .chat-msg .msg-author { color: var(--gold-hi); font-weight: 600; margin-right: 4px; }
-.chat-msg .msg-text { color: var(--text); }
+.chat-msg .msg-text   { color: var(--text); }
 
 .chat-section-label {
   font-size: 0.52rem; color: var(--text-muted);
@@ -495,8 +498,8 @@
   display: flex; align-items: center; justify-content: center;
   transition: transform 0.15s, background 0.15s;
 }
-.chat-emoji-btn:hover { transform: scale(1.2); background: rgba(200,160,69,.15); border-color: rgba(200,160,69,.3); }
-.chat-emoji-btn:active { transform: scale(0.88); }
+.chat-emoji-btn:hover  { transform: scale(1.2); background: rgba(200,160,69,.15); border-color: rgba(200,160,69,.3); }
+.chat-emoji-btn:active { transform: scale(.88); }
 
 .chat-quick-msgs {
   display: flex; flex-direction: column; gap: 3px;
@@ -520,11 +523,8 @@
   border-color: rgba(184,48,48,.5);
   color: #fff;
   background: linear-gradient(135deg, rgba(160,30,30,.85), rgba(100,15,15,.85));
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 1px;
-  text-align: center;
-  text-transform: uppercase;
+  font-weight: 700; font-size: 0.78rem;
+  letter-spacing: 1px; text-align: center; text-transform: uppercase;
   box-shadow: 0 0 10px rgba(224,64,64,.25);
 }
 .chat-quick-btn.golpe:hover {
@@ -542,48 +542,40 @@
   filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
 }
 @keyframes reactionPop {
-  0%   { opacity:0; transform:scale(0.3) translateY(0); }
+  0%   { opacity:0; transform:scale(.3) translateY(0); }
   15%  { opacity:1; transform:scale(1.25) translateY(-10px); }
   35%  { transform:scale(1) translateY(-5px); }
   70%  { opacity:1; transform:scale(1) translateY(-22px); }
-  100% { opacity:0; transform:scale(0.8) translateY(-55px); }
+  100% { opacity:0; transform:scale(.8) translateY(-55px); }
 }
 
 /* ── Globito de diálogo ── */
-
-/* Anchor invisible que vive dentro de .opp y de player-header */
 .bubble-anchor {
   position: absolute;
-  bottom: -6px;   /* justo debajo del borde del contenedor */
+  bottom: -6px;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
+  width: 0; height: 0;
   pointer-events: none;
   z-index: 80;
 }
 
 .speech-bubble {
   position: absolute;
-  top: 8px;        /* debajo del anchor = debajo del .opp */
+  top: 8px;
   left: 50%;
-  transform: translateX(-50%) scale(0.85);
-  background: rgba(8, 24, 14, 0.96);
+  transform: translateX(-50%) scale(.85);
+  background: rgba(8,24,14,.96);
   border: 1.5px solid rgba(200,160,69,.4);
   border-radius: 10px;
   padding: 6px 11px;
-  font-size: 0.72rem;
-  color: #e8e8e0;
-  white-space: normal;
-  max-width: 160px;
-  min-width: 60px;
-  text-align: center;
-  pointer-events: none;
+  font-size: 0.72rem; color: #e8e8e0;
+  white-space: normal; max-width: 160px; min-width: 60px;
+  text-align: center; pointer-events: none;
   box-shadow: 0 4px 18px rgba(0,0,0,.65);
   opacity: 0;
-  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.56,.64,1);
-  line-height: 1.35;
-  word-break: break-word;
+  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.35; word-break: break-word;
   z-index: 80;
 }
 
@@ -591,8 +583,7 @@
 .speech-bubble::before {
   content: '';
   position: absolute;
-  bottom: 100%;        /* encima del globito */
-  left: 50%;
+  bottom: 100%; left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
   border-bottom-color: rgba(200,160,69,.4);
@@ -600,8 +591,7 @@
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: calc(100% - 1px);
-  left: 50%;
+  bottom: calc(100% - 1px); left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-bottom-color: rgba(8,24,14,.96);
@@ -617,63 +607,94 @@
 .speech-bubble.paga {
   border-color: rgba(220,60,60,.7);
   background: rgba(60,8,8,.97);
-  color: #ff9090;
-  font-weight: 800;
-  font-size: 0.82rem;
-  letter-spacing: 0.5px;
+  color: #ff9090; font-weight: 800; font-size: 0.82rem; letter-spacing: .5px;
   box-shadow: 0 0 20px rgba(220,60,60,.4), 0 4px 18px rgba(0,0,0,.65);
 }
 .speech-bubble.paga::before { border-bottom-color: rgba(220,60,60,.7); }
 .speech-bubble.paga::after  { border-bottom-color: rgba(60,8,8,.97); }
 
-/* .opp y .player-header necesitan overflow visible y position relative */
-.opp { position: relative; overflow: visible !important; }
-.player-header { position: relative; overflow: visible !important; }
-
 /* Golpe de mesa */
 @keyframes tableBang {
   0%   { transform:translate(0,0) rotate(0deg); }
-  10%  { transform:translate(-3px,-3px) rotate(-0.5deg); }
-  20%  { transform:translate(4px,2px) rotate(0.5deg); }
-  30%  { transform:translate(-4px,1px) rotate(-0.4deg); }
-  40%  { transform:translate(4px,-2px) rotate(0.4deg); }
-  50%  { transform:translate(-3px,3px) rotate(-0.3deg); }
-  60%  { transform:translate(3px,-2px) rotate(0.3deg); }
-  70%  { transform:translate(-2px,1px) rotate(-0.15deg); }
-  85%  { transform:translate(2px,-1px) rotate(0.1deg); }
+  10%  { transform:translate(-3px,-3px) rotate(-.5deg); }
+  20%  { transform:translate(4px,2px) rotate(.5deg); }
+  30%  { transform:translate(-4px,1px) rotate(-.4deg); }
+  40%  { transform:translate(4px,-2px) rotate(.4deg); }
+  50%  { transform:translate(-3px,3px) rotate(-.3deg); }
+  60%  { transform:translate(3px,-2px) rotate(.3deg); }
+  70%  { transform:translate(-2px,1px) rotate(-.15deg); }
+  85%  { transform:translate(2px,-1px) rotate(.1deg); }
   100% { transform:translate(0,0) rotate(0deg); }
 }
 .table-bang { animation: tableBang 0.55s ease-in-out !important; }
+
+#fondo-wrap .card,
+#fondo-wrap .cback { min-width: var(--cw); min-height: var(--ch); }
 
 /* ================================================================
    RESPONSIVE
    ================================================================ */
 
+/* ── Móviles portrait (≤ 767px) ── */
 @media (max-width: 767px) {
-  .topbar { height: auto; min-height: 42px; padding: 4px 10px; flex-wrap: wrap; }
-  .tb-title { font-size: 0.95rem; }
-  .opp { min-width: 65px; padding: 4px 7px; }
-  .opp-name { font-size: 0.62rem; }
+  .topbar { height: auto; min-height: 40px; padding: 4px 10px; flex-wrap: wrap; }
+  .tb-title { font-size: 0.92rem; }
+  .opp { min-width: 62px; padding: 4px 7px; }
+  .opp-name { font-size: 0.6rem; }
   .cback-xs { width: 10px; height: 14px; }
   .deck-area-container { width: 70px; flex-direction: row; justify-content: center; gap: 10px; }
   .center-zone { gap: 10px; }
-  #chat-toggle { bottom: 74px; right: 10px; width: 36px; height: 36px; font-size: 1rem; }
-  #chat-panel { right: 10px; width: 220px; }
+
+  /* Action bar compacta en móvil */
+  .action-bar {
+    padding: 4px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 3px;
+  }
+  .instr { font-size: 0.68rem; padding: 4px 10px; }
+  .action-btns { gap: 5px; flex-wrap: wrap; }
+  .abtn { padding: 6px 12px; font-size: 0.72rem; border-radius: 20px; letter-spacing: 0.2px; }
+  .log-line { font-size: 0.56rem; padding: 1px 8px; }
+  .castigo-banner { padding: 5px 12px; font-size: 0.75rem; }
+
+  /* Chat */
+  #chat-toggle { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); right: 10px; width: 36px; height: 36px; font-size: 1rem; }
+  #chat-panel  { bottom: calc(114px + env(safe-area-inset-bottom, 0px)); right: 10px; width: 220px; }
 }
 
+/* ── Móviles ≤ 480px ── */
 @media (max-width: 480px) {
   /* Scoreboard vuelve a flujo normal en móviles pequeños */
   .scoreboard { position: static; transform: none; margin: 0 auto; pointer-events: auto; }
+  .abtn { padding: 5px 10px; font-size: 0.68rem; border-radius: 18px; }
+  .instr { font-size: 0.64rem; padding: 3px 8px; }
+  .action-bar { gap: 2px; }
 }
 
+/* ── Móviles ≤ 414px ── */
 @media (max-width: 414px) {
   .topbar { padding: 3px 8px; gap: 6px; }
   .slot-hint { display: none; }
+  .abtn { padding: 5px 9px; font-size: 0.65rem; white-space: nowrap; }
+  .action-btns { justify-content: center; }
 }
 
-/* Landscape — móviles horizontales */
+/* ── Pantallas muy bajas portrait (≤ 650px alto) — iPhone SE ── */
+@media (max-height: 650px) and (orientation: portrait) {
+  .row-desc { display: none; }
+  .slot-hint { display: none; }
+  .log-line { display: none; }
+  .action-bar { gap: 2px; padding-top: 3px; padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px)); }
+  .abtn { padding: 5px 10px; font-size: 0.67rem; }
+  .instr { font-size: 0.62rem; padding: 3px 8px; }
+  .castigo-banner { padding: 4px 10px; font-size: 0.7rem; }
+  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px); }
+  .building-row  { height: calc(var(--ch) + 22px); min-height: calc(var(--ch) + 22px); }
+}
+
+/* ── Landscape móviles horizontales (≤ 500px alto) ── */
 @media (orientation: landscape) and (max-height: 500px) {
-  :root { --cw:30px; --ch:44px; --cw-sm:20px; --ch-sm:28px; }
+  :root { --cw: 30px; --ch: 44px; --cw-sm: 20px; --ch-sm: 28px; }
+
   .topbar { height: 32px; min-height: 32px; padding: 0 10px; }
   .tb-title { font-size: 0.85rem; }
   .pill { font-size: 0.58rem; padding: 1px 6px; }
@@ -690,56 +711,53 @@
   .row-desc { display: none; }
   .slot-hint { display: none; }
   .building-slot-header { font-size: 0.52rem; }
-  .discard-zone { height: calc(var(--ch)+4px); min-height: calc(var(--ch)+4px); padding: 1px 8px; }
-  .building-row { height: calc(var(--ch)+20px); min-height: calc(var(--ch)+20px); gap: 4px; padding: 0 8px; }
+  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px);  padding: 1px 8px; }
+  .building-row  { height: calc(var(--ch) + 20px); min-height: calc(var(--ch) + 20px); gap: 4px; padding: 0 8px; }
   .building-slot { padding: 2px; }
-  .action-bar { padding: 3px 10px 4px; gap: 2px; }
-  .instr { font-size: 0.65rem; padding: 3px 10px; }
-  .abtn { padding: 5px 11px; font-size: 0.7rem; border-radius: 18px; }
-  .action-btns { gap: 5px; }
-  .log-line { display: none; }
-  .castigo-banner { padding: 4px 12px; font-size: 0.75rem; border-radius: 20px; }
+  .action-bar    { padding: 3px 8px calc(4px + env(safe-area-inset-bottom, 0px)); gap: 2px; }
+  .instr         { font-size: 0.62rem; padding: 2px 8px; }
+  .abtn          { padding: 4px 10px; font-size: 0.67rem; border-radius: 16px; }
+  .action-btns   { gap: 4px; }
+  .log-line      { display: none; }
+  .castigo-banner { padding: 3px 10px; font-size: 0.7rem; border-radius: 18px; }
   .deck-clickable-hint { display: none; }
-  #chat-toggle { bottom: 58px; right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
-  #chat-panel { bottom: 96px; right: 8px; width: 200px; }
+  #chat-toggle { bottom: calc(54px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
+  #chat-panel  { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 200px; }
 }
 
-/* Landscape — tablets horizontales */
+/* ── Landscape tablets (501–768px alto) ── */
 @media (orientation: landscape) and (min-height: 501px) and (max-height: 768px) {
   .topbar { height: 38px; min-height: 38px; }
-  .table { gap: 4px; padding: 4px 10px 3px; }
-  .slot-hint { display: none; }
-  .row-desc { display: none; }
+  .table  { gap: 4px; padding: 4px 10px 3px; }
+  .slot-hint  { display: none; }
+  .row-desc   { display: none; }
   .player-section { gap: 1px; }
-  .player-header { font-size: 0.7rem; }
-  .row-label { font-size: 0.52rem; }
-  .discard-zone { height: calc(var(--ch)+4px); min-height: calc(var(--ch)+4px); }
-  .building-row { height: calc(var(--ch)+22px); min-height: calc(var(--ch)+22px); }
-  .action-bar { padding: 5px 12px 6px; gap: 3px; }
-  .instr { font-size: 0.7rem; padding: 4px 12px; }
-  .abtn { padding: 6px 13px; font-size: 0.75rem; }
+  .player-header  { font-size: 0.7rem; }
+  .row-label      { font-size: 0.52rem; }
+  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px); }
+  .building-row  { height: calc(var(--ch) + 22px); min-height: calc(var(--ch) + 22px); }
+  .action-bar  { padding: 5px 12px calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; }
+  .instr       { font-size: 0.7rem; padding: 4px 12px; }
+  .abtn        { padding: 6px 13px; font-size: 0.75rem; }
   .action-btns { gap: 6px; }
-  .log-line { font-size: 0.55rem; padding: 1px 8px; }
+  .log-line    { font-size: 0.55rem; padding: 1px 8px; }
 }
 
-/* Landscape — monitores/laptops */
+/* ── Landscape monitores / laptops (> 768px alto) ── */
 @media (orientation: landscape) and (min-height: 769px) {
-  .slot-hint { font-size: 0.45rem; }
-  .building-row { max-width: 960px; }
-  .discard-zone { max-width: 960px; }
+  .slot-hint     { font-size: 0.45rem; }
+  .building-row  { max-width: 960px; }
+  .discard-zone  { max-width: 960px; }
   .player-header { max-width: 960px; }
 }
 
-/* Desktop ancho */
+/* ── Desktop ancho ── */
 @media (min-width: 1280px) {
-  .building-row { max-width: 1000px; }
-  .discard-zone { max-width: 1000px; }
+  .building-row  { max-width: 1000px; }
+  .discard-zone  { max-width: 1000px; }
   .building-slot { max-width: 280px; }
-  .instr { font-size: 0.78rem; }
+  .instr         { font-size: 0.78rem; }
 }
-
-#fondo-wrap .card,
-#fondo-wrap .cback { min-width: var(--cw); min-height: var(--ch); }
   </style>
 </head>
 
@@ -750,21 +768,26 @@
   <div class="topbar">
     <span class="tb-title">Continental</span>
     <span class="pill pill-gold" id="ronda-pill">Ronda 1</span>
-    <span class="pill pill-dim" id="req-pill">2 tercias</span>
-    <span class="pill pill-dim" id="mode-pill">●</span>
+    <span class="pill pill-dim"  id="req-pill">2 tercias</span>
+    <span class="pill pill-dim"  id="mode-pill">●</span>
     <div class="scoreboard" id="scoreboard"></div>
   </div>
 
   <!-- MESA -->
   <div class="table" id="main-table">
+
+    <!-- Fila de oponentes -->
     <div class="opponents-row" id="opponents"></div>
 
+    <!-- Zona central: bajadas + mazo/fondo -->
     <div class="center-zone">
+
       <div class="table-bajadas-container">
         <div class="table-bajadas" id="table-bajadas"></div>
       </div>
 
       <div class="deck-area-container">
+
         <div class="deck-area">
           <div class="deck-label">Mazo</div>
           <div class="mazo-wrap" id="mazo-wrap" title="Clic para robar">
@@ -781,44 +804,49 @@
           <div id="fondo-wrap"></div>
           <div class="deck-clickable-hint" id="fondo-hint" style="display:none">▲ TOMAR</div>
         </div>
-      </div>
-    </div>
 
-    <!-- JUGADOR -->
+      </div>
+    </div><!-- /center-zone -->
+
+    <!-- Sección del jugador propio -->
     <div class="player-section">
+
       <div class="player-header">
         <div class="player-label">
           <span class="pulse-dot" id="pulse-dot" style="display:none"></span>
           <span id="my-name">—</span>
         </div>
-        <span class="turn-tag" id="turn-tag"></span>
+        <span class="turn-tag"  id="turn-tag"></span>
         <span id="hand-count"></span>
+        <!-- Anchor para el globito de diálogo propio -->
         <div id="my-bubble-anchor" class="bubble-anchor"></div>
       </div>
 
-      <!-- FILA 1: Sobrantes -->
+      <!-- Fila 1: Sobrantes -->
       <div class="row-label">
         <span>📦 SOBRANTES</span>
         <span class="row-desc">Cartas no usadas</span>
       </div>
       <div class="hand-zone discard-zone" id="discard-zone"></div>
 
-      <!-- FILA 2: Construcción -->
+      <!-- Fila 2: Construcción -->
       <div class="row-label">
         <span>🔨 CONSTRUCCIÓN</span>
         <span class="row-desc" id="building-requirement"></span>
       </div>
       <div class="building-row" id="building-row"></div>
-    </div>
 
-    <!-- ACCIONES -->
+    </div><!-- /player-section -->
+
+    <!-- Barra de acciones -->
     <div class="action-bar">
       <div class="castigo-banner" id="castigo-banner" style="display:none"></div>
-      <div class="instr" id="instr"></div>
-      <div class="action-btns" id="action-btns"></div>
-      <div class="log-line" id="log-line"></div>
+      <div class="instr"        id="instr"></div>
+      <div class="action-btns"  id="action-btns"></div>
+      <div class="log-line"     id="log-line"></div>
     </div>
-  </div>
+
+  </div><!-- /table -->
 
   <!-- ===== CHAT / REACCIONES ===== -->
   <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes">💬</button>
@@ -839,21 +867,22 @@
 
     <div class="chat-section-label">Mensajes rápidos</div>
     <div class="chat-quick-msgs">
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! ')">¡Ya dame mi carta! </button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! ')">¡Castígate! </button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané!')">¡Ya gané, jaja! </button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! ')">¡Qué mala suerte! </button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! ')">¡Buena jugada! </button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! ')">¡No mames!</button>
-      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','¡¡¡PAGA!!!')"> ¡¡¡PAGA!!!</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! 😩')">¡Ya dame mi carta! 😩</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! 😈')">¡Castígate! 😈</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané, jaja! 🏆')">¡Ya gané, jaja! 🏆</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! 😭')">¡Qué mala suerte! 😭</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! 👏')">¡Buena jugada! 👏</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! 😤')">¡No mames! 😤</button>
+      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','¡¡¡PAGA!!!')">🔥 ¡¡¡PAGA!!!</button>
     </div>
   </div>
 
-  <!-- MODALES -->
+  <!-- ===== MODALES ===== -->
+
   <div class="modal-overlay" id="modal-ronda">
     <div class="modal">
       <h2 id="mr-title"></h2>
-      <p id="mr-msg"></p>
+      <p  id="mr-msg"></p>
       <div class="score-rows" id="mr-scores"></div>
       <div class="modal-btns">
         <button class="btn btn-gold" style="flex:1" onclick="ackRonda()">Siguiente Ronda →</button>
@@ -880,8 +909,10 @@
   </div>
 
   <div id="toast"></div>
-</div>
 
+</div><!-- /game -->
+
+<!-- ===== SCRIPTS ===== -->
 <script src="js/socket.js"></script>
 <script src="js/animations.js"></script>
 <script src="js/dragdrop.js"></script>
@@ -936,19 +967,15 @@
   /* ── Dispatcher principal ── */
   function showReaction ({ tipo, texto, nombre }) {
     appendChatMessage(nombre, texto);
-
     if (tipo === 'golpe') {
       triggerPaga(nombre);
     } else {
-      // Emojis y mensajes: globito sobre el avatar del jugador
       showSpeechBubble(nombre, texto);
     }
   }
 
   /* ─────────────────────────────────────────────
      GLOBITO DE DIÁLOGO
-     Aparece debajo del avatar del jugador (opp)
-     o debajo del nombre del jugador propio.
   ───────────────────────────────────────────── */
   function showSpeechBubble (nombre, texto, esPaga) {
     const anchorEl = getOrCreateBubbleAnchor(nombre);
@@ -964,7 +991,6 @@
     bubble.textContent = texto;
     bubble.classList.toggle('paga', !!esPaga);
 
-    // Re-trigger transición
     bubble.classList.remove('visible');
     void bubble.offsetWidth;
     bubble.classList.add('visible');
@@ -975,21 +1001,14 @@
     }, esPaga ? 3000 : BUBBLE_DURATION);
   }
 
-  /* Obtiene (o crea) el div anchor dentro del elemento correcto */
   function getOrCreateBubbleAnchor (nombre) {
     if (typeof G === 'undefined' || !G) return null;
-
     const idx = G.jugadores.findIndex(j => j.nombre === nombre);
-
     if (idx === myIdx) {
-      // Jugador propio: anchor ya está en el HTML
       return document.getElementById('my-bubble-anchor');
     }
-
-    // Oponente: buscar su .opp por data-idx
     const oppEl = document.querySelector(`.opp[data-idx="${idx}"]`);
     if (!oppEl) return null;
-
     let anchor = oppEl.querySelector('.bubble-anchor');
     if (!anchor) {
       anchor = document.createElement('div');
@@ -999,9 +1018,7 @@
     return anchor;
   }
 
-  /* ─────────────────────────────────────────────
-     LOG DEL PANEL
-  ───────────────────────────────────────────── */
+  /* ── Log del panel ── */
   function appendChatMessage (nombre, texto) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -1023,11 +1040,8 @@
     }
   }
 
-  /* ─────────────────────────────────────────────
-     ¡¡¡PAGA!!! — sacude la mesa + globito rojo
-  ───────────────────────────────────────────── */
+  /* ── ¡¡¡PAGA!!! ── */
   function triggerPaga (nombre) {
-    // 1. Sacudir toda la mesa
     const table = document.getElementById('main-table');
     if (table) {
       table.classList.remove('table-bang');
@@ -1035,9 +1049,7 @@
       table.classList.add('table-bang');
       setTimeout(() => table.classList.remove('table-bang'), 580);
     }
-
-    // 2. Globito rojo ¡¡¡PAGA!!! sobre el jugador que lo envió
-    showSpeechBubble(nombre, ' ¡¡¡PAGA!!!', true);
+    showSpeechBubble(nombre, '🔥 ¡¡¡PAGA!!!', true);
   }
 
   /* ── Sanitizar ── */

@@ -846,7 +846,21 @@ function renderTableBajadas() {
 function renderMazo() {
     document.getElementById('mazo-count').textContent = `${G.mazo_count} cartas`;
     const mazoW = document.getElementById('mazo-wrap');
-    mazoW.style.cursor = isMyTurn() && G.estado === 'esperando_robo' ? 'pointer' : 'default';
+    const canDraw = isMyTurn() && G.estado === 'esperando_robo';
+    mazoW.style.cursor = canDraw ? 'pointer' : 'default';
+    
+    // Remover listener anterior para evitar duplicados
+    mazoW.onclick = null;
+    
+    if (canDraw) {
+        mazoW.onclick = (e) => {
+            e.stopPropagation();
+            acMazo();
+        };
+        mazoW.title = 'Clic para robar del mazo';
+    } else {
+        mazoW.title = '';
+    }
 }
 
 function renderFondo(me) {
@@ -858,8 +872,13 @@ function renderFondo(me) {
             const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
             if (!canTake) {
                 fc.classList.add('disabled');
+                fc.title = '';
             } else {
-                fc.onclick = acFondo;
+                fc.title = 'Clic para tomar del fondo';
+                fc.onclick = (e) => {
+                    e.stopPropagation();
+                    acFondo();
+                };
                 fc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }));
                 fc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }), { passive: false });
             }

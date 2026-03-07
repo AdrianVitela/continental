@@ -93,6 +93,14 @@ wss.on('connection', (ws) => {
         break;
       }
 
+      case 'reaction': {
+        const room = rooms.get(ctx.roomCode);
+        if (!room || !ctx.playerId) return;
+        // Reenviar a todos los jugadores de la sala excepto al emisor
+        room.broadcast({ type: 'reaction', ...msg }, ctx.playerId);
+        break;
+      }
+
       // ─── Game actions ────────────────────────
       default: {
         const room = rooms.get(ctx.roomCode);

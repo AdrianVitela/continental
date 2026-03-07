@@ -515,9 +515,24 @@
 }
 .chat-quick-btn:hover { background: rgba(200,160,69,.12); border-color: rgba(200,160,69,.3); color: var(--gold-hi); }
 
-/* Botón especial: golpe de mesa */
-.chat-quick-btn.golpe { border-color: rgba(184,48,48,.4); color: #ffb0b0; background: rgba(184,48,48,.08); }
-.chat-quick-btn.golpe:hover { background: rgba(184,48,48,.2); border-color: var(--red-hi); color: #ff8888; }
+/* Botón especial: ¡¡¡PAGA!!! */
+.chat-quick-btn.golpe {
+  border-color: rgba(184,48,48,.5);
+  color: #fff;
+  background: linear-gradient(135deg, rgba(160,30,30,.85), rgba(100,15,15,.85));
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(224,64,64,.25);
+}
+.chat-quick-btn.golpe:hover {
+  background: linear-gradient(135deg, rgba(200,40,40,.95), rgba(140,20,20,.95));
+  border-color: var(--red-hi);
+  box-shadow: 0 0 18px rgba(224,64,64,.5);
+  transform: scale(1.02);
+}
 
 /* Emoji flotante */
 .reaction-float {
@@ -533,6 +548,87 @@
   70%  { opacity:1; transform:scale(1) translateY(-22px); }
   100% { opacity:0; transform:scale(0.8) translateY(-55px); }
 }
+
+/* ── Globito de diálogo ── */
+
+/* Anchor invisible que vive dentro de .opp y de player-header */
+.bubble-anchor {
+  position: absolute;
+  bottom: -6px;   /* justo debajo del borde del contenedor */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 80;
+}
+
+.speech-bubble {
+  position: absolute;
+  top: 8px;        /* debajo del anchor = debajo del .opp */
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  background: rgba(8, 24, 14, 0.96);
+  border: 1.5px solid rgba(200,160,69,.4);
+  border-radius: 10px;
+  padding: 6px 11px;
+  font-size: 0.72rem;
+  color: #e8e8e0;
+  white-space: normal;
+  max-width: 160px;
+  min-width: 60px;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0,0,0,.65);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.35;
+  word-break: break-word;
+  z-index: 80;
+}
+
+/* Triangulito apuntando ARRIBA (hacia el oponente) */
+.speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;        /* encima del globito */
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-bottom-color: rgba(200,160,69,.4);
+}
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: rgba(8,24,14,.96);
+  z-index: 1;
+}
+
+.speech-bubble.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Globito especial ¡¡¡PAGA!!! */
+.speech-bubble.paga {
+  border-color: rgba(220,60,60,.7);
+  background: rgba(60,8,8,.97);
+  color: #ff9090;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 20px rgba(220,60,60,.4), 0 4px 18px rgba(0,0,0,.65);
+}
+.speech-bubble.paga::before { border-bottom-color: rgba(220,60,60,.7); }
+.speech-bubble.paga::after  { border-bottom-color: rgba(60,8,8,.97); }
+
+/* .opp y .player-header necesitan overflow visible y position relative */
+.opp { position: relative; overflow: visible !important; }
+.player-header { position: relative; overflow: visible !important; }
 
 /* Golpe de mesa */
 @keyframes tableBang {
@@ -697,6 +793,7 @@
         </div>
         <span class="turn-tag" id="turn-tag"></span>
         <span id="hand-count"></span>
+        <div id="my-bubble-anchor" class="bubble-anchor"></div>
       </div>
 
       <!-- FILA 1: Sobrantes -->
@@ -742,13 +839,13 @@
 
     <div class="chat-section-label">Mensajes rápidos</div>
     <div class="chat-quick-msgs">
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! 😩')">¡Ya dame mi carta! 😩</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! 😈')">¡Castígate! 😈</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané, jaja! 🏆')">¡Ya gané, jaja! 🏆</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! 😭')">¡Qué mala suerte! 😭</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! 👏')">¡Buena jugada! 👏</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! 😤')">¡No mames! 😤</button>
-      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','💥 ¡GOLPE DE MESA!')">💥 ¡Golpe de mesa!</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! ')">¡Ya dame mi carta! </button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! ')">¡Castígate! </button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané!')">¡Ya gané, jaja! </button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! ')">¡Qué mala suerte! </button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! ')">¡Buena jugada! </button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! ')">¡No mames!</button>
+      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','¡¡¡PAGA!!!')"> ¡¡¡PAGA!!!</button>
     </div>
   </div>
 
@@ -793,23 +890,23 @@
 <script>
 /* ================================================================
    CHAT / REACCIONES — lógica cliente
-   Se engancha al WS ya conectado por socket.js/game.js.
    Mensaje WS: { type:'reaction', tipo:'emoji'|'msg'|'golpe', texto, nombre }
    ================================================================ */
 (function () {
   'use strict';
 
+  const BUBBLE_DURATION = 3800; // ms que se muestra el globito
+
   /* ── Toggle panel ── */
   window.toggleChat = function () {
     const panel = document.getElementById('chat-panel');
     panel.classList.toggle('open');
-    // Limpiar badge al abrir
     if (panel.classList.contains('open')) {
       document.getElementById('chat-toggle').textContent = '💬';
     }
   };
 
-  /* Cerrar al click fuera del panel */
+  /* Cerrar al click fuera */
   document.addEventListener('click', (e) => {
     const panel  = document.getElementById('chat-panel');
     const toggle = document.getElementById('chat-toggle');
@@ -825,32 +922,86 @@
     if (typeof G === 'undefined' || !G) return;
     const nombre = G.jugadores[myIdx]?.nombre || 'Yo';
     WS.send({ type: 'reaction', tipo, texto, nombre });
-    // Mostrar localmente sin esperar al servidor
     showReaction({ tipo, texto, nombre });
     document.getElementById('chat-panel').classList.remove('open');
   };
 
-  /* ── Escuchar reacciones del servidor ── */
+  /* ── Recibir reacciones del servidor ── */
   WS.on('reaction', (msg) => {
-    // Evitar duplicar la propia reacción (ya la mostramos localmente)
     if (typeof G !== 'undefined' && G &&
         G.jugadores[myIdx]?.nombre === msg.nombre) return;
     showReaction(msg);
   });
 
-  /* ── Mostrar reacción ── */
+  /* ── Dispatcher principal ── */
   function showReaction ({ tipo, texto, nombre }) {
     appendChatMessage(nombre, texto);
-    if (tipo === 'emoji') {
-      spawnFloatingEmoji(texto, nombre);
-    } else if (tipo === 'golpe') {
-      triggerTableBang(nombre);
+
+    if (tipo === 'golpe') {
+      triggerPaga(nombre);
     } else {
-      showChatToast(nombre, texto);
+      // Emojis y mensajes: globito sobre el avatar del jugador
+      showSpeechBubble(nombre, texto);
     }
   }
 
-  /* ── Añadir al log del panel ── */
+  /* ─────────────────────────────────────────────
+     GLOBITO DE DIÁLOGO
+     Aparece debajo del avatar del jugador (opp)
+     o debajo del nombre del jugador propio.
+  ───────────────────────────────────────────── */
+  function showSpeechBubble (nombre, texto, esPaga) {
+    const anchorEl = getOrCreateBubbleAnchor(nombre);
+    if (!anchorEl) return;
+
+    let bubble = anchorEl.querySelector('.speech-bubble');
+    if (!bubble) {
+      bubble = document.createElement('div');
+      bubble.className = 'speech-bubble';
+      anchorEl.appendChild(bubble);
+    }
+
+    bubble.textContent = texto;
+    bubble.classList.toggle('paga', !!esPaga);
+
+    // Re-trigger transición
+    bubble.classList.remove('visible');
+    void bubble.offsetWidth;
+    bubble.classList.add('visible');
+
+    clearTimeout(bubble._hideT);
+    bubble._hideT = setTimeout(() => {
+      bubble.classList.remove('visible');
+    }, esPaga ? 3000 : BUBBLE_DURATION);
+  }
+
+  /* Obtiene (o crea) el div anchor dentro del elemento correcto */
+  function getOrCreateBubbleAnchor (nombre) {
+    if (typeof G === 'undefined' || !G) return null;
+
+    const idx = G.jugadores.findIndex(j => j.nombre === nombre);
+
+    if (idx === myIdx) {
+      // Jugador propio: anchor ya está en el HTML
+      return document.getElementById('my-bubble-anchor');
+    }
+
+    // Oponente: buscar su .opp por data-idx
+    const oppEl = document.querySelector(`.opp[data-idx="${idx}"]`);
+    if (!oppEl) return null;
+
+    let anchor = oppEl.querySelector('.bubble-anchor');
+    if (!anchor) {
+      anchor = document.createElement('div');
+      anchor.className = 'bubble-anchor';
+      oppEl.appendChild(anchor);
+    }
+    return anchor;
+  }
+
+  /* ─────────────────────────────────────────────
+     LOG DEL PANEL
+  ───────────────────────────────────────────── */
   function appendChatMessage (nombre, texto) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -863,7 +1014,6 @@
     while (container.children.length > 30) container.removeChild(container.firstChild);
     container.scrollTop = container.scrollHeight;
 
-    // Badge si el panel está cerrado
     const panel  = document.getElementById('chat-panel');
     const toggle = document.getElementById('chat-toggle');
     if (!panel.classList.contains('open')) {
@@ -873,74 +1023,24 @@
     }
   }
 
-  /* ── Emoji flotante sobre el oponente ── */
-  function spawnFloatingEmoji (emoji, nombre) {
-    let x = window.innerWidth / 2;
-    let y = window.innerHeight * 0.3;
-
-    if (typeof G !== 'undefined' && G) {
-      const idx = G.jugadores.findIndex(j => j.nombre === nombre);
-      if (idx >= 0 && idx !== myIdx) {
-        const el = document.querySelector(`.opp[data-idx="${idx}"]`);
-        if (el) {
-          const r = el.getBoundingClientRect();
-          x = r.left + r.width / 2;
-          y = r.top + r.height / 2;
-        }
-      }
-    }
-
-    const el = document.createElement('div');
-    el.className = 'reaction-float';
-    el.textContent = emoji;
-    el.style.left = (x - 18) + 'px';
-    el.style.top  = (y - 18) + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 2400);
-  }
-
-  /* ── Toast de mensaje ── */
-  function showChatToast (nombre, texto) {
-    const t = document.getElementById('toast');
-    if (!t) return;
-    t.textContent = `${nombre}: ${texto}`;
-    t.style.background = 'rgba(14,42,26,.96)';
-    t.style.border = '1px solid rgba(200,160,69,.35)';
-    t.style.display = 'block';
-    clearTimeout(t._t);
-    t._t = setTimeout(() => {
-      t.style.display = 'none';
-      t.style.background = '';
-      t.style.border = '';
-    }, 3500);
-  }
-
-  /* ── Golpe de mesa ── */
-  function triggerTableBang (nombre) {
+  /* ─────────────────────────────────────────────
+     ¡¡¡PAGA!!! — sacude la mesa + globito rojo
+  ───────────────────────────────────────────── */
+  function triggerPaga (nombre) {
+    // 1. Sacudir toda la mesa
     const table = document.getElementById('main-table');
     if (table) {
       table.classList.remove('table-bang');
-      void table.offsetWidth; // reflow para re-trigger
+      void table.offsetWidth;
       table.classList.add('table-bang');
       setTimeout(() => table.classList.remove('table-bang'), 580);
     }
 
-    const t = document.getElementById('toast');
-    if (t) {
-      t.textContent = `💥 ${nombre} golpeó la mesa!`;
-      t.style.background = 'rgba(130,25,25,.96)';
-      t.style.border = '1px solid rgba(224,64,64,.55)';
-      t.style.display = 'block';
-      clearTimeout(t._t);
-      t._t = setTimeout(() => {
-        t.style.display = 'none';
-        t.style.background = '';
-        t.style.border = '';
-      }, 2800);
-    }
+    // 2. Globito rojo ¡¡¡PAGA!!! sobre el jugador que lo envió
+    showSpeechBubble(nombre, ' ¡¡¡PAGA!!!', true);
   }
 
-  /* ── Sanitizar HTML ── */
+  /* ── Sanitizar ── */
   function esc (str) {
     return String(str)
       .replace(/&/g,'&amp;')

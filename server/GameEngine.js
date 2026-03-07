@@ -692,7 +692,7 @@ class GameEngine {
         if (!j) return this._err('Jugador no encontrado.');
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
-        if (this.estado !== 'esperando_accion' && this.estado !== 'esperando_pago') return this._err('Debes robar una carta antes de intercambiar.');
+        if (this.estado !== 'esperando_accion') return this._err('Debes robar una carta antes de intercambiar.');
         const origen = this.jugadores[origenJugadorIdx];
         if (!origen || !origen.bajado) return this._err('Jugador origen no se ha bajado.');
         const jugadaOrigen = origen.jugadas[origenJugadaIdx];
@@ -790,36 +790,7 @@ class GameEngine {
         const cidx = j.mano.findIndex(c => c.id === cartaId);
         if (cidx < 0) return this._err('Carta no encontrada.');
         const carta = j.mano[cidx];
-
-        // Si no puede acomodar directamente pero puede intercambiar con el joker de esa jugada
-        // (el drag cayó sobre la pila → redirigir automáticamente como intercambio)
-        if (!puedeAcomodar(carta, jug)) {
-            const comodinIdx = jug.cartas.findIndex(c => c.comodin);
-            if (comodinIdx !== -1 && puedeIntercambiarComodin(carta, jug)) {
-                // Ejecutar como intercambio: la carta va a la jugada, el joker va a la mano
-                const comodin = jug.cartas[comodinIdx];
-                jug.cartas[comodinIdx] = carta;
-                j.mano[cidx] = comodin;
-                delete comodin.valorReemplazado;
-                delete comodin.paloReemplazado;
-                delete comodin.jugadaId;
-                // Reordenar si corrida y recalcular joker
-                if (jug.tipo === 'corrida') jug.cartas = ordenarCorridaAcomodada(jug.cartas);
-                guardarValorComodin(jug);
-                this.addLog(`🔄 ${j.nombre} intercambió ${carta.valor}${carta.palo || ''} por un comodín (arrastró sobre jugada de ${dest.nombre}).`);
-                this.lastAction = Date.now();
-                // El joker ahora está en la mano — si la mano queda vacía, fin de ronda
-                if (j.mano.length === 1 && j.mano[0].comodin) {
-                    // Tiene solo el joker — aún debe acomodarlo, no es fin de ronda
-                }
-                return this._ok('intercambiar_comodin', {
-                    jugadorIdx: tidx, origenJugadorIdx: destJugadorIdx, origenJugadaIdx: destJugadaIdx,
-                    cartaEntregada: carta, comodinRecibido: comodin
-                });
-            }
-            return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
-        }
-
+        if (!puedeAcomodar(carta, jug)) return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
         jug.cartas.push(carta);
         // Reordenar corridas de menor a mayor; recalcular valorReemplazado del joker en ambos tipos
         if (jug.tipo === 'corrida') {

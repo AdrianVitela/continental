@@ -6,287 +6,323 @@
     <title>Continental - Lobby</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* ===== LAYOUT PRINCIPAL ===== */
-        body { 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%); 
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
         }
 
-        .lobby-wrap { 
-            position: relative; 
-            z-index: 1; 
-            width: min(480px, 96%); 
-            display: flex; 
-            flex-direction: column; 
-            gap: 24px; 
+        .lobby-wrap {
+            position: relative;
+            z-index: 1;
+            width: min(480px, 96%);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding: 20px 0;
         }
 
         /* ===== LOGO ===== */
-        .logo { 
-            text-align: center; 
-            animation: fadeDown .7s var(--eout) both; 
+        .logo {
+            text-align: center;
+            animation: fadeDown .7s var(--eout) both;
+        }
+        .logo h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(3rem, 9vw, 5.5rem);
+            font-weight: 700;
+            color: var(--gold);
+            text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5);
+            letter-spacing: 4px;
+        }
+        .logo p {
+            color: var(--text-dim);
+            font-size: .8rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-top: 4px;
         }
 
-        .logo h1 { 
-            font-family: 'Cormorant Garamond', serif; 
-            font-size: clamp(3rem, 9vw, 5.5rem); 
-            font-weight: 700; 
-            color: var(--gold); 
-            text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5); 
-            letter-spacing: 4px; 
+        /* ===== CARD ===== */
+        .card-box {
+            background: rgba(0,0,0,.35);
+            border: 1px solid rgba(200,160,69,.18);
+            border-radius: 18px;
+            padding: 26px 28px;
+            backdrop-filter: blur(16px);
+            animation: fadeUp .7s .1s var(--eout) both;
+        }
+        .card-box h2 {
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--gold);
+            font-size: 1.15rem;
+            text-align: center;
+            margin-bottom: 18px;
+            letter-spacing: 2px;
         }
 
-        .logo p { 
-            color: var(--text-dim); 
-            font-size: .8rem; 
-            letter-spacing: 4px; 
-            text-transform: uppercase; 
-            margin-top: 4px; 
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            background: rgba(0,0,0,.3);
+            border-radius: 10px;
+            padding: 3px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .85rem;
+            color: var(--text-dim);
+            transition: background .2s, color .2s;
+            user-select: none;
+        }
+        .tab.active {
+            background: rgba(200,160,69,.2);
+            color: var(--gold-hi);
+            font-weight: 600;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        /* ===== TARJETA DE FORMULARIO ===== */
-        .card-box { 
-            background: rgba(0,0,0,.35); 
-            border: 1px solid rgba(200,160,69,.18); 
-            border-radius: 18px; 
-            padding: 26px 28px; 
-            backdrop-filter: blur(16px); 
-            animation: fadeUp .7s .1s var(--eout) both; 
+        /* ===== FIELDS ===== */
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .field-group label {
+            font-size: .78rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .card-box h2 { 
-            font-family: 'Cormorant Garamond', serif; 
-            color: var(--gold); 
-            font-size: 1.15rem; 
-            text-align: center; 
-            margin-bottom: 18px; 
-            letter-spacing: 2px; 
+        /* Fila input + botón de dados */
+        .input-row {
+            display: flex;
+            gap: 6px;
+            align-items: stretch;
+        }
+        .input-row input {
+            flex: 1;
         }
 
-        /* Pestañas */
-        .tabs { 
-            display: flex; 
-            gap: 0; 
-            background: rgba(0,0,0,.3); 
-            border-radius: 10px; 
-            padding: 3px; 
-            margin-bottom: 20px; 
+        /* Botón de nombre aleatorio */
+        .btn-random-name {
+            flex-shrink: 0;
+            width: 38px;
+            height: 38px;  /* igual que input */
+            background: rgba(200,160,69,.1);
+            border: 1px solid rgba(200,160,69,.3);
+            border-radius: 9px;
+            color: var(--gold);
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background .2s, transform .15s;
+            line-height: 1;
+        }
+        .btn-random-name:hover {
+            background: rgba(200,160,69,.22);
+            transform: rotate(20deg) scale(1.08);
+        }
+        .btn-random-name:active { transform: rotate(0deg) scale(.95); }
+
+        /* Hint de validación */
+        .field-hint {
+            font-size: .68rem;
+            color: var(--red-hi);
+            min-height: 14px;
+            line-height: 1.3;
+            display: none;
+        }
+        .field-hint.show { display: block; }
+
+        /* ===== MODO DE JUEGO ===== */
+        .mode-row { display: flex; gap: 8px; }
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.12);
+            border-radius: 9px;
+            color: var(--text-dim);
+            font-size: .82rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background .2s, border-color .2s, color .2s;
+            user-select: none;
+        }
+        .mode-btn.active {
+            background: rgba(200,160,69,.15);
+            border-color: rgba(200,160,69,.4);
+            color: var(--gold-hi);
+        }
+        .mode-btn small {
+            display: block;
+            font-size: .68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
         }
 
-        .tab { 
-            flex: 1; 
-            padding: 8px; 
-            text-align: center; 
-            border-radius: 8px; 
-            cursor: pointer; 
-            font-size: .85rem; 
-            color: var(--text-dim); 
-            transition: background .2s, color .2s; 
+        /* ===== JUGADORES MAX ===== */
+        .player-count {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-
-        .tab.active { 
-            background: rgba(200,160,69,.2); 
-            color: var(--gold-hi); 
-            font-weight: 600; 
+        .player-count label {
+            font-size: .78rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
-
-        .tab-panel { 
-            display: none; 
+        .pc-ctrl { display: flex; align-items: center; gap: 10px; }
+        .pc-btn {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: rgba(200,160,69,.12);
+            border: 1px solid rgba(200,160,69,.3);
+            color: var(--gold); font-size: 1rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: background .15s;
         }
+        .pc-btn:hover { background: rgba(200,160,69,.25); }
+        .pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
 
-        .tab-panel.active { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-        }
-
-        /* Campos de formulario */
-        .field-group { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 6px; 
-        }
-
-        .field-group label { 
-            font-size: .78rem; 
-            color: var(--text-dim); 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
-
-        .mode-row { 
-            display: flex; 
-            gap: 8px; 
-        }
-
-        .mode-btn { 
-            flex: 1; 
-            padding: 10px; 
-            background: rgba(255,255,255,.05); 
-            border: 1px solid rgba(255,255,255,.12); 
-            border-radius: 9px; 
-            color: var(--text-dim); 
-            font-size: .82rem; 
-            cursor: pointer; 
-            text-align: center; 
-            transition: background .2s, border-color .2s, color .2s; 
-        }
-
-        .mode-btn.active { 
-            background: rgba(200,160,69,.15); 
-            border-color: rgba(200,160,69,.4); 
-            color: var(--gold-hi); 
-        }
-
-        .mode-btn small { 
-            display: block; 
-            font-size: .68rem; 
-            color: var(--text-muted); 
-            margin-top: 2px; 
-        }
-
-        /* Control de número de jugadores */
-        .player-count { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-        }
-
-        .player-count label { 
-            font-size: .78rem; 
-            color: var(--text-dim); 
-            text-transform: uppercase; 
-            letter-spacing: 1px; 
-        }
-
-        .pc-ctrl { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-        }
-
-        .pc-btn { 
-            width: 30px; 
-            height: 30px; 
-            border-radius: 50%; 
-            background: rgba(200,160,69,.12); 
-            border: 1px solid rgba(200,160,69,.3); 
-            color: var(--gold); 
-            font-size: 1rem; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            transition: background .15s; 
-        }
-
-        .pc-btn:hover { 
-            background: rgba(200,160,69,.25); 
-        }
-
-        .pc-val { 
-            font-size: .95rem; 
-            min-width: 20px; 
-            text-align: center; 
+        /* ===== INPUT CÓDIGO DE SALA ===== */
+        #unirse-code {
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            font-size: 1.2rem;
+            text-align: center;
+            font-family: 'Cormorant Garamond', serif;
         }
 
         /* ===== SALA DE ESPERA ===== */
-        #lobby-room { 
-            display: none; 
-            flex-direction: column; 
-            gap: 16px; 
-        }
+        #lobby-room { display: none; flex-direction: column; gap: 16px; }
+        #lobby-room.show { display: flex; }
 
-        #lobby-room.show { 
-            display: flex; 
+        .room-code-display { text-align: center; }
+        .room-code-display .code {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem; font-weight: 700;
+            color: var(--gold); letter-spacing: 8px;
+            background: rgba(0,0,0,.3);
+            border: 1px solid rgba(200,160,69,.25);
+            border-radius: 12px; padding: 10px 20px;
+            display: inline-block; cursor: pointer;
+            transition: background .2s;
         }
+        .room-code-display .code:hover { background: rgba(200,160,69,.1); }
+        .room-code-display p { font-size: .75rem; color: var(--text-dim); margin-top: 6px; }
 
-        .room-code-display { 
-            text-align: center; 
+        .player-list { display: flex; flex-direction: column; gap: 6px; }
+        .player-item {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
+            animation: popIn .3s var(--spring) both;
         }
+        .player-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
+        .player-dot.away { background: var(--text-muted); }
+        .player-badge { font-size: .72rem; color: var(--gold); margin-left: auto; }
 
-        .room-code-display .code { 
-            font-family: 'Cormorant Garamond', serif; 
-            font-size: 2.5rem; 
-            font-weight: 700; 
-            color: var(--gold); 
-            letter-spacing: 8px; 
-            background: rgba(0,0,0,.3); 
-            border: 1px solid rgba(200,160,69,.25); 
-            border-radius: 12px; 
-            padding: 10px 20px; 
-            display: inline-block; 
-            cursor: pointer; 
-            transition: background .2s; 
-        }
+        .separator { height: 1px; background: rgba(255,255,255,.08); }
+        .waiting-msg { text-align: center; font-size: .82rem; color: var(--text-dim); }
 
-        .room-code-display .code:hover { 
-            background: rgba(200,160,69,.1); 
+        @keyframes dots {
+            0%,20% { content: '.'; }
+            40%     { content: '..'; }
+            60%,100%{ content: '...'; }
         }
+        .dot-pulse::after { content: '...'; animation: dots 1.2s infinite; }
 
-        .room-code-display p { 
-            font-size: .75rem; 
-            color: var(--text-dim); 
-            margin-top: 6px; 
+        /* ===== MODAL DE NOMBRES ===== */
+        .names-modal-overlay {
+            display: none;
+            position: fixed; inset: 0; z-index: 500;
+            background: rgba(0,0,0,.72);
+            backdrop-filter: blur(5px);
+            align-items: center; justify-content: center;
         }
+        .names-modal-overlay.show { display: flex; }
 
-        /* Lista de jugadores */
-        .player-list { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 6px; 
+        .names-modal {
+            background: linear-gradient(160deg, #1a3d28, #0d1f14);
+            border: 1px solid rgba(200,160,69,.22);
+            border-radius: 16px;
+            padding: 22px 20px 18px;
+            width: min(340px, 92%);
+            display: flex; flex-direction: column; gap: 14px;
+            animation: fadeUp .25s var(--eout) both;
         }
+        .names-modal h3 {
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--gold); font-size: 1.05rem;
+            text-align: center; letter-spacing: 2px;
+        }
+        .names-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
+            max-height: 52vh;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gold-dim) transparent;
+        }
+        .name-option {
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: .82rem;
+            cursor: pointer;
+            text-align: center;
+            transition: background .15s, border-color .15s, color .15s;
+            line-height: 1.2;
+            color: var(--text);
+        }
+        .name-option:hover {
+            background: rgba(200,160,69,.15);
+            border-color: rgba(200,160,69,.4);
+            color: var(--gold-hi);
+        }
+        .name-option .nicon { display: block; font-size: 1.1rem; margin-bottom: 3px; }
 
-        .player-item { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            background: rgba(0,0,0,.2); 
-            border-radius: 8px; 
-            padding: 8px 12px; 
-            animation: popIn .3s var(--spring) both; 
+        .names-modal-footer {
+            display: flex; gap: 8px;
         }
-
-        .player-dot { 
-            width: 8px; 
-            height: 8px; 
-            border-radius: 50%; 
-            background: #2ecc71; 
+        .btn-modal-close {
+            flex: 1; padding: 8px;
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.1);
+            border-radius: 8px; color: var(--text-dim);
+            font-size: .8rem; cursor: pointer;
+            transition: background .15s;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .player-dot.away { 
-            background: var(--text-muted); 
+        .btn-modal-close:hover { background: rgba(255,255,255,.1); color: var(--text); }
+        .btn-modal-shuffle {
+            flex: 1; padding: 8px;
+            background: rgba(200,160,69,.1);
+            border: 1px solid rgba(200,160,69,.3);
+            border-radius: 8px; color: var(--gold);
+            font-size: .8rem; cursor: pointer;
+            transition: background .15s;
+            font-family: 'Outfit', sans-serif;
         }
-
-        .player-badge { 
-            font-size: .72rem; 
-            color: var(--gold); 
-            margin-left: auto; 
-        }
-
-        .separator { 
-            height: 1px; 
-            background: rgba(255,255,255,.08); 
-        }
-
-        .waiting-msg { 
-            text-align: center; 
-            font-size: .82rem; 
-            color: var(--text-dim); 
-        }
-
-        .dot-pulse::after { 
-            content: '...'; 
-            animation: dots 1.2s infinite; 
-        }
-
-        @keyframes dots { 
-            0%,20% { content: '.'; } 
-            40% { content: '..'; } 
-            60%,100% { content: '...'; } 
-        }
+        .btn-modal-shuffle:hover { background: rgba(200,160,69,.2); }
     </style>
 </head>
 <body>
@@ -296,7 +332,7 @@
             <p>Juego de cartas multijugador</p>
         </div>
 
-        <!-- Setup form -->
+        <!-- ===== FORMULARIO ===== -->
         <div class="card-box" id="lobby-setup">
             <h2>Unirse o Crear Sala</h2>
             <div class="tabs">
@@ -304,12 +340,21 @@
                 <div class="tab" onclick="switchTab('unirse')">Unirse</div>
             </div>
 
-            <!-- CREATE -->
+            <!-- CREAR -->
             <div class="tab-panel active" id="panel-crear">
                 <div class="field-group">
                     <label>Tu nombre</label>
-                    <input type="text" id="crear-nombre" placeholder="Nombre de jugador" maxlength="18">
+                    <div class="input-row">
+                        <input type="text" id="crear-nombre"
+                               placeholder="Nombre de jugador"
+                               maxlength="18"
+                               oninput="sanitizeName(this)"
+                               autocomplete="off" autocorrect="off" spellcheck="false">
+                        <button class="btn-random-name" onclick="openNamesModal('crear')" title="Nombres predefinidos">🎲</button>
+                    </div>
+                    <span class="field-hint" id="hint-crear-nombre"></span>
                 </div>
+
                 <div class="field-group">
                     <label>Modo de juego</label>
                     <div class="mode-row">
@@ -321,6 +366,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="player-count">
                     <label>Jugadores máx.</label>
                     <div class="pc-ctrl">
@@ -329,24 +375,40 @@
                         <button class="pc-btn" onclick="chgMax(1)">+</button>
                     </div>
                 </div>
+
                 <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSala()">🃏 Crear Sala</button>
             </div>
 
-            <!-- JOIN -->
+            <!-- UNIRSE -->
             <div class="tab-panel" id="panel-unirse">
                 <div class="field-group">
                     <label>Tu nombre</label>
-                    <input type="text" id="unirse-nombre" placeholder="Nombre de jugador" maxlength="18">
+                    <div class="input-row">
+                        <input type="text" id="unirse-nombre"
+                               placeholder="Nombre de jugador"
+                               maxlength="18"
+                               oninput="sanitizeName(this)"
+                               autocomplete="off" autocorrect="off" spellcheck="false">
+                        <button class="btn-random-name" onclick="openNamesModal('unirse')" title="Nombres predefinidos">🎲</button>
+                    </div>
+                    <span class="field-hint" id="hint-unirse-nombre"></span>
                 </div>
+
                 <div class="field-group">
                     <label>Código de sala</label>
-                    <input type="text" id="unirse-code" placeholder="Ej: ABC12" maxlength="5" style="text-transform:uppercase;letter-spacing:4px;font-size:1.1rem;text-align:center">
+                    <input type="text" id="unirse-code"
+                           placeholder="Ej: ABC12"
+                           maxlength="5"
+                           oninput="sanitizeCode(this)"
+                           autocomplete="off" autocorrect="off" spellcheck="false">
+                    <span class="field-hint" id="hint-unirse-code"></span>
                 </div>
+
                 <button class="btn btn-gold" style="width:100%" onclick="unirse()">Unirse →</button>
             </div>
         </div>
 
-        <!-- Waiting room -->
+        <!-- ===== SALA DE ESPERA ===== -->
         <div class="card-box" id="lobby-room">
             <div class="room-code-display">
                 <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar">????</div>
@@ -355,16 +417,29 @@
             <div class="separator"></div>
             <div class="player-list" id="player-list"></div>
             <div class="separator"></div>
-            <div class="waiting-msg" id="waiting-msg">Esperando jugadores<span class="dot-pulse"></span></div>
+            <div class="waiting-msg" id="waiting-msg">
+                Esperando jugadores<span class="dot-pulse"></span>
+            </div>
             <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start" onclick="iniciarJuego()">
                 ▶ Iniciar Partida
             </button>
         </div>
     </div>
 
+    <!-- ===== MODAL NOMBRES PREDEFINIDOS ===== -->
+    <div class="names-modal-overlay" id="names-modal" onclick="closeNamesModalOutside(event)">
+        <div class="names-modal">
+            <h3>🎲 Elige un nombre</h3>
+            <div class="names-grid" id="names-grid"></div>
+            <div class="names-modal-footer">
+                <button class="btn-modal-close" onclick="closeNamesModal()">Cancelar</button>
+                <button class="btn-modal-shuffle" onclick="shuffleNames()">🔀 Otros nombres</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toast"></div>
 
-    <!-- Scripts -->
     <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>
 </body>

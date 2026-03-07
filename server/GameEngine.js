@@ -692,7 +692,7 @@ class GameEngine {
         if (!j) return this._err('Jugador no encontrado.');
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
-        if (this.estado !== 'esperando_accion') return this._err('Debes robar una carta antes de intercambiar.');
+        if (this.estado !== 'esperando_accion' && this.estado !== 'esperando_pago') return this._err('Debes robar una carta antes de intercambiar.');
         const origen = this.jugadores[origenJugadorIdx];
         if (!origen || !origen.bajado) return this._err('Jugador origen no se ha bajado.');
         const jugadaOrigen = origen.jugadas[origenJugadaIdx];

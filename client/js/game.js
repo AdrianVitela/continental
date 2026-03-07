@@ -162,7 +162,10 @@ const _intercambiosCache = new Map();
 // Retorna array de { cartaId, cartaValor, cartaPalo, jugadorIdx, jugadaIdx, comodinId }
 function detectarIntercambiosPosibles() {
     if (!G || myIdx < 0) return [];
-    if (!isMyTurn() || G.estado !== 'esperando_accion') return [];
+    // Permitir intercambio en esperando_accion y en esperando_pago (cuando ya bajado)
+    const estadoPermitido = G.estado === 'esperando_accion' ||
+        (G.estado === 'esperando_pago' && G.jugadores[myIdx]?.bajado);
+    if (!isMyTurn() || !estadoPermitido) return [];
     const me = G.jugadores[myIdx];
     if (!me) return [];
     // Si ya bajó: detectar intercambios simples (tiene la carta exacta, sin necesidad de bajar)
@@ -794,9 +797,11 @@ function renderTableBajadas() {
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
             // Detectar intercambios posibles para resaltar jokers
-            // Se activa tanto si ya bajó como si no — en ambos casos puede intercambiar
+            // Se activa en esperando_accion y en esperando_pago (bajado)
             const _me = G.jugadores[myIdx];
-            const intercambiosPosibles = (isMyTurn() && G.estado === 'esperando_accion')
+            const _estadoInterc = G.estado === 'esperando_accion' ||
+                (G.estado === 'esperando_pago' && _me?.bajado);
+            const intercambiosPosibles = (isMyTurn() && _estadoInterc)
                 ? detectarIntercambiosPosibles()
                 : [];
 
@@ -1243,7 +1248,14 @@ function renderActions() {
                 if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
             } else {
-                if (instr) instr.textContent = 'Selecciona una carta para acomodar o pagar.';
+                const intercambiosPago = detectarIntercambiosPosibles();
+                if (intercambiosPago.length > 0) {
+                    const ic = intercambiosPago[0];
+                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre}.`;
+                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
+                } else {
+                    if (instr) instr.textContent = 'Selecciona una carta para acomodar o pagar.';
+                }
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
                 if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
             }

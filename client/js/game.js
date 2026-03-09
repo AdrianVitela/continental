@@ -960,10 +960,11 @@ function createCardElement(c, fromSlot = null) {
         onPagar: id => acPagar(id),
         onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
         onReorder: (id, beforeId) => acReorder(id, beforeId),
-        onBuildingDrop: (id, slotIndex, slotType) => handleBuildingDrop(id, slotIndex, slotType),
+        onBuildingDrop: (id, slotIndex, slotType, insertIdx) => handleBuildingDrop(id, slotIndex, slotType, insertIdx),
         onRemoveFromSlot: (id, slotIndex) => handleRemoveFromSlot(id, slotIndex),
-        onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType) => handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType),
+        onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType, insertIdx) => handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType, insertIdx),
         onReturnToHand: (id, slotIndex) => handleReturnToHand(id, slotIndex),
+        onReorderWithinSlot: (id, slotIndex, insertIdx) => handleReorderWithinSlot(id, slotIndex, insertIdx),
     };
 
     el.addEventListener('mousedown', e => { if (e.button !== 0) return; DragDrop.startHandDrag(e, el, c.id, dragCallbacks); });
@@ -972,7 +973,7 @@ function createCardElement(c, fromSlot = null) {
     return el;
 }
 
-function handleBuildingDrop(cartaId, slotIndex, slotType) {
+function handleBuildingDrop(cartaId, slotIndex, slotType, insertIdx) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) { toast('Ya estás bajado, no puedes construir más jugadas'); return; }
 
@@ -986,7 +987,13 @@ function handleBuildingDrop(cartaId, slotIndex, slotType) {
     const [cartaMovida] = me.mano.splice(cartaIndex, 1);
     if (!buildingCards.has(slotIndex)) buildingCards.set(slotIndex, []);
     const slotCards = buildingCards.get(slotIndex);
-    slotCards.push(cartaMovida);
+
+    // Insertar en posición si se especificó, si no al final
+    if (insertIdx !== undefined && insertIdx !== null && insertIdx < slotCards.length) {
+        slotCards.splice(insertIdx, 0, cartaMovida);
+    } else {
+        slotCards.push(cartaMovida);
+    }
 
     updateSlotUI(slotIndex, slotCards);
     renderHand();
@@ -1061,7 +1068,7 @@ function handleReturnToHand(cartaId, slotIndex) {
     toast(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`, 'green');
 }
 
-function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType) {
+function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType, insertIdx) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) { toast('Ya estás bajado, no puedes modificar jugadas'); return; }
 
@@ -1080,11 +1087,36 @@ function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType)
 
     if (!buildingCards.has(toSlotIndex)) buildingCards.set(toSlotIndex, []);
     const toSlotCards = buildingCards.get(toSlotIndex);
-    toSlotCards.push(cartaMovida);
+
+    if (insertIdx !== undefined && insertIdx !== null && insertIdx < toSlotCards.length) {
+        toSlotCards.splice(insertIdx, 0, cartaMovida);
+    } else {
+        toSlotCards.push(cartaMovida);
+    }
 
     updateSlotUI(toSlotIndex, toSlotCards);
     renderActions();
-    toast(`Carta movida a ${toSlotType}`, 'green');
+}
+
+function handleReorderWithinSlot(cartaId, slotIndex, insertIdx) {
+    const me = G.jugadores[myIdx];
+    if (!me || me.bajado) return;
+
+    slotIndex = String(slotIndex);
+    const slotCards = buildingCards.get(slotIndex);
+    if (!slotCards) return;
+
+    const currentIdx = slotCards.findIndex(c => c.id === cartaId);
+    if (currentIdx === -1) return;
+
+    // Sacar la carta y volver a insertarla en la nueva posición
+    const [carta] = slotCards.splice(currentIdx, 1);
+    // Ajustar insertIdx si la carta estaba antes del destino
+    const adjustedIdx = (insertIdx > currentIdx) ? Math.max(0, insertIdx - 1) : insertIdx;
+    slotCards.splice(adjustedIdx, 0, carta);
+
+    updateSlotUI(slotIndex, slotCards);
+    renderActions();
 }
 
 // ═══════════════════════════════════════════════════

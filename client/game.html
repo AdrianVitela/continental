@@ -280,6 +280,7 @@
 /* SLOTS */
 .building-slot {
   flex: 1;
+  min-width: 120px;
   max-width: 300px;
   display: flex;
   flex-direction: column;
@@ -288,7 +289,7 @@
   border-radius: 6px;
   padding: 3px;
   transition: all 0.2s ease;
-  overflow: hidden;
+  overflow: visible;
 }
 .building-slot:hover { border-color: var(--gold); background: rgba(200,160,69,.08); }
 .building-slot.drop-target { border-color: #2ecc71; background: rgba(46,204,113,.1); }
@@ -307,8 +308,14 @@
 .building-slot-count.valid { color: #2ecc71; background: rgba(46,204,113,.2); }
 .building-slot-cards {
   display: flex; gap: 2px; flex-wrap: wrap;
-  align-items: center; justify-content: center;
-  flex: 1; padding: 2px; overflow: hidden;
+  align-items: center; justify-content: flex-start;
+  flex: 1; padding: 2px; overflow: visible;
+  min-height: 52px;
+}
+.building-slot-cards .insert-ghost {
+  width: 4px; min-width: 4px; height: 52px;
+  background: #2ecc71; border-radius: 3px;
+  pointer-events: none; flex-shrink: 0;
 }
 .slot-hint {
   font-size: 0.46rem; color: var(--text-muted); text-align: center;

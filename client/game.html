@@ -269,19 +269,23 @@
   gap: 6px;
   justify-content: center;
   width: 100%;
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 0 10px;
-  height: calc(var(--ch) + 28px);
+  height: auto;
   min-height: calc(var(--ch) + 28px);
   box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.building-row::-webkit-scrollbar { display: none; }
 
 /* SLOTS */
 .building-slot {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 120px;
-  max-width: 300px;
+  max-width: 1000px;
   display: flex;
   flex-direction: column;
   background: rgba(0,0,0,.2);
@@ -307,9 +311,9 @@
 }
 .building-slot-count.valid { color: #2ecc71; background: rgba(46,204,113,.2); }
 .building-slot-cards {
-  display: flex; gap: 2px; flex-wrap: wrap;
+  display: flex; gap: 2px; flex-wrap: nowrap;
   align-items: center; justify-content: center;
-  flex: 1; padding: 2px; overflow: visible;
+  padding: 2px; overflow: visible;
   min-height: 52px;
 }
 .building-slot-cards .insert-ghost {
@@ -569,7 +573,8 @@
 
 .speech-bubble {
   position: absolute;
-  top: 8px;
+  bottom: calc(100% + 8px);
+  top: auto;
   left: 50%;
   transform: translateX(-50%) scale(.85);
   background: rgba(8,24,14,.96);
@@ -586,22 +591,22 @@
   z-index: 80;
 }
 
-/* Triangulito apuntando ARRIBA (hacia el oponente) */
+/* Triangulito apuntando ABAJO (hacia el jugador) */
 .speech-bubble::before {
   content: '';
   position: absolute;
-  bottom: 100%; left: 50%;
+  top: 100%; left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-bottom-color: rgba(200,160,69,.4);
+  border-top-color: rgba(200,160,69,.4);
 }
 .speech-bubble::after {
   content: '';
   position: absolute;
-  bottom: calc(100% - 1px); left: 50%;
+  top: calc(100% - 1px); left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-bottom-color: rgba(8,24,14,.96);
+  border-top-color: rgba(8,24,14,.96);
   z-index: 1;
 }
 

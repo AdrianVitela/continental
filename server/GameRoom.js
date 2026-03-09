@@ -248,7 +248,7 @@ class GameRoom {
       code: this.code,
       mode: this.mode,
       status: this.status,
-      players: this.players.map(p => ({ nombre: p.nombre, conectado: p.conectado })),
+      players: this.players.map(p => ({ id: p.id, nombre: p.nombre, conectado: p.conectado })),
       maxPlayers: this.maxPlayers,
     };
   }

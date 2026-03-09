@@ -414,7 +414,8 @@ function updateLobbyState (lobbyState) {
 
   const canStart = playersList.length >= 2 && lobbyState.status === 'lobby';
   const btn      = document.getElementById('btn-start');
-  btn.style.display = canStart && isHost ? 'block' : 'none';
+  const soyHost  = playersList.length > 0 && myId && playersList[0].id === myId;
+  btn.style.display = canStart && soyHost ? 'block' : 'none';
 
   const waiting = document.getElementById('waiting-msg');
   waiting.innerHTML = canStart

@@ -14,7 +14,6 @@
   display: flex;
   flex-direction: column;
   z-index: 1;
-  /* dvh respeta la barra del navegador móvil; 100vh como fallback */
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
@@ -45,7 +44,6 @@
   flex-shrink: 0;
 }
 
-/* Scoreboard centrado absolutamente en la topbar */
 .scoreboard {
   position: absolute;
   left: 50%;
@@ -222,7 +220,7 @@
   flex-shrink: 0;
 }
 
-/* ETIQUETAS DE FILA — CENTRADAS */
+/* ETIQUETAS DE FILA */
 .row-label {
   display: flex;
   justify-content: center;
@@ -239,7 +237,7 @@
 }
 .row-desc { font-size: 0.5rem; color: var(--text-dim); text-transform: none; }
 
-/* FILA 1: SOBRANTES — CARTAS CENTRADAS */
+/* FILA 1: SOBRANTES */
 .discard-zone {
   display: flex;
   gap: 3px;
@@ -263,11 +261,19 @@
   box-sizing: border-box;
 }
 
-/* FILA 2: CONSTRUCCIÓN */
+/* ===================================================
+   FILA 2: CONSTRUCCIÓN
+   Los slots crecen en ancho con sus cartas.
+   Cuando el total supera la pantalla → scroll horizontal.
+   =================================================== */
 .building-row {
   display: flex;
   gap: 6px;
-  justify-content: center;
+  /* flex-start para que los slots no se estiren ni se centren
+     artificialmente cuando son muy anchos */
+  justify-content: flex-start;
+  /* centrado visual cuando caben sin scroll */
+  align-items: flex-start;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -276,23 +282,34 @@
   min-height: calc(var(--ch) + 28px);
   box-sizing: border-box;
   flex-wrap: nowrap;
+  /* scroll horizontal cuando los slots superen el ancho disponible */
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
 }
-.building-row::-webkit-scrollbar { display: none; }
+.building-row::-webkit-scrollbar { height: 4px; }
+.building-row::-webkit-scrollbar-track { background: transparent; }
+.building-row::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 4px; }
 
-/* SLOTS */
+/* ===================================================
+   SLOTS
+   flex: 0 0 auto  → el slot NO encoge ni crece forzado,
+   toma exactamente el ancho que necesitan sus cartas.
+   Con 3 cartas ≈ 110 px, con 13 cartas ≈ 460 px.
+   =================================================== */
 .building-slot {
-  flex: 0 1 auto;
-  min-width: 120px;
-  max-width: 1000px;
+  flex: 0 0 auto;           /* no encoge ni crece: toma su tamaño natural */
+  min-width: 110px;
+  /* sin max-width: el slot se expande con las cartas */
   display: flex;
   flex-direction: column;
   background: rgba(0,0,0,.2);
   border: 2px solid rgba(200,160,69,.2);
   border-radius: 6px;
   padding: 3px;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s, background 0.2s;
   overflow: visible;
 }
 .building-slot:hover { border-color: var(--gold); background: rgba(200,160,69,.08); }
@@ -310,17 +327,32 @@
   background: rgba(0,0,0,.3); padding: 1px 4px; border-radius: 6px;
 }
 .building-slot-count.valid { color: #2ecc71; background: rgba(46,204,113,.2); }
+
+/* ===================================================
+   CARTAS DENTRO DEL SLOT
+   nowrap + justify flex-start: las cartas se alinean
+   de izquierda a derecha y el slot crece con ellas.
+   No hay wrap, no hay encimamiento.
+   =================================================== */
 .building-slot-cards {
-  display: flex; gap: 2px; flex-wrap: nowrap;
-  align-items: center; justify-content: center;
-  padding: 2px; overflow: visible;
-  min-height: 52px;
+  display: flex;
+  gap: 2px;
+  flex-wrap: nowrap;            /* fila única horizontal */
+  align-items: center;
+  justify-content: flex-start;  /* crece hacia la derecha */
+  padding: 2px;
+  overflow: visible;
+  min-height: calc(var(--ch) + 4px);
+  /* ancho mínimo para que el slot no colapse cuando está vacío */
+  min-width: calc(var(--cw) * 2 + 10px);
 }
+
 .building-slot-cards .insert-ghost {
-  width: 4px; min-width: 4px; height: 52px;
+  width: 4px; min-width: 4px; height: calc(var(--ch) + 2px);
   background: #2ecc71; border-radius: 3px;
   pointer-events: none; flex-shrink: 0;
 }
+
 .slot-hint {
   font-size: 0.46rem; color: var(--text-muted); text-align: center;
   padding: 1px 2px; border-top: 1px dashed rgba(255,255,255,.08);
@@ -334,7 +366,6 @@
   border-top: 1px solid rgba(200,160,69,.25);
   backdrop-filter: blur(12px);
   padding: 6px 12px 8px;
-  /* padding-bottom extra para la barra de gestos de iOS/Android */
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
@@ -529,7 +560,6 @@
 }
 .chat-quick-btn:hover { background: rgba(200,160,69,.12); border-color: rgba(200,160,69,.3); color: var(--gold-hi); }
 
-/* Botón especial: ¡¡¡PAGA!!! */
 .chat-quick-btn.golpe {
   border-color: rgba(184,48,48,.5);
   color: #fff;
@@ -581,7 +611,6 @@
   z-index: 200;
 }
 
-/* Bubble para OPONENTES - sale hacia abajo desde su anchor */
 .bubble-anchor .speech-bubble {
   position: absolute;
   top: 8px;
@@ -602,7 +631,6 @@
   z-index: 80;
 }
 
-/* Bubble para JUGADOR LOCAL - sale hacia arriba */
 #my-bubble-anchor .speech-bubble {
   position: absolute;
   bottom: 12px;
@@ -623,7 +651,6 @@
   z-index: 200;
 }
 
-/* Triángulo oponentes - apunta ARRIBA */
 .bubble-anchor .speech-bubble::before {
   content: '';
   position: absolute;
@@ -642,7 +669,6 @@
   z-index: 1;
 }
 
-/* Triángulo jugador local - apunta ABAJO */
 #my-bubble-anchor .speech-bubble::before {
   content: '';
   position: absolute;
@@ -667,7 +693,6 @@
   transform: translateX(-50%) scale(1);
 }
 
-/* Globito especial ¡¡¡PAGA!!! */
 .bubble-anchor .speech-bubble.paga,
 #my-bubble-anchor .speech-bubble.paga {
   border-color: rgba(220,60,60,.7);
@@ -681,7 +706,6 @@
 #my-bubble-anchor .speech-bubble.paga::before { border-top-color: rgba(220,60,60,.7); }
 #my-bubble-anchor .speech-bubble.paga::after  { border-top-color: rgba(60,8,8,.97); }
 
-/* Golpe de mesa */
 @keyframes tableBang {
   0%   { transform:translate(0,0) rotate(0deg); }
   10%  { transform:translate(-3px,-3px) rotate(-.5deg); }
@@ -712,26 +736,18 @@
   .cback-xs { width: 10px; height: 14px; }
   .deck-area-container { width: 70px; flex-direction: row; justify-content: center; gap: 10px; }
   .center-zone { gap: 10px; }
-
-  /* Action bar compacta en móvil */
-  .action-bar {
-    padding: 4px 8px calc(6px + env(safe-area-inset-bottom, 0px));
-    gap: 3px;
-  }
+  .action-bar { padding: 4px 8px calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; }
   .instr { font-size: 0.68rem; padding: 4px 10px; }
   .action-btns { gap: 5px; flex-wrap: wrap; }
   .abtn { padding: 6px 12px; font-size: 0.72rem; border-radius: 20px; letter-spacing: 0.2px; }
   .log-line { font-size: 0.56rem; padding: 1px 8px; }
   .castigo-banner { padding: 5px 12px; font-size: 0.75rem; }
-
-  /* Chat */
   #chat-toggle { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); right: 10px; width: 36px; height: 36px; font-size: 1rem; }
   #chat-panel  { bottom: calc(114px + env(safe-area-inset-bottom, 0px)); right: 10px; width: 220px; }
 }
 
 /* ── Móviles ≤ 480px ── */
 @media (max-width: 480px) {
-  /* Scoreboard vuelve a flujo normal en móviles pequeños */
   .scoreboard { position: static; transform: none; margin: 0 auto; pointer-events: auto; }
   .abtn { padding: 5px 10px; font-size: 0.68rem; border-radius: 18px; }
   .instr { font-size: 0.64rem; padding: 3px 8px; }
@@ -755,8 +771,8 @@
   .abtn { padding: 5px 10px; font-size: 0.67rem; }
   .instr { font-size: 0.62rem; padding: 3px 8px; }
   .castigo-banner { padding: 4px 10px; font-size: 0.7rem; }
-  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px); }
-  .building-row  { height: calc(var(--ch) + 22px); min-height: calc(var(--ch) + 22px); }
+  .discard-zone { height: calc(var(--ch) + 4px); min-height: calc(var(--ch) + 4px); }
+  .building-row { min-height: calc(var(--ch) + 22px); }
 }
 
 /* ── Landscape móviles horizontales (≤ 500px alto) ── */
@@ -779,8 +795,8 @@
   .row-desc { display: none; }
   .slot-hint { display: none; }
   .building-slot-header { font-size: 0.52rem; }
-  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px);  padding: 1px 8px; }
-  .building-row  { height: calc(var(--ch) + 20px); min-height: calc(var(--ch) + 20px); gap: 4px; padding: 0 8px; }
+  .discard-zone { height: calc(var(--ch) + 4px); min-height: calc(var(--ch) + 4px); padding: 1px 8px; }
+  .building-row { min-height: calc(var(--ch) + 20px); gap: 4px; padding: 0 8px; }
   .building-slot { padding: 2px; }
   .action-bar    { padding: 3px 8px calc(4px + env(safe-area-inset-bottom, 0px)); gap: 2px; }
   .instr         { font-size: 0.62rem; padding: 2px 8px; }
@@ -802,8 +818,8 @@
   .player-section { gap: 1px; }
   .player-header  { font-size: 0.7rem; }
   .row-label      { font-size: 0.52rem; }
-  .discard-zone  { height: calc(var(--ch) + 4px);  min-height: calc(var(--ch) + 4px); }
-  .building-row  { height: calc(var(--ch) + 22px); min-height: calc(var(--ch) + 22px); }
+  .discard-zone { height: calc(var(--ch) + 4px); min-height: calc(var(--ch) + 4px); }
+  .building-row { min-height: calc(var(--ch) + 22px); }
   .action-bar  { padding: 5px 12px calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; }
   .instr       { font-size: 0.7rem; padding: 4px 12px; }
   .abtn        { padding: 6px 13px; font-size: 0.75rem; }
@@ -813,17 +829,17 @@
 
 /* ── Landscape monitores / laptops (> 768px alto) ── */
 @media (orientation: landscape) and (min-height: 769px) {
-  .slot-hint     { font-size: 0.45rem; }
-  .building-row  { max-width: 960px; }
-  .discard-zone  { max-width: 960px; }
+  .slot-hint    { font-size: 0.45rem; }
+  .building-row { max-width: 960px; }
+  .discard-zone { max-width: 960px; }
   .player-header { max-width: 960px; }
 }
 
 /* ── Desktop ancho ── */
 @media (min-width: 1280px) {
-  .building-row  { max-width: 1000px; }
-  .discard-zone  { max-width: 1000px; }
-  .building-slot { max-width: 280px; }
+  /* Sin max-width en building-slot: crece libremente con las cartas */
+  .building-row  { max-width: 1200px; }
+  .discard-zone  { max-width: 1200px; }
   .instr         { font-size: 0.78rem; }
 }
   </style>
@@ -886,7 +902,6 @@
         </div>
         <span class="turn-tag"  id="turn-tag"></span>
         <span id="hand-count"></span>
-        <!-- Anchor para el globito de diálogo propio -->
       </div>
       <div id="my-bubble-anchor" class="bubble-anchor"></div>
 
@@ -989,14 +1004,12 @@
 <script>
 /* ================================================================
    CHAT / REACCIONES — lógica cliente
-   Mensaje WS: { type:'reaction', tipo:'emoji'|'msg'|'golpe', texto, nombre }
    ================================================================ */
 (function () {
   'use strict';
 
-  const BUBBLE_DURATION = 3800; // ms que se muestra el globito
+  const BUBBLE_DURATION = 3800;
 
-  /* ── Toggle panel ── */
   window.toggleChat = function () {
     const panel = document.getElementById('chat-panel');
     panel.classList.toggle('open');
@@ -1005,7 +1018,6 @@
     }
   };
 
-  /* Cerrar al click fuera */
   document.addEventListener('click', (e) => {
     const panel  = document.getElementById('chat-panel');
     const toggle = document.getElementById('chat-toggle');
@@ -1016,7 +1028,6 @@
     }
   });
 
-  /* ── Enviar reacción ── */
   window.sendReaction = function (tipo, texto) {
     if (typeof G === 'undefined' || !G) return;
     const nombre = G.jugadores[myIdx]?.nombre || 'Yo';
@@ -1025,14 +1036,12 @@
     document.getElementById('chat-panel').classList.remove('open');
   };
 
-  /* ── Recibir reacciones del servidor ── */
   WS.on('reaction', (msg) => {
     if (typeof G !== 'undefined' && G &&
         G.jugadores[myIdx]?.nombre === msg.nombre) return;
     showReaction(msg);
   });
 
-  /* ── Dispatcher principal ── */
   function showReaction ({ tipo, texto, nombre }) {
     appendChatMessage(nombre, texto);
     if (tipo === 'golpe') {
@@ -1042,9 +1051,6 @@
     }
   }
 
-  /* ─────────────────────────────────────────────
-     GLOBITO DE DIÁLOGO
-  ───────────────────────────────────────────── */
   function showSpeechBubble (nombre, texto, esPaga) {
     const anchorEl = getOrCreateBubbleAnchor(nombre);
     if (!anchorEl) return;
@@ -1058,7 +1064,6 @@
 
     bubble.textContent = texto;
     bubble.classList.toggle('paga', !!esPaga);
-
     bubble.classList.remove('visible');
     void bubble.offsetWidth;
     bubble.classList.add('visible');
@@ -1086,7 +1091,6 @@
     return anchor;
   }
 
-  /* ── Log del panel ── */
   function appendChatMessage (nombre, texto) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -1108,7 +1112,6 @@
     }
   }
 
-  /* ── ¡¡¡PAGA!!! ── */
   function triggerPaga (nombre) {
     const table = document.getElementById('main-table');
     if (table) {
@@ -1120,7 +1123,6 @@
     showSpeechBubble(nombre, '🔥 ¡¡¡PAGA!!!', true);
   }
 
-  /* ── Sanitizar ── */
   function esc (str) {
     return String(str)
       .replace(/&/g,'&amp;')

@@ -263,16 +263,16 @@
 
 /* ===================================================
    FILA 2: CONSTRUCCIÓN
-   Centrada como antes. Sin scroll horizontal.
-   Los slots tienen ancho fijo (~6 cartas) y cuando
-   se añaden más de 6, las cartas pasan a la fila
-   siguiente dentro del mismo slot (wrap).
+   Los slots se centran y crecen juntos en ancho.
+   Solo cuando el total supera la pantalla aparece
+   scroll horizontal (casos extremos con 3 corridas
+   largas en pantallas pequeñas).
    =================================================== */
 .building-row {
   display: flex;
   gap: 6px;
-  justify-content: center;
-  align-items: flex-start;      /* los slots se alinean arriba si crecen en alto */
+  justify-content: center;      /* slots centrados mientras quepan */
+  align-items: flex-start;      /* se alinean arriba cuando crecen en alto */
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
@@ -281,24 +281,27 @@
   min-height: calc(var(--ch) + 28px);
   box-sizing: border-box;
   flex-wrap: nowrap;
-  overflow-x: auto;             /* scroll solo si los slots juntos no caben (raro) */
+  overflow-x: auto;
   overflow-y: visible;
-  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-dim) transparent;
 }
-.building-row::-webkit-scrollbar { display: none; }
+.building-row::-webkit-scrollbar { height: 4px; }
+.building-row::-webkit-scrollbar-track { background: transparent; }
+.building-row::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 4px; }
 
 /* ===================================================
    SLOTS
-   Ancho fijo equivalente a ~6 cartas + gaps.
-   Se calcula: 6 × --cw  +  5 × 2px (gaps)  +  2×3px (padding) ≈ 6*cw + 16px
-   Al llegar a ese ancho, las cartas siguientes
-   hacen wrap hacia abajo automáticamente.
+   flex: 1 1 auto  → cada slot toma su parte proporcional
+   del espacio disponible, creciendo con sus cartas.
+   max-width limita a ~8 cartas en una fila antes de
+   que las siguientes hagan wrap hacia abajo.
    =================================================== */
 .building-slot {
-  flex: 0 0 auto;
-  /* Ancho fijo para ~6 cartas. Usa calc con la variable de carta. */
-  width: calc(var(--cw) * 6 + 26px);
-  min-width: calc(var(--cw) * 3 + 14px);   /* mínimo 3 cartas visible */
+  flex: 1 1 auto;
+  min-width: calc(var(--cw) * 3 + 16px);
+  max-width: calc(var(--cw) * 8 + 40px);   /* ~8 cartas → después wrap */
   display: flex;
   flex-direction: column;
   background: rgba(0,0,0,.2);
@@ -326,20 +329,22 @@
 
 /* ===================================================
    CARTAS DENTRO DEL SLOT
-   flex-wrap: wrap → cuando las cartas superan el ancho
-   del slot (~6), la 7ª carta pasa a la fila de abajo.
-   Nunca se salen del borde ni se enciman con otro slot.
+   flex-wrap: wrap + justify-content: center →
+   - Las cartas se centran dentro del slot.
+   - Crecen hacia la derecha ocupando el ancho disponible.
+   - Cuando llegan al max-width del slot, la carta
+     siguiente baja a una nueva fila, también centrada.
    =================================================== */
 .building-slot-cards {
   display: flex;
   gap: 2px;
-  flex-wrap: wrap;              /* ← clave: wrap hacia abajo */
+  flex-wrap: wrap;              /* wrap hacia abajo cuando no caben más */
   align-items: flex-start;
-  justify-content: flex-start;
+  justify-content: center;      /* cartas centradas dentro del slot */
   padding: 2px;
   overflow: visible;
   min-height: calc(var(--ch) + 4px);
-  width: 100%;                  /* ocupa todo el ancho del slot */
+  width: 100%;
 }
 
 .building-slot-cards .insert-ghost {
@@ -835,11 +840,13 @@
   .building-row  { max-width: 1200px; }
   .discard-zone  { max-width: 1200px; }
   .instr         { font-size: 0.78rem; }
+  /* En desktop hay más espacio: el wrap ocurre después de ~10 cartas */
+  .building-slot { max-width: calc(var(--cw) * 10 + 50px); }
 }
 
-/* ── Monitores muy anchos: slots un poco más generosos (~7 cartas) ── */
+/* ── Monitores muy anchos ── */
 @media (min-width: 1600px) {
-  .building-slot { width: calc(var(--cw) * 7 + 30px); }
+  .building-slot { max-width: calc(var(--cw) * 13 + 66px); }
 }
   </style>
 </head>

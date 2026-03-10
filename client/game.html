@@ -1038,35 +1038,6 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
   </div><!-- /table -->
 
-  <!-- ===== CHAT / REACCIONES ===== -->
-  <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes">💬</button>
-
-  <div id="chat-panel">
-    <div class="chat-header">💬 Reacciones</div>
-    <div class="chat-messages" id="chat-messages"></div>
-
-    <div class="chat-section-label">Emojis</div>
-    <div class="chat-emojis">
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😂')" title="Risa">😂</div>
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😤')" title="Frustración">😤</div>
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😢')" title="Tristeza">😢</div>
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😱')" title="Sorpresa">😱</div>
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','🥳')" title="Celebración">🥳</div>
-      <div class="chat-emoji-btn" onclick="sendReaction('emoji','🤬')" title="Enojo">🤬</div>
-    </div>
-
-    <div class="chat-section-label">Mensajes rápidos</div>
-    <div class="chat-quick-msgs">
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! 😩')">¡Ya dame mi carta! 😩</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! 😈')">¡Castígate! 😈</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané, jaja! 🏆')">¡Ya gané, jaja! 🏆</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! 😭')">¡Qué mala suerte! 😭</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! 👏')">¡Buena jugada! 👏</button>
-      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! 😤')">¡No mames! 😤</button>
-      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','¡¡¡PAGA!!!')">🔥 ¡¡¡PAGA!!!</button>
-    </div>
-  </div>
-
   <!-- ===== MODALES ===== -->
 
   <div class="modal-overlay" id="modal-ronda">
@@ -1101,6 +1072,36 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   <div id="toast"></div>
 
 </div><!-- /game -->
+
+  <!-- ===== CHAT / REACCIONES ===== (fuera del #game) -->
+  <!-- ===== CHAT / REACCIONES ===== -->
+  <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes">💬</button>
+
+  <div id="chat-panel">
+    <div class="chat-header">💬 Reacciones</div>
+    <div class="chat-messages" id="chat-messages"></div>
+
+    <div class="chat-section-label">Emojis</div>
+    <div class="chat-emojis">
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😂')" title="Risa">😂</div>
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😤')" title="Frustración">😤</div>
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😢')" title="Tristeza">😢</div>
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','😱')" title="Sorpresa">😱</div>
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','🥳')" title="Celebración">🥳</div>
+      <div class="chat-emoji-btn" onclick="sendReaction('emoji','🤬')" title="Enojo">🤬</div>
+    </div>
+
+    <div class="chat-section-label">Mensajes rápidos</div>
+    <div class="chat-quick-msgs">
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! 😩')">¡Ya dame mi carta! 😩</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Castígate! 😈')">¡Castígate! 😈</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Ya gané, jaja! 🏆')">¡Ya gané, jaja! 🏆</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! 😭')">¡Qué mala suerte! 😭</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡Buena jugada! 👏')">¡Buena jugada! 👏</button>
+      <button class="chat-quick-btn" onclick="sendReaction('msg','¡No mames! 😤')">¡No mames! 😤</button>
+      <button class="chat-quick-btn golpe" onclick="sendReaction('golpe','¡¡¡PAGA!!!')">🔥 ¡¡¡PAGA!!!</button>
+    </div>
+  </div>
 
   <!-- Reproductor de música flotante — FUERA del #game para z-index correcto -->
   <!-- Desktop music player -->

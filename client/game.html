@@ -1100,7 +1100,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
   <div id="toast"></div>
 
-  <!-- Reproductor de música flotante -->
+</div><!-- /game -->
+
+  <!-- Reproductor de música flotante — FUERA del #game para z-index correcto -->
   <!-- Desktop music player -->
   <div id="music-player">
     <button id="music-btn" onclick="toggleGameMusic()">🎷 ▶</button>
@@ -1114,8 +1116,6 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
       <input type="range" id="mp-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)">
     </div>
   </div>
-
-</div><!-- /game -->
 
 <!-- ===== SCRIPTS ===== -->
 <script src="js/socket.js"></script>
@@ -1254,7 +1254,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
 })();
 </script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 <script>
 (function() {
   const MUSIC_URL = 'https://files.catbox.moe/bs0qiq.mp3';

@@ -163,7 +163,7 @@ class GameRoom {
     this.players.forEach(p => {
       if (!p.ws || !p.conectado) return;
       const state = this.engine ? this.engine.stateFor(p.id) : null;
-      this._send(p, { type: 'state_update', event, data, state });
+      this._send(p, { type: 'state_update', event, data, state, tableColor: this.tableColor || 'green' });
     });
   }
 

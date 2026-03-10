@@ -359,11 +359,13 @@ function setupSocketEvents() {
         document.getElementById('modal-disconnected').classList.add('show');
         document.getElementById('mode-pill').textContent = '🔴 Desconectado';
     });
-    WS.on('state_update', ({ event, data, state }) => {
+    WS.on('state_update', ({ event, data, state, tableColor }) => {
         if (!state) return;
         const prev = G;
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
+        // Aplicar tema de mesa si llegó del servidor
+        if (tableColor) applyTableTheme(tableColor);
         applyEvent(event, data, prev);
         render();
     });
@@ -717,6 +719,15 @@ function ackRonda() {
 // ═══════════════════════════════════════════════════
 // RENDERIZADO
 // ═══════════════════════════════════════════════════
+
+function applyTableTheme(color) {
+    const valid = ['green', 'navy', 'wine', 'black'];
+    if (!valid.includes(color)) return;
+    document.body.className = document.body.className
+        .replace(/\btheme-\w+\b/g, '').trim();
+    document.body.classList.add('theme-' + color);
+    sessionStorage.setItem('tableColor', color);
+}
 
 function render() {
     if (!G || myIdx < 0) return;

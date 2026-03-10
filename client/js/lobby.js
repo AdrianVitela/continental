@@ -501,7 +501,7 @@ function setupSocketEvents () {
       sessionStorage.setItem('tableColor', currentTableColor);
       if (musicAudio) sessionStorage.setItem('musicTime', musicAudio.currentTime);
       sessionStorage.setItem('musicPlaying', musicPlaying ? '1' : '0');
-      window.location.href = `/game?code=${myCode}&pid=${myId}`;
+      window.location.href = `/game?code=${myCode}&pid=${myId}&color=${currentTableColor}`;
     }
   });
 

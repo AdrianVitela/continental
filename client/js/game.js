@@ -723,9 +723,10 @@ function ackRonda() {
 function applyTableTheme(color) {
     const valid = ['green', 'navy', 'wine', 'black'];
     if (!valid.includes(color)) return;
-    document.body.className = document.body.className
-        .replace(/\btheme-\w+\b/g, '').trim();
-    document.body.classList.add('theme-' + color);
+    [document.documentElement, document.body].forEach(el => {
+        el.className = el.className.replace(/\btheme-\w+\b/g, '').trim();
+        el.classList.add('theme-' + color);
+    });
     sessionStorage.setItem('tableColor', color);
 }
 

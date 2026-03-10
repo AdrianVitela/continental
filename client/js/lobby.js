@@ -499,6 +499,8 @@ function setupSocketEvents () {
   WS.on('state_update', ({ event }) => {
     if (event === 'game_started' || event === 'nueva_ronda') {
       sessionStorage.setItem('tableColor', currentTableColor);
+      if (musicAudio) sessionStorage.setItem('musicTime', musicAudio.currentTime);
+      sessionStorage.setItem('musicPlaying', musicPlaying ? '1' : '0');
       window.location.href = `/game?code=${myCode}&pid=${myId}`;
     }
   });

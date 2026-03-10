@@ -782,7 +782,11 @@ class GameEngine {
         if (!j) return this._err('Jugador no encontrado.');
         const tidx = this.jugadores.indexOf(j);
         if (tidx !== this.turno) return this._err('No es tu turno.');
-        if (this.estado !== 'esperando_accion') return this._err('Debes robar una carta antes de intercambiar.');
+        // Permitir intercambio tanto antes de pagar (esperando_accion)
+        // como después de bajarse con sobrantes (esperando_pago).
+        // En ningún otro estado tiene sentido.
+        const estadosValidos = ['esperando_accion', 'esperando_pago'];
+        if (!estadosValidos.includes(this.estado)) return this._err('No puedes intercambiar en este momento.');
         const origen = this.jugadores[origenJugadorIdx];
         if (!origen || !origen.bajado) return this._err('Jugador origen no se ha bajado.');
         const jugadaOrigen = origen.jugadas[origenJugadaIdx];

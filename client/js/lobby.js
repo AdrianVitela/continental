@@ -496,12 +496,15 @@ function setupSocketEvents () {
     sessionStorage.setItem('tableColor', color);
   });
 
-  WS.on('state_update', ({ event }) => {
+  WS.on('state_update', ({ event, tableColor }) => {
     if (event === 'game_started' || event === 'nueva_ronda') {
-      sessionStorage.setItem('tableColor', currentTableColor);
+      // El host ya tiene currentTableColor; los demás lo reciben en tableColor del servidor
+      const color = tableColor || currentTableColor || 'green';
+      currentTableColor = color;
+      sessionStorage.setItem('tableColor', color);
       if (musicAudio) sessionStorage.setItem('musicTime', musicAudio.currentTime);
       sessionStorage.setItem('musicPlaying', musicPlaying ? '1' : '0');
-      window.location.href = `/game?code=${myCode}&pid=${myId}&color=${currentTableColor}`;
+      window.location.href = `/game?code=${myCode}&pid=${myId}&color=${color}`;
     }
   });
 

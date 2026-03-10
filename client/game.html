@@ -484,6 +484,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
    ================================================================ */
 
 /* ── Music player desktop ── */
+#music-toggle-btn { display: none; }
+#music-panel-mobile { display: none; }
+
 #music-player {
   position: fixed;
   right: 14px;
@@ -505,25 +508,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
 /* ── Music player móvil: bolita + panel popup ── */
 @media (max-width: 767px) {
-  #music-toggle-btn {
-    display: flex;
-  }
-  #music-player {
-    bottom: calc(114px + env(safe-area-inset-bottom, 0px));
-    right: 10px;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 0;
-    z-index: 200;
-  }
-  /* Bolita igual al chat */
-  #music-player #music-btn {
-    display: none;
-  }
-  #music-player #game-vol {
-    display: none;
-  }
+  /* En móvil: ocultar reproductor desktop, mostrar bolita */
+  #music-player { display: none !important; }
+  #music-toggle-btn { display: flex; }
   /* Panel que aparece al tocar la bolita */
   #music-panel-mobile {
     display: none;
@@ -918,7 +905,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   .deck-clickable-hint { display: none; }
   #chat-toggle { bottom: calc(54px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
   #chat-panel  { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 200px; }
-  #music-toggle-btn { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
+  #music-player { display: none !important; }
+  #music-toggle-btn { display: flex; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
   #music-panel-mobile { bottom: calc(130px + env(safe-area-inset-bottom, 0px)); right: 8px; }
 }
 
@@ -1119,7 +1107,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     <input type="range" id="game-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)">
   </div>
   <!-- Mobile: bolita + panel popup -->
-  <button id="music-toggle-btn" onclick="toggleMusicPanel()" style="display:none" title="Música">🎷</button>
+  <button id="music-toggle-btn" onclick="toggleMusicPanel()" title="Música">🎷</button>
   <div id="music-panel-mobile">
     <div class="mp-playrow">
       <button id="mp-btn" onclick="toggleGameMusic()">▶</button>
@@ -1266,7 +1254,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
 })();
 </script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 <script>
 (function() {
   const MUSIC_URL = 'https://files.catbox.moe/bs0qiq.mp3';

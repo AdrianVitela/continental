@@ -376,7 +376,7 @@ body::before {
 }
 
 .modal {
-  background: linear-gradient(160deg, #1a3d28, #0d1f14);
+  background: linear-gradient(160deg, var(--felt), var(--felt-deep));
   border: 1px solid rgba(200, 160, 69, 0.22);
   border-radius: 16px;
   padding: 24px 28px;

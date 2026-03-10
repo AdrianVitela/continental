@@ -150,6 +150,9 @@ let myId        = null;
 let myCode      = null;
 let isHost      = false;
 let playersList = [];
+let currentTableColor = 'green';
+let musicPlaying = false;
+let musicAudio = null;
 
 // Para el modal de nombres: qué input está activo
 let _activeNameTarget = 'crear';
@@ -344,6 +347,55 @@ function closeNamesModalOutside (e) {
 /* ================================================================
    ACCIONES DE LOBBY
    ================================================================ */
+/* ================================================================
+   COLOR DE MESA
+   ================================================================ */
+function setMesaColor (color) {
+  currentTableColor = color;
+  document.querySelectorAll('.mesa-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === color);
+  });
+  WS.send({ type: 'set_table_color', color });
+}
+
+/* ================================================================
+   MÚSICA
+   ================================================================ */
+// Jazz de casino - usamos una URL pública de stream libre
+const MUSIC_TRACKS = [
+  'https://www.bensound.com/bensound-music/bensound-jazzyfrenchy.mp3',
+  'https://www.bensound.com/bensound-music/bensound-tenderness.mp3',
+];
+let trackIdx = 0;
+
+function initMusic () {
+  musicAudio = new Audio(MUSIC_TRACKS[trackIdx]);
+  musicAudio.loop = true;
+  musicAudio.volume = 0.25;
+  musicAudio.addEventListener('ended', () => {
+    trackIdx = (trackIdx + 1) % MUSIC_TRACKS.length;
+    musicAudio.src = MUSIC_TRACKS[trackIdx];
+    musicAudio.play();
+  });
+}
+
+function toggleMusic () {
+  if (!musicAudio) initMusic();
+  if (musicPlaying) {
+    musicAudio.pause();
+    musicPlaying = false;
+    document.getElementById('music-toggle').textContent = '▶ Play';
+  } else {
+    musicAudio.play().catch(() => {});
+    musicPlaying = true;
+    document.getElementById('music-toggle').textContent = '⏸ Pausa';
+  }
+}
+
+function setVolume (val) {
+  if (musicAudio) musicAudio.volume = val / 100;
+}
+
 function copyCode () {
   navigator.clipboard?.writeText(myCode);
   toast('¡Código copiado!', 'green');
@@ -397,6 +449,9 @@ function showLobby (lobbyState, pid, code, host) {
   const lr = document.getElementById('lobby-room');
   lr.classList.add('show');
   document.getElementById('room-code-display').textContent = code;
+  // Mostrar selector de color solo al host
+  const pickerWrap = document.getElementById('mesa-picker-wrap');
+  if (pickerWrap) pickerWrap.style.display = host ? 'block' : 'none';
   updateLobbyState(lobbyState);
 }
 
@@ -441,8 +496,20 @@ function setupSocketEvents () {
     if (lobbyState) updateLobbyState(lobbyState);
   });
 
+  WS.on('table_color_changed', ({ color, lobbyState }) => {
+    currentTableColor = color;
+    // Actualizar swatches si el host los ve
+    document.querySelectorAll('.mesa-swatch').forEach(s => {
+      s.classList.toggle('active', s.dataset.color === color);
+    });
+    if (lobbyState) updateLobbyState(lobbyState);
+    // Guardar en sessionStorage para que game.html lo lea al cargar
+    sessionStorage.setItem('tableColor', color);
+  });
+
   WS.on('state_update', ({ event }) => {
     if (event === 'game_started' || event === 'nueva_ronda') {
+      sessionStorage.setItem('tableColor', currentTableColor);
       window.location.href = `/game?code=${myCode}&pid=${myId}`;
     }
   });
@@ -467,6 +534,9 @@ function init () {
 }
 
 /* Exponer globales que usa el HTML */
+window.setMesaColor        = setMesaColor;
+window.toggleMusic         = toggleMusic;
+window.setVolume           = setVolume;
 window.switchTab           = switchTab;
 window.setMode             = setMode;
 window.chgMax              = chgMax;

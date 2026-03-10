@@ -139,6 +139,15 @@ wss.on('connection', (ws) => {
       }
 
       // ─── Iniciar juego ───────────────────────
+      case 'set_table_color': {
+        const room = rooms.get(ctx.roomCode);
+        if (!room) break;
+        if (room.players[0]?.id !== ctx.playerId) break; // solo host
+        room.setTableColor(msg.color);
+        room.broadcast({ type: 'table_color_changed', color: msg.color, lobbyState: room.lobbyState() });
+        break;
+      }
+
       case 'start_game': {
         const room = rooms.get(ctx.roomCode);
         if (!room) return send(ws, { type: 'error', msg: 'Sala no encontrada.' });

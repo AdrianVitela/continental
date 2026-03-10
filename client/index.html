@@ -212,6 +212,38 @@
 
         /* ===== SALA DE ESPERA ===== */
         #lobby-room { display: none; flex-direction: column; gap: 16px; }
+
+        .mesa-picker { display: flex; flex-direction: column; gap: 8px; }
+        .mesa-picker-label { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
+        .mesa-swatches { display: flex; gap: 8px; }
+        .mesa-swatch {
+          width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+          border: 2px solid transparent; transition: all .15s ease;
+        }
+        .mesa-swatch:hover { transform: scale(1.1); }
+        .mesa-swatch.active { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,160,69,.5); }
+        .mesa-swatch[data-color="green"]  { background: #0e2419; }
+        .mesa-swatch[data-color="navy"]   { background: #0a1628; }
+        .mesa-swatch[data-color="wine"]   { background: #2a0a0f; }
+        .mesa-swatch[data-color="black"]  { background: #111111; }
+        .mesa-swatch-name { font-size: .62rem; color: var(--text-dim); text-align: center; margin-top: 2px; }
+
+        .music-bar {
+          display: flex; align-items: center; gap: 10px;
+          background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
+          border: 1px solid rgba(200,160,69,.15);
+        }
+        .music-bar span { font-size: .72rem; color: var(--text-dim); flex: 1; }
+        .music-toggle {
+          background: none; border: 1px solid rgba(200,160,69,.3);
+          color: var(--gold); border-radius: 6px; padding: 4px 10px;
+          cursor: pointer; font-size: .72rem; transition: all .15s;
+        }
+        .music-toggle:hover { background: rgba(200,160,69,.1); }
+        input[type=range].vol-slider {
+          width: 70px; accent-color: var(--gold);
+          cursor: pointer;
+        }
         #lobby-room.show { display: flex; }
 
         .room-code-display { text-align: center; }
@@ -417,6 +449,40 @@
             <div class="separator"></div>
             <div class="player-list" id="player-list"></div>
             <div class="separator"></div>
+
+            <!-- Color de mesa (solo visible para host) -->
+            <div id="mesa-picker-wrap" style="display:none">
+              <div class="mesa-picker">
+                <div class="mesa-picker-label">🎨 Color de mesa</div>
+                <div class="mesa-swatches">
+                  <div style="text-align:center">
+                    <div class="mesa-swatch active" data-color="green" onclick="setMesaColor('green')" title="Verde clásico"></div>
+                    <div class="mesa-swatch-name">Verde</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div class="mesa-swatch" data-color="navy" onclick="setMesaColor('navy')" title="Azul marino"></div>
+                    <div class="mesa-swatch-name">Azul</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div class="mesa-swatch" data-color="wine" onclick="setMesaColor('wine')" title="Rojo vino"></div>
+                    <div class="mesa-swatch-name">Vino</div>
+                  </div>
+                  <div style="text-align:center">
+                    <div class="mesa-swatch" data-color="black" onclick="setMesaColor('black')" title="Negro elegante"></div>
+                    <div class="mesa-swatch-name">Negro</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Reproductor de música -->
+            <div class="music-bar">
+              <span>🎷 Jazz de Casino</span>
+              <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="25" oninput="setVolume(this.value)">
+              <button class="music-toggle" id="music-toggle" onclick="toggleMusic()">▶ Play</button>
+            </div>
+
+            <div class="separator"></div>
             <div class="waiting-msg" id="waiting-msg">
                 Esperando jugadores<span class="dot-pulse"></span>
             </div>
@@ -442,6 +508,6 @@
 
     <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 </body>
 </html>

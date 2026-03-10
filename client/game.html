@@ -5,8 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>Continental - Mesa de Juego</title>
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    // Aplicar tema de mesa antes de renderizar para evitar flash
+    (function() {
+      const color = sessionStorage.getItem('tableColor') || 'green';
+      document.documentElement.classList.add('theme-' + color);
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.className = (document.body.className + ' theme-' + color).trim();
+      });
+    })();
+  </script>
 
   <style>
+/* ===== TEMAS DE MESA ===== */
+body.theme-green  { --felt: #1a3d28; --felt-deep: #0e2419; }
+body.theme-navy   { --felt: #0d2444; --felt-deep: #071428; }
+body.theme-wine   { --felt: #3a0f18; --felt-deep: #1e0709; }
+body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
+
 /* ===== LAYOUT PRINCIPAL ===== */
 #game {
   position: fixed;
@@ -1138,6 +1154,6 @@
 
 })();
 </script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 </body>
 </html>

@@ -243,6 +243,12 @@ class GameRoom {
     return this.players.every(p => !p.conectado); 
   }
 
+  setTableColor(color) {
+    const valid = ['green', 'navy', 'wine', 'black'];
+    if (!valid.includes(color)) return;
+    this.tableColor = color;
+  }
+
   lobbyState() {
     return {
       code: this.code,
@@ -250,6 +256,7 @@ class GameRoom {
       status: this.status,
       players: this.players.map(p => ({ id: p.id, nombre: p.nombre, conectado: p.conectado })),
       maxPlayers: this.maxPlayers,
+      tableColor: this.tableColor || 'green',
     };
   }
 }

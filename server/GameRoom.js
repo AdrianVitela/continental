@@ -101,7 +101,7 @@ class GameRoom {
         result = this.engine.acPagar(playerId, msg.cartaId);
         break;
       case 'acomodar':
-        result = this.engine.acAcomodar(playerId, msg.cartaId, msg.destJugadorIdx, msg.destJugadaIdx);
+        result = this.engine.acAcomodar(playerId, msg.cartaId, msg.destJugadorIdx, msg.destJugadaIdx, data.posicion || null);
         break;
       case 'reordenar':
         result = this.engine.acReordenarMano(playerId, msg.order);

@@ -863,7 +863,12 @@ class GameEngine {
         });
     }
 
-    acAcomodar(playerId, cartaId, destJugadorIdx, destJugadaIdx) {
+    // posicion: 'alta' | 'baja' | null
+    //   null      → carta normal, ordenar automáticamente
+    //   'alta'    → joker va al FINAL de la corrida (valor más alto)
+    //   'baja'    → joker va al INICIO de la corrida (valor más bajo)
+    //   Para tercias posicion se ignora (siempre al final).
+    acAcomodar(playerId, cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
         const tidx = this.jugadores.indexOf(j);
@@ -877,10 +882,27 @@ class GameEngine {
         if (cidx < 0) return this._err('Carta no encontrada.');
         const carta = j.mano[cidx];
         if (!puedeAcomodar(carta, jug)) return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
-        jug.cartas.push(carta);
+
         if (jug.tipo === 'corrida') {
-            jug.cartas = ordenarCorridaAcomodada(jug.cartas);
+            if (carta.comodin && posicion) {
+                // El usuario eligió explícitamente dónde va el joker
+                // 'baja' → inicio de la corrida, 'alta' → final
+                const normales = jug.cartas.filter(c => !c.comodin);
+                normales.sort((a, b) => VNUM[a.valor] - VNUM[b.valor]);
+                if (posicion === 'baja') {
+                    jug.cartas = [carta, ...normales];
+                } else {
+                    jug.cartas = [...normales, carta];
+                }
+            } else {
+                jug.cartas.push(carta);
+                jug.cartas = ordenarCorridaAcomodada(jug.cartas);
+            }
+        } else {
+            // Tercia: siempre al final, sin pregunta
+            jug.cartas.push(carta);
         }
+
         guardarValorComodin(jug);
         j.mano.splice(cidx, 1);
         this.addLog(`🃏 ${j.nombre} acomodó en jugada de ${dest.nombre}.`);

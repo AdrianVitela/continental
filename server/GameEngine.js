@@ -484,30 +484,40 @@ class GameEngine {
     //   Funciona igual que siempre; se reporta en el log.
     // ─────────────────────────────────────────────────
     chkMazo() {
-        // Reciclado normal: el fondo tiene cartas → rebarajar como nuevo mazo
-        if (!this.mazo.length && this.fondo.length > 1) {
-            const last = this.fondo.pop();
-            this.mazo = shuffle([...this.fondo]);
-            this.fondo = [last];
-            this.addLog('♻️ Mazo rearmado del fondo.');
+        if (this.mazo.length > 0) return; // hay cartas, no hacer nada
+
+        // ── El mazo ya fue reciclado una vez y se agotó de nuevo ──
+        // No importa si el fondo tiene cartas: reiniciar la ronda.
+        if (this.mazoReciclado) {
+            this.addLog('⚠️ Mazo agotado por segunda vez — la ronda se reinicia sin ganador.');
+            this._reiniciarRonda();
             return;
         }
 
-        // Mazo vacío y fondo también vacío o con 1 sola carta:
-        // usar fondoDescartado si hay cartas ahí
-        if (!this.mazo.length && this.fondo.length <= 1 && this.fondoDescartado.length > 0) {
-            if (!this.mazoReciclado) {
-                // Primera vez que se agota: reciclar fondoDescartado como mazo
-                this.mazo = shuffle([...this.fondoDescartado]);
-                this.fondoDescartado = [];
-                this.mazoReciclado = true;
-                this.addLog('♻️ Mazo agotado — se reciclan las cartas del fondo como nuevo mazo.');
-            } else {
-                // Ya se recicló una vez y se volvió a agotar → reiniciar ronda
-                this.addLog('⚠️ Mazo agotado por segunda vez — la ronda se reinicia sin ganador.');
-                this._reiniciarRonda();
-            }
+        // ── Primera vez que se agota el mazo ──
+        // Reciclar: fondo (menos la carta visible) + fondoDescartado.
+        const reciclables = [];
+
+        // Tomar todas las cartas del fondo excepto la última (que se queda visible)
+        if (this.fondo.length > 1) {
+            const cartasDelFondo = this.fondo.splice(0, this.fondo.length - 1);
+            reciclables.push(...cartasDelFondo);
         }
+
+        // Agregar las cartas que nadie tomó del fondo en turnos anteriores
+        reciclables.push(...this.fondoDescartado);
+        this.fondoDescartado = [];
+
+        if (reciclables.length === 0) {
+            // Absolutamente no hay cartas — reiniciar directamente
+            this.addLog('⚠️ Sin cartas disponibles — la ronda se reinicia sin ganador.');
+            this._reiniciarRonda();
+            return;
+        }
+
+        this.mazo = shuffle(reciclables);
+        this.mazoReciclado = true;
+        this.addLog(`♻️ Mazo agotado — se reciclaron ${this.mazo.length} cartas del fondo como nuevo mazo.`);
     }
 
     // ─────────────────────────────────────────────────
@@ -623,7 +633,7 @@ class GameEngine {
 
             if (sig === this.turno) {
                 // Nadie quiso la carta del fondo — moverla a fondoDescartado
-                if (this.fondo.length > 0 && !this.mazoReciclado) {
+                if (this.fondo.length > 0) {
                     const cartaRechazada = this.fondo.pop();
                     this.fondoDescartado.push(cartaRechazada);
                     this.addLog(`📦 Carta del fondo rechazada, guardada para reciclaje.`);
@@ -732,9 +742,10 @@ class GameEngine {
         if (idx < 0) return this._err('Carta no encontrada.');
         const carta = j.mano.splice(idx, 1)[0];
 
-        // La carta que estaba en el fondo (visible) ahora queda debajo de la nueva.
-        // Moverla a fondoDescartado si el mazo aún no fue reciclado.
-        if (this.fondo.length > 0 && !this.mazoReciclado) {
+        // La carta visible del fondo queda desplazada por la nueva.
+        // Siempre la guardamos en fondoDescartado para poder reciclarla
+        // si el mazo se agota de nuevo.
+        if (this.fondo.length > 0) {
             const cartaAnterior = this.fondo.pop();
             this.fondoDescartado.push(cartaAnterior);
         }

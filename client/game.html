@@ -483,6 +483,35 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
    CHAT / REACCIONES
    ================================================================ */
 
+#music-player {
+  position: fixed;
+  right: 14px;
+  bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: center; gap: 6px;
+  z-index: 100;
+  background: rgba(8,24,14,.9);
+  border: 1px solid rgba(200,160,69,.2);
+  border-radius: 20px;
+  padding: 5px 10px;
+}
+#music-player #music-btn {
+  background: none; border: none; color: var(--gold);
+  cursor: pointer; font-size: 0.75rem; padding: 0;
+}
+#music-player #game-vol {
+  width: 55px; accent-color: var(--gold); cursor: pointer;
+}
+/* En móvil: va encima del botón de chat, sin slider */
+@media (max-width: 767px) {
+  #music-player {
+    bottom: calc(114px + env(safe-area-inset-bottom, 0px));
+    padding: 5px 8px;
+    right: 10px;
+  }
+  #music-player #game-vol { display: none; }
+  #music-player #music-btn { font-size: 1rem; }
+}
+
 #chat-toggle {
   position: fixed;
   right: 14px;
@@ -828,6 +857,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   .deck-clickable-hint { display: none; }
   #chat-toggle { bottom: calc(54px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 30px; height: 30px; font-size: 0.85rem; }
   #chat-panel  { bottom: calc(90px + env(safe-area-inset-bottom, 0px)); right: 8px; width: 200px; }
+  #music-player { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); right: 8px; padding: 4px 7px; }
+  #music-player #game-vol { display: none; }
+  #music-player #music-btn { font-size: 0.85rem; }
 }
 
 /* ── Landscape tablets (501–768px alto) ── */
@@ -1021,10 +1053,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   <div id="toast"></div>
 
   <!-- Reproductor de música flotante -->
-  <div id="music-player" style="position:fixed;bottom:10px;right:60px;display:flex;align-items:center;gap:6px;z-index:9998;background:rgba(8,24,14,.85);border:1px solid rgba(200,160,69,.2);border-radius:20px;padding:4px 10px;">
-    <button id="music-btn" onclick="toggleGameMusic()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:0.75rem;padding:0;">🎷 ▶</button>
-    <input type="range" id="game-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)"
-      style="width:55px;accent-color:var(--gold);cursor:pointer;">
+  <div id="music-player">
+    <button id="music-btn" onclick="toggleGameMusic()">🎷 ▶</button>
+    <input type="range" id="game-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)">
   </div>
 
 </div><!-- /game -->

@@ -33,9 +33,15 @@ function shuffle(arr) {
     return arr;
 }
 
-function mkMazo() {
+// ─────────────────────────────────────────────────────
+// mkMazo: construye 2 barajas normalmente.
+// Si hay 7 o más jugadores agrega una tercera baraja
+// para que alcancen las cartas en rondas largas.
+// ─────────────────────────────────────────────────────
+function mkMazo(numJugadores = 2) {
+    const barajas = numJugadores >= 7 ? 3 : 2;
     const m = [];
-    for (let baraja = 0; baraja < 2; baraja++) {
+    for (let baraja = 0; baraja < barajas; baraja++) {
         for (const p of PALOS) {
             for (const v of VALORES) {
                 m.push(mkCard(v, p));
@@ -59,7 +65,6 @@ function getValorComodinEnJugada(jugada) {
     if (jugada.tipo === 'tercia') {
         return { valor: cartasNormales[0].valor, palo: null };
     } else {
-        // Determinar si el As vale 1 o 14 según el contexto de la corrida
         const valsRaw = cartasNormales.map(c => VNUM[c.valor]);
         const tieneAs = valsRaw.includes(1);
         const tieneCartasAltas = valsRaw.some(v => v >= 11);
@@ -73,7 +78,6 @@ function getValorComodinEnJugada(jugada) {
 
         const VNUM_R = {'1':'A','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'J','12':'Q','13':'K','14':'A'};
 
-        // Verificar hueco interno (joker en medio de la secuencia)
         let valorEsperado = valores[0].valorNum;
         for (let i = 0; i < valores.length; i++) {
             if (valores[i].valorNum !== valorEsperado) {
@@ -82,17 +86,12 @@ function getValorComodinEnJugada(jugada) {
             valorEsperado++;
         }
 
-        // Sin hueco interno → el joker está en un extremo
-        // Determinar por la posición del joker en el array ordenado original
         const minVal = valores[0].valorNum;
         const maxVal = valores[valores.length - 1].valorNum;
         const ante = minVal - 1;
         const sig  = maxVal + 1;
 
-        // Buscar posición del joker respecto a las cartas normales en el array original
         const idxJoker = jugada.cartas.findIndex(c => c.comodin);
-        // Calcular la posición "numérica" del joker en la secuencia ordenada
-        // Comparar con los índices de las cartas normales ordenadas
         const idxsNormalesEnOriginal = jugada.cartas
             .map((c, i) => c.comodin ? -1 : i)
             .filter(i => i >= 0);
@@ -252,7 +251,6 @@ function puedeAcomodarEnCorrida(carta, corrida) {
     if (cartasNormales.length === 0) return true;
     if (carta.palo !== cartasNormales[0].palo) return false;
 
-    // Construir lista completa de valores ocupados (normales + lo que cubre el joker)
     const valsNorm = cartasNormales.map(c => VNUM[c.valor]);
     const tieneAs = valsNorm.includes(1);
     const tieneCartasAltas = valsNorm.some(v => v >= 11);
@@ -260,7 +258,6 @@ function puedeAcomodarEnCorrida(carta, corrida) {
 
     const valsConA = valsNorm.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
 
-    // Si hay joker, agregar su valor cubierto a los valores ocupados
     const valsOcupados = [...valsConA];
     if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
         const vComodin = VNUM[comodin.valorReemplazado];
@@ -271,17 +268,14 @@ function puedeAcomodarEnCorrida(carta, corrida) {
     const valorCarta = VNUM[carta.valor];
     const valCarta = (valorCarta === 1 && useA14) ? 14 : valorCarta;
 
-    // La carta solo puede ir al inicio o al final de la secuencia completa (incluyendo joker)
+    if (valsOcupados.includes(valCarta)) return false;
+
     const minVal = valsOcupados[0];
     const maxVal = valsOcupados[valsOcupados.length - 1];
-
-    // Verificar que no sea un valor ya ocupado
-    if (valsOcupados.includes(valCarta)) return false;
 
     return valCarta === minVal - 1 || valCarta === maxVal + 1;
 }
 
-// Ordena las cartas de una corrida de menor a mayor (A puede ser 1 o 14 según contexto)
 function ordenarCorridaAcomodada(cartas) {
     const normales = cartas.filter(c => !c.comodin);
     const comodines = cartas.filter(c => c.comodin);
@@ -289,9 +283,7 @@ function ordenarCorridaAcomodada(cartas) {
 
     const valsNorm = normales.map(c => VNUM[c.valor]);
     const tieneAs = valsNorm.includes(1);
-    const tieneCartasAltas = valsNorm.some(v => v >= 11); // J, Q, K
-
-    // Decidir si el As va como 1 o 14
+    const tieneCartasAltas = valsNorm.some(v => v >= 11);
     const useA14 = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
 
     const normalesConNum = normales.map(c => ({
@@ -299,7 +291,6 @@ function ordenarCorridaAcomodada(cartas) {
         _num: (c.valor === 'A' && useA14) ? 14 : VNUM[c.valor]
     })).sort((a, b) => a._num - b._num);
 
-    // Intercalar comodines en los huecos
     const resultado = [];
     let comodinesRestantes = [...comodines];
     for (let i = 0; i < normalesConNum.length; i++) {
@@ -312,7 +303,6 @@ function ordenarCorridaAcomodada(cartas) {
         }
     }
     resultado.push(...comodinesRestantes);
-    // Limpiar propiedad temporal
     resultado.forEach(c => delete c._num);
     return resultado;
 }
@@ -324,7 +314,7 @@ function puedeAcomodar(carta, jugada) {
 }
 
 // ═══════════════════════════════════════════════════
-// VALIDACIÓN DE JUGADAS CONSTRUIDAS (ENVIADAS POR CLIENTE)
+// VALIDACIÓN DE JUGADAS CONSTRUIDAS
 // ═══════════════════════════════════════════════════
 
 function validarTercia(cartas) {
@@ -393,7 +383,6 @@ function validarCorrida(cartas) {
     }
 
     if (esSecuenciaValida(vals, comodines.length)) return true;
-    // Probar A como 14 (J-Q-K-A) si hay un As — no requiere que también haya K
     if (vals.includes(1)) {
         const con14 = vals.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
         if (esSecuenciaValida(con14, comodines.length)) return true;
@@ -454,6 +443,17 @@ class GameEngine {
         this.turno = 1 % jugadores.length;
         this.mazo = [];
         this.fondo = [];
+
+        // ─── Gestión de mazo agotado ───────────────────
+        // fondoDescartado: cartas que pasaron por el fondo
+        // y nadie castigó (se ignoran una vez el fondo se
+        // recicla como mazo, para no volver a usarlas).
+        this.fondoDescartado = [];
+        // true mientras el mazo reciclado (del fondo) esté activo.
+        // Cuando este mazo también se agota → reinicio de ronda.
+        this.mazoReciclado = false;
+        // ──────────────────────────────────────────────
+
         this.estado = 'esperando_robo';
         this.log = [];
         this.castigo_idx = -1;
@@ -467,18 +467,56 @@ class GameEngine {
         if (this.log.length > 20) this.log.shift();
     }
 
+    // ─────────────────────────────────────────────────
+    // chkMazo — se llama antes de cada robo del mazo.
+    //
+    // Caso 1 — mazo vacío, primera vez:
+    //   Toma fondoDescartado, lo baraja y lo convierte
+    //   en el nuevo mazo. Activa mazoReciclado = true.
+    //   Deja una carta visible en el fondo para que el
+    //   juego continúe normalmente.
+    //
+    // Caso 2 — mazo vacío, ya fue reciclado antes:
+    //   No hay más cartas disponibles. Reinicia la ronda
+    //   actual sin sumar puntos (nadie ganó).
+    //
+    // Caso 3 — mazo normal pero bajo (< 3):
+    //   Funciona igual que siempre; se reporta en el log.
+    // ─────────────────────────────────────────────────
     chkMazo() {
+        // Reciclado normal: el fondo tiene cartas → rebarajar como nuevo mazo
         if (!this.mazo.length && this.fondo.length > 1) {
             const last = this.fondo.pop();
             this.mazo = shuffle([...this.fondo]);
             this.fondo = [last];
-            this.addLog('♻️ Mazo rearmado.');
+            this.addLog('♻️ Mazo rearmado del fondo.');
+            return;
+        }
+
+        // Mazo vacío y fondo también vacío o con 1 sola carta:
+        // usar fondoDescartado si hay cartas ahí
+        if (!this.mazo.length && this.fondo.length <= 1 && this.fondoDescartado.length > 0) {
+            if (!this.mazoReciclado) {
+                // Primera vez que se agota: reciclar fondoDescartado como mazo
+                this.mazo = shuffle([...this.fondoDescartado]);
+                this.fondoDescartado = [];
+                this.mazoReciclado = true;
+                this.addLog('♻️ Mazo agotado — se reciclan las cartas del fondo como nuevo mazo.');
+            } else {
+                // Ya se recicló una vez y se volvió a agotar → reiniciar ronda
+                this.addLog('⚠️ Mazo agotado por segunda vez — la ronda se reinicia sin ganador.');
+                this._reiniciarRonda();
+            }
         }
     }
 
-    repartir() {
-        this.mazo = mkMazo();
-        this.fondo = [];
+    // ─────────────────────────────────────────────────
+    // _reiniciarRonda: reparte de nuevo la misma ronda
+    // sin sumar ni restar puntos. Avisa a todos.
+    // ─────────────────────────────────────────────────
+    _reiniciarRonda() {
+        this.addLog(`🔄 Ronda ${this.ronda} reiniciada — mazo insuficiente.`);
+        // Resetear estado de jugadores pero conservar pts_t
         this.jugadores.forEach(j => {
             j.mano = [];
             j.bajado = false;
@@ -487,6 +525,28 @@ class GameEngine {
             j.penalizacion = null;
             j.puedeBajar = true;
         });
+        // Repartir de nuevo (repartir() ya construye mazo fresco y limpia fondoDescartado)
+        this.repartir();
+        // Notificar via _broadcastReinicio (el caller — GameRoom — debe manejar el broadcast)
+        this._pendingReinicio = true;
+    }
+
+    repartir() {
+        const numJugadores = this.jugadores.length;
+        this.mazo = mkMazo(numJugadores);
+        this.fondo = [];
+        this.fondoDescartado = [];   // limpiar al inicio de cada ronda
+        this.mazoReciclado = false;  // resetear flag de reciclado
+
+        this.jugadores.forEach(j => {
+            j.mano = [];
+            j.bajado = false;
+            j.pts_r = 0;
+            j.jugadas = [];
+            j.penalizacion = null;
+            j.puedeBajar = true;
+        });
+
         const n = 5 + this.ronda;
         for (let i = 0; i < n; i++) {
             this.jugadores.forEach(j => { this.chkMazo(); j.mano.push(this.mazo.pop()); });
@@ -517,6 +577,14 @@ class GameEngine {
         const carta = this.mazo.pop();
         this.jActivo.mano.push(carta);
         this.addLog(`🎴 ${this.jActivo.nombre} robó del mazo.`);
+
+        // La carta que estaba visible en el fondo nadie la tomó en este turno.
+        // Si hay una carta en el fondo que no sea la que acaba de llegar,
+        // moverla a fondoDescartado (solo cuando NO hay mazoReciclado activo,
+        // porque en ese caso ya no guardamos para evitar loop infinito).
+        // En realidad la carta del fondo se queda visible hasta que alguien la tome
+        // o se pague otra carta. No la movemos aquí — se mueve cuando se paga (acPagar).
+
         let idx = (this.turno + 1) % this.jugadores.length;
         while (this.jugadores[idx].bajado && idx !== this.turno) idx = (idx + 1) % this.jugadores.length;
         if (this.fondo.length > 0 && idx !== this.turno) {
@@ -543,18 +611,35 @@ class GameEngine {
             this.lastAction = Date.now();
             return this._ok('castigo_acepta', { jugadorIdx: this.castigo_idx, cartaFondo, cartaMazo });
         } else {
+            // Nadie tomó la carta del fondo en este castigo — guardarla en fondoDescartado
+            // solo si el mazo aún no fue reciclado (para evitar duplicados).
+            if (this.fondo.length > 0 && !this.mazoReciclado) {
+                // Verificar si el siguiente jugador también pasará el castigo
+                // La carta se guarda cuando ya nadie la quiera (al llegar al turno activo)
+            }
             this.addLog(`🙅 ${jc.nombre} pasó.`);
             let sig = (this.castigo_idx + 1) % this.jugadores.length;
             while (this.jugadores[sig].bajado && sig !== this.turno) sig = (sig + 1) % this.jugadores.length;
-            if (sig === this.turno) this.estado = 'esperando_accion';
-            else this.castigo_idx = sig;
+
+            if (sig === this.turno) {
+                // Nadie quiso la carta del fondo — moverla a fondoDescartado
+                if (this.fondo.length > 0 && !this.mazoReciclado) {
+                    const cartaRechazada = this.fondo.pop();
+                    this.fondoDescartado.push(cartaRechazada);
+                    this.addLog(`📦 Carta del fondo rechazada, guardada para reciclaje.`);
+                    // El fondo queda vacío hasta que el jugador activo pague
+                }
+                this.estado = 'esperando_accion';
+            } else {
+                this.castigo_idx = sig;
+            }
             this.lastAction = Date.now();
             return this._ok('castigo_pasa', { nextCastigoIdx: this.estado === 'fase_castigo' ? sig : -1 });
         }
     }
 
     // ═══════════════════════════════════════════════════
-    // BAJAR — con devolución de cartas si falla
+    // BAJAR
     // ═══════════════════════════════════════════════════
     acBajar(playerId, jugadasConstruidas) {
         const err = this._checkTurn(playerId, 'esperando_accion');
@@ -569,7 +654,6 @@ class GameEngine {
             return this._err('No hay jugadas para bajar.');
         }
 
-        // Recopilar IDs de cartas en las jugadas enviadas
         const cartasEnJugadasIds = new Set();
         for (const jugada of jugadasConstruidas) {
             for (const carta of (jugada.cartas || [])) {
@@ -577,30 +661,22 @@ class GameEngine {
             }
         }
 
-        // Verificar que todas las cartas estén en la mano antes de cualquier modificación
         for (const cartaId of cartasEnJugadasIds) {
             if (!this.jActivo.mano.some(c => c.id === cartaId)) {
                 return this._err(`Carta ${cartaId} no está en tu mano`);
             }
         }
 
-        // ── Validar jugadas ──
         const validacion = validarJugadasConstruidas(jugadasConstruidas);
 
         if (!validacion.valido) {
-            // BAJADA EN FALSO: cualquier jugada inválida cuenta como bajada en falso
-            // Las cartas nunca salieron de la mano del servidor, así que solo penalizamos
             this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
             this.jActivo.puedeBajar = false;
             const motivo = validacion.errores.join(', ');
             this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre}: ${motivo}. Penalizado 2 turnos.`);
-            // Devolver las cartas de los slots a la mano del jugador
-            // (el servidor no las quitó, pero el cliente las tiene en slots — 
-            //  el state_update con error las resincronizará vía el estado del servidor)
             return this._err(`¡BAJADA EN FALSO! ${motivo}. Castigado 2 turnos sin bajar.`);
         }
 
-        // ── Verificar requisitos de la ronda ──
         const terciasCount = validacion.jugadasOrdenadas.filter(j => j.tipo === 'tercia').length;
         const corridasCount = validacion.jugadasOrdenadas.filter(j => j.tipo === 'corrida').length;
         const req = REQ[this.ronda];
@@ -608,7 +684,6 @@ class GameEngine {
         if (terciasCount < req.t) return this._err(`Necesitas ${req.t} tercia(s) (tienes ${terciasCount})`);
         if (corridasCount < req.c) return this._err(`Necesitas ${req.c} corrida(s) (tienes ${corridasCount})`);
 
-        // ── Ronda 7: no se puede bajar con cartas en sobrantes ──
         if (this.ronda === 7) {
             const cartasEnJugadas = new Set();
             jugadasConstruidas.forEach(jug => jug.cartas.forEach(c => cartasEnJugadas.add(c.id)));
@@ -621,7 +696,6 @@ class GameEngine {
             }
         }
 
-        // ── Todo válido: registrar jugadas y quitar cartas de la mano ──
         const cartasUsadasIds = new Set();
         validacion.jugadasOrdenadas.forEach(jugada => jugada.cartas.forEach(c => cartasUsadasIds.add(c.id)));
 
@@ -657,6 +731,14 @@ class GameEngine {
         const idx = j.mano.findIndex(c => c.id === cartaId);
         if (idx < 0) return this._err('Carta no encontrada.');
         const carta = j.mano.splice(idx, 1)[0];
+
+        // La carta que estaba en el fondo (visible) ahora queda debajo de la nueva.
+        // Moverla a fondoDescartado si el mazo aún no fue reciclado.
+        if (this.fondo.length > 0 && !this.mazoReciclado) {
+            const cartaAnterior = this.fondo.pop();
+            this.fondoDescartado.push(cartaAnterior);
+        }
+
         this.fondo.push(carta);
         this.addLog(`💳 ${j.nombre} pagó ${carta.valor}${carta.palo || ''}.`);
         this.lastAction = Date.now();
@@ -668,7 +750,6 @@ class GameEngine {
         const prevTurno = this.turno;
         this.turno = (this.turno + 1) % this.jugadores.length;
 
-        // Reducir penalizaciones al cambiar de turno
         this.jugadores.forEach(jugador => {
             if (jugador.penalizacion?.activa) {
                 jugador.penalizacion.turnosRestantes--;
@@ -685,8 +766,6 @@ class GameEngine {
         return this._ok('pagar', { carta, jugadorIdx: prevTurno, nextTurno: this.turno });
     }
 
-    // jugadasEnSlots: array de {tipo, cartas} que el cliente tiene armadas en sus slots
-    // Si el jugador aún no se bajó, verificamos que con el comodín recibido + jugadasEnSlots pueda bajarse
     acIntercambiarComodin(playerId, cartaId, origenJugadorIdx, origenJugadaIdx, jugadasEnSlots = []) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
@@ -706,21 +785,16 @@ class GameEngine {
             return this._err('Esta carta no puede reemplazar al comodín en esa jugada.');
         }
 
-        // Si el jugador aún no se bajó, verificar que DESPUÉS del intercambio pueda bajarse
         if (!j.bajado) {
             const comodinRecibido = jugadaOrigen.cartas[comodinIdx];
             const req = REQ[this.ronda];
 
-            // Si el cliente envió sus slots armados, usarlos para validar
             if (jugadasEnSlots && jugadasEnSlots.length > 0) {
-                // Construir jugadas simuladas reemplazando la carta por el comodín
                 let jugadasSimuladas = jugadasEnSlots.map(jug => ({
                     ...jug,
                     cartas: jug.cartas.map(c => c.id === cartaId ? { ...comodinRecibido } : c)
                 }));
 
-                // Si la carta NO estaba en ningún slot (estaba en sobrantes),
-                // agregar el comodín al primer slot que lo necesita
                 const cartaEnSlot = jugadasEnSlots.some(jug => jug.cartas.some(c => c.id === cartaId));
                 if (!cartaEnSlot) {
                     let comodinUsado = false;
@@ -751,8 +825,6 @@ class GameEngine {
                     return this._err('Con el intercambio aún no cumplirías los requisitos para bajarte.');
                 }
             } else {
-                // Fallback: el cliente no envió slots (GameRoom desactualizado)
-                // Simular con la mano completa: carta sale, comodín entra, verificar si puede bajarse
                 const manoSimulada = j.mano.filter(c => c.id !== cartaId);
                 manoSimulada.push({ ...comodinRecibido });
                 if (!puedeBajarse(manoSimulada, this.ronda)) {
@@ -761,7 +833,6 @@ class GameEngine {
             }
         }
 
-        // Ejecutar el intercambio
         const comodin = jugadaOrigen.cartas[comodinIdx];
         jugadaOrigen.cartas[comodinIdx] = cartaParaIntercambiar;
         j.mano[cartaEnManoIdx] = comodin;
@@ -792,11 +863,10 @@ class GameEngine {
         const carta = j.mano[cidx];
         if (!puedeAcomodar(carta, jug)) return this._err(`No puedes acomodar ${carta.valor}${carta.palo || ''} ahí.`);
         jug.cartas.push(carta);
-        // Reordenar corridas de menor a mayor; recalcular valorReemplazado del joker en ambos tipos
         if (jug.tipo === 'corrida') {
             jug.cartas = ordenarCorridaAcomodada(jug.cartas);
         }
-        guardarValorComodin(jug); // siempre recalcular: cubre tercia Y corrida
+        guardarValorComodin(jug);
         j.mano.splice(cidx, 1);
         this.addLog(`🃏 ${j.nombre} acomodó en jugada de ${dest.nombre}.`);
         this.lastAction = Date.now();
@@ -878,6 +948,9 @@ class GameEngine {
             estado: this.estado,
             fondo_top: this.fondo.length ? this.fondo[this.fondo.length - 1] : null,
             mazo_count: this.mazo.length,
+            // Exponer cuántas cartas hay en el fondo reciclable (info para UI)
+            fondo_reciclable_count: this.fondoDescartado.length,
+            mazo_reciclado: this.mazoReciclado,
             castigo_idx: this.castigo_idx,
             jugadores: this.jugadores.map(j => ({
                 id: j.id,

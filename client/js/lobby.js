@@ -362,21 +362,10 @@ function setMesaColor (color) {
    MÚSICA
    ================================================================ */
 // Jazz de casino - usamos una URL pública de stream libre
-const MUSIC_TRACKS = [
-  'https://www.bensound.com/bensound-music/bensound-jazzyfrenchy.mp3',
-  'https://www.bensound.com/bensound-music/bensound-tenderness.mp3',
-];
-let trackIdx = 0;
-
 function initMusic () {
-  musicAudio = new Audio(MUSIC_TRACKS[trackIdx]);
+  musicAudio = new Audio('https://files.catbox.moe/bs0qiq.mp3');
   musicAudio.loop = true;
   musicAudio.volume = 0.25;
-  musicAudio.addEventListener('ended', () => {
-    trackIdx = (trackIdx + 1) % MUSIC_TRACKS.length;
-    musicAudio.src = MUSIC_TRACKS[trackIdx];
-    musicAudio.play();
-  });
 }
 
 function toggleMusic () {

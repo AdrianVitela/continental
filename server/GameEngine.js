@@ -252,28 +252,61 @@ function puedeAcomodarEnCorrida(carta, corrida) {
     if (carta.palo !== cartasNormales[0].palo) return false;
 
     const valsNorm = cartasNormales.map(c => VNUM[c.valor]);
+
+    // Detectar si el As debe valer 14 en el contexto de las normales
     const tieneAs = valsNorm.includes(1);
     const tieneCartasAltas = valsNorm.some(v => v >= 11);
-    const useA14 = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
+    const useA14base = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
 
-    const valsConA = valsNorm.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
+    const valsNormAdj = valsNorm.map(v => (v === 1 && useA14base) ? 14 : v).sort((a, b) => a - b);
 
-    const valsOcupados = [...valsConA];
+    // Valor numérico del joker si existe
+    let valJoker = null;
     if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
-        const vComodin = VNUM[comodin.valorReemplazado];
-        if (vComodin) valsOcupados.push(vComodin === 1 && useA14 ? 14 : vComodin);
-        valsOcupados.sort((a, b) => a - b);
+        const vj = VNUM[comodin.valorReemplazado];
+        if (vj) {
+            // El joker puede reemplazar un As como 14 si la corrida tiene cartas altas
+            valJoker = (vj === 1 && useA14base) ? 14 : vj;
+        }
     }
 
-    const valorCarta = VNUM[carta.valor];
-    const valCarta = (valorCarta === 1 && useA14) ? 14 : valorCarta;
+    // Valor numérico de la carta que queremos acomodar
+    // El As puede valer 1 o 14 — probar ambos
+    const valorCartaRaw = VNUM[carta.valor];
+    const posiblesValores = carta.valor === 'A' ? [1, 14] : [valorCartaRaw];
 
-    if (valsOcupados.includes(valCarta)) return false;
+    for (const valCarta of posiblesValores) {
+        // Construir el conjunto de valores ocupados considerando este valor del As
+        const useA14 = valCarta === 14 || useA14base;
+        const valsAdj = valsNorm.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
 
-    const minVal = valsOcupados[0];
-    const maxVal = valsOcupados[valsOcupados.length - 1];
+        // Calcular valJoker con el nuevo contexto de useA14
+        let valJokerAdj = null;
+        if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
+            const vj = VNUM[comodin.valorReemplazado];
+            if (vj) valJokerAdj = (vj === 1 && useA14) ? 14 : vj;
+        }
 
-    return valCarta === minVal - 1 || valCarta === maxVal + 1;
+        // No incluir el valor del joker en "ocupados" si la carta tiene exactamente
+        // ese valor — eso sería un intercambio, no un acomodo. Aquí solo evaluamos
+        // si la carta puede ir en un extremo LIBRE (no ocupado por joker ni por normal).
+        const valsOcupados = [...valsAdj];
+        if (valJokerAdj !== null && valJokerAdj !== valCarta) {
+            valsOcupados.push(valJokerAdj);
+            valsOcupados.sort((a, b) => a - b);
+        }
+
+        // La carta no puede ir donde ya hay una normal
+        if (valsAdj.includes(valCarta)) continue;
+
+        const minVal = valsOcupados[0];
+        const maxVal = valsOcupados[valsOcupados.length - 1];
+
+        // La carta puede ir en el extremo inferior o superior
+        if (valCarta === minVal - 1 || valCarta === maxVal + 1) return true;
+    }
+
+    return false;
 }
 
 function ordenarCorridaAcomodada(cartas) {

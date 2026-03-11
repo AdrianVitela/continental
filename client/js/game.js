@@ -549,6 +549,20 @@ function acPagar(cartaId) {
 }
 
 function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
+    // Obtener carta y jugada ANTES de cualquier modificación de estado
+    const me = G?.jugadores?.[myIdx];
+    const carta = me?.mano?.find(c => c.id === cartaId);
+    const jugada = G?.jugadores?.[destJugadorIdx]?.jugadas?.[destJugadaIdx];
+
+    // Si es un joker acomodándose en una corrida y no tiene posición elegida,
+    // mostrar el selector ANTES de hacer nada más
+    if (carta?.comodin && jugada?.tipo === 'corrida' && posicion === null) {
+        mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada);
+        return;
+    }
+
+    // Solo limpiar buildingCards si la carta viene de un slot (no aplica post-bajada
+    // donde las cartas están en sobrantes, pero igual lo revisamos sin daño)
     buildingCards.forEach((cards, slotIndex) => {
         const index = cards.findIndex(c => c.id === cartaId);
         if (index > -1) {
@@ -557,17 +571,6 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
             updateSlotUI(slotIndex, cards);
         }
     });
-
-    // Si es un joker acomodándose en una corrida, preguntar posición primero
-    const me = G?.jugadores?.[myIdx];
-    const carta = me?.mano?.find(c => c.id === cartaId);
-    const jugada = G?.jugadores?.[destJugadorIdx]?.jugadas?.[destJugadaIdx];
-
-    if (carta?.comodin && jugada?.tipo === 'corrida' && posicion === null) {
-        // Mostrar selector de posición antes de enviar
-        mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada);
-        return;
-    }
 
     WS.send({ type: 'acomodar', cartaId, destJugadorIdx, destJugadaIdx, posicion: posicion || null });
     selId = null;

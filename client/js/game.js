@@ -671,7 +671,12 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 window._confirmarPosJoker = function(cartaId, destJugadorIdx, destJugadaIdx, posicion) {
     const modal = document.getElementById('joker-pos-modal');
     if (modal) modal.remove();
-    acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion);
+    // cartaId viene del atributo HTML como string — convertir al tipo original
+    // Los ids del engine son números, intentar parsear
+    const id = isNaN(cartaId) ? cartaId : Number(cartaId);
+    const ji = Number(destJugadorIdx);
+    const jugi = Number(destJugadaIdx);
+    acAcomodar(id, ji, jugi, posicion);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

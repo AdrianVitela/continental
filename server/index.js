@@ -146,6 +146,18 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        case 'set_table_color': {
+          const room = rooms.get(ctx.roomCode);
+          if (!room || !ctx.playerId) return;
+          // Solo el host puede cambiar el color
+          if (room.players[0]?.id !== ctx.playerId) return;
+          const validColors = ['green', 'navy', 'wine', 'black'];
+          const color = validColors.includes(msg.color) ? msg.color : 'green';
+          room.setTableColor(color);
+          room.broadcast({ type: 'table_color_changed', color, lobbyState: room.lobbyState() });
+          break;
+        }
+
         default: {
           const room = rooms.get(ctx.roomCode);
           if (!room || !ctx.playerId)

@@ -550,7 +550,23 @@ function acPagar(cartaId) {
     cancelIntercambio();
 }
 
-function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx) {
+function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
+    const me = G?.jugadores?.[myIdx];
+    const jugada = G?.jugadores?.[destJugadorIdx]?.jugadas?.[destJugadaIdx];
+
+    // Solo preguntar alta/baja cuando:
+    //   1. El jugador YA está bajado (está acomodando sobrantes)
+    //   2. La jugada destino es una corrida
+    //   3. No tiene posición elegida todavía
+    // Buscar si la carta es joker en la mano (puede venir de intercambio reciente)
+    if (me?.bajado && jugada?.tipo === 'corrida' && posicion === null) {
+        const carta = me?.mano?.find(c => c.id === cartaId);
+        if (carta?.comodin) {
+            mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada);
+            return;
+        }
+    }
+
     buildingCards.forEach((cards, slotIndex) => {
         const index = cards.findIndex(c => c.id === cartaId);
         if (index > -1) {
@@ -559,10 +575,113 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx) {
             updateSlotUI(slotIndex, cards);
         }
     });
-    WS.send({ type: 'acomodar', cartaId, destJugadorIdx, destJugadaIdx });
+
+    WS.send({ type: 'acomodar', cartaId, destJugadorIdx, destJugadaIdx, posicion: posicion || null });
     selId = null;
     cancelIntercambio();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// mostrarSelectorPosicionJoker
+// Muestra un mini-modal inline en las bajadas preguntando si el joker
+// va como carta ALTA (final de la corrida) o BAJA (inicio de la corrida).
+// Muestra el contexto: "5♦ 6♦ 7♦ 8♦ → ¿Joker como 4♦ o 9♦?"
+// ─────────────────────────────────────────────────────────────────────────────
+function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada) {
+    // Calcular qué valor sería en cada posición para mostrarlo al usuario
+    const VN_MAP = { A:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, K:13 };
+    const VN_REV = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
+    const normales = jugada.cartas.filter(c => !c.comodin);
+    const palo = normales[0]?.palo || '';
+    const vals = normales.map(c => VN_MAP[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
+
+    // Detectar si hay As como 14
+    const tieneAs = vals.includes(1);
+    const tieneAltas = vals.some(v => v >= 11);
+    const useA14 = tieneAs && tieneAltas && !vals.includes(2);
+    const valsReales = vals.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
+
+    const minVal = valsReales[0];
+    const maxVal = valsReales[valsReales.length - 1];
+    const valBaja = minVal - 1;
+    const valAlta = maxVal + 1;
+
+    const lblBaja = valBaja >= 1 ? `${VN_REV[valBaja] || valBaja}${palo}` : null;
+    const lblAlta = valAlta <= 14 ? `${VN_REV[valAlta] || valAlta}${palo}` : null;
+
+    // Quitar modal anterior si existe
+    const prev = document.getElementById('joker-pos-modal');
+    if (prev) prev.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'joker-pos-modal';
+    modal.style.cssText = `
+        position: fixed; inset: 0; z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        background: rgba(0,0,0,.7);
+    `;
+
+    const secuenciaHtml = jugada.cartas.map(c => {
+        if (c.comodin) return `<span style="background:#4a2080;color:#ffe066;padding:2px 5px;border-radius:4px;font-size:.75rem">🃏</span>`;
+        const isRed = c.palo === '♥' || c.palo === '♦';
+        return `<span style="color:${isRed ? '#e05050' : '#e8e8e8'};font-size:.75rem">${c.valor}${c.palo}</span>`;
+    }).join('<span style="color:#aaa;margin:0 2px">·</span>');
+
+    modal.innerHTML = `
+        <div style="
+            background: #1a2a1a;
+            border: 2px solid var(--gold, #c8a045);
+            border-radius: 10px;
+            padding: 18px 22px;
+            min-width: 260px;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,.6);
+        ">
+            <div style="font-size:.72rem;color:#aaa;margin-bottom:6px">¿Dónde va el 🃏 Joker?</div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+                ${secuenciaHtml}
+            </div>
+            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                ${lblBaja ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')"
+                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
+                    ⬅ Baja<br><small style="font-size:.7rem;color:#aaa">${lblBaja}</small>
+                </button>` : ''}
+                ${lblAlta ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')"
+                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
+                    Alta ➡<br><small style="font-size:.7rem;color:#aaa">${lblAlta}</small>
+                </button>` : ''}
+                ${!lblBaja && !lblAlta ? `<span style="color:#aaa;font-size:.75rem">Solo hay una posición posible</span>` : ''}
+            </div>
+            <button onclick="document.getElementById('joker-pos-modal').remove(); window.cancelIntercambio();"
+                style="margin-top:12px;background:transparent;border:none;color:#888;cursor:pointer;font-size:.72rem">
+                ✕ Cancelar
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Si solo hay una opción, elegirla automáticamente sin preguntar
+    if (!lblBaja && lblAlta) {
+        modal.remove();
+        acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'alta');
+    } else if (lblBaja && !lblAlta) {
+        modal.remove();
+        acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'baja');
+    }
+}
+
+window._confirmarPosJoker = function(cartaId, destJugadorIdx, destJugadaIdx, posicion) {
+    const modal = document.getElementById('joker-pos-modal');
+    if (modal) modal.remove();
+    // cartaId viene del atributo HTML como string — convertir al tipo original
+    // Los ids del engine son números, intentar parsear
+    const id = isNaN(cartaId) ? cartaId : Number(cartaId);
+    const ji = Number(destJugadorIdx);
+    const jugi = Number(destJugadaIdx);
+    acAcomodar(id, ji, jugi, posicion);
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // acIntercambiarComodin
@@ -832,7 +951,11 @@ function renderTableBajadas() {
 
             pile.innerHTML = `<div class="bajada-pile-label">${jug.tipo}</div><div class="bajada-pile-cards">${cardsHtml}</div>`;
             if (!intercambioMode && _me?.bajado) {
-                pile.onclick = () => { if (selId && isMyTurn()) acAcomodar(selId, ji, jugi); };
+                pile.onclick = () => {
+                    if (!selId || !isMyTurn()) return;
+                    // null como posicion: si es joker en corrida, preguntará automáticamente
+                    acAcomodar(selId, ji, jugi, null);
+                };
             }
             wrap.appendChild(pile);
         });

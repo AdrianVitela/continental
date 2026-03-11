@@ -885,21 +885,25 @@ class GameEngine {
 
         if (jug.tipo === 'corrida') {
             if (carta.comodin && posicion) {
-                // El usuario eligió explícitamente dónde va el joker
-                // 'baja' → inicio de la corrida, 'alta' → final
+                // Usuario eligió posición explícita para el joker.
+                // Respetar su elección sin validar si "tiene sentido":
+                // el usuario es libre de ponerlo como baja o alta.
+                // Ordenar las cartas normales y colocar el joker al inicio o final.
                 const normales = jug.cartas.filter(c => !c.comodin);
                 normales.sort((a, b) => VNUM[a.valor] - VNUM[b.valor]);
                 if (posicion === 'baja') {
                     jug.cartas = [carta, ...normales];
                 } else {
+                    // 'alta' o cualquier otro valor → al final
                     jug.cartas = [...normales, carta];
                 }
             } else {
+                // Carta normal o joker sin posición elegida → ordenar automático
                 jug.cartas.push(carta);
                 jug.cartas = ordenarCorridaAcomodada(jug.cartas);
             }
         } else {
-            // Tercia: siempre al final, sin pregunta
+            // Tercia: siempre al final
             jug.cartas.push(carta);
         }
 

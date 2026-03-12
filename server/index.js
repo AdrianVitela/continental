@@ -5,12 +5,7 @@ const { WebSocketServer } = require('ws');
 const path     = require('path');
 const { randomUUID } = require('crypto');
 const { GameRoom  } = require('./GameRoom');
-let PescaRoom;
-try {
-  ({ PescaRoom } = require('./PescaRoom'));
-} catch (e) {
-  console.warn('\u26a0\ufe0f  PescaRoom no disponible - sube PescaRoom.js y PescaEngine.js:', e.message);
-}
+const { PescaRoom } = require('./PescaRoom');
 
 const PORT = process.env.PORT || 3000;
 const app  = express();

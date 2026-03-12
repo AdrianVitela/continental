@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="icon" type="image/png" href="/favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Continental - Lobby</title>
@@ -108,40 +107,29 @@
             letter-spacing: 1px;
         }
 
-        /* Fila input + botón de dados */
         .input-row {
             display: flex;
             gap: 6px;
             align-items: stretch;
         }
-        .input-row input {
-            flex: 1;
-        }
+        .input-row input { flex: 1; }
 
-        /* Botón de nombre aleatorio */
         .btn-random-name {
             flex-shrink: 0;
-            width: 38px;
-            height: 38px;
+            width: 38px; height: 38px;
             background: rgba(200,160,69,.1);
             border: 1px solid rgba(200,160,69,.3);
             border-radius: 9px;
             color: var(--gold);
             font-size: 1.1rem;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
             transition: background .2s, transform .15s;
             line-height: 1;
         }
-        .btn-random-name:hover {
-            background: rgba(200,160,69,.22);
-            transform: rotate(20deg) scale(1.08);
-        }
+        .btn-random-name:hover { background: rgba(200,160,69,.22); transform: rotate(20deg) scale(1.08); }
         .btn-random-name:active { transform: rotate(0deg) scale(.95); }
 
-        /* Hint de validación */
         .field-hint {
             font-size: .68rem;
             color: var(--red-hi);
@@ -154,15 +142,11 @@
         /* ===== MODO DE JUEGO ===== */
         .mode-row { display: flex; gap: 8px; }
         .mode-btn {
-            flex: 1;
-            padding: 10px;
+            flex: 1; padding: 10px;
             background: rgba(255,255,255,.05);
             border: 1px solid rgba(255,255,255,.12);
-            border-radius: 9px;
-            color: var(--text-dim);
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
+            border-radius: 9px; color: var(--text-dim);
+            font-size: .82rem; cursor: pointer; text-align: center;
             transition: background .2s, border-color .2s, color .2s;
             user-select: none;
         }
@@ -171,25 +155,11 @@
             border-color: rgba(200,160,69,.4);
             color: var(--gold-hi);
         }
-        .mode-btn small {
-            display: block;
-            font-size: .68rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
+        .mode-btn small { display: block; font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
 
         /* ===== JUGADORES MAX ===== */
-        .player-count {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .player-count label {
-            font-size: .78rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .player-count { display: flex; align-items: center; justify-content: space-between; }
+        .player-count label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .pc-ctrl { display: flex; align-items: center; gap: 10px; }
         .pc-btn {
             width: 30px; height: 30px; border-radius: 50%;
@@ -202,7 +172,6 @@
         .pc-btn:hover { background: rgba(200,160,69,.25); }
         .pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
 
-        /* ===== INPUT CÓDIGO DE SALA ===== */
         #unirse-code {
             text-transform: uppercase;
             letter-spacing: 5px;
@@ -213,38 +182,6 @@
 
         /* ===== SALA DE ESPERA ===== */
         #lobby-room { display: none; flex-direction: column; gap: 16px; }
-
-        .mesa-picker { display: flex; flex-direction: column; gap: 8px; }
-        .mesa-picker-label { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
-        .mesa-swatches { display: flex; gap: 8px; }
-        .mesa-swatch {
-          width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
-          border: 2px solid transparent; transition: all .15s ease;
-        }
-        .mesa-swatch:hover { transform: scale(1.1); }
-        .mesa-swatch.active { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,160,69,.5); }
-        .mesa-swatch[data-color="green"]  { background: #0e2419; }
-        .mesa-swatch[data-color="navy"]   { background: #0a1628; }
-        .mesa-swatch[data-color="wine"]   { background: #2a0a0f; }
-        .mesa-swatch[data-color="black"]  { background: #111111; }
-        .mesa-swatch-name { font-size: .62rem; color: var(--text-dim); text-align: center; margin-top: 2px; }
-
-        .music-bar {
-          display: flex; align-items: center; gap: 10px;
-          background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
-          border: 1px solid rgba(200,160,69,.15);
-        }
-        .music-bar span { font-size: .72rem; color: var(--text-dim); flex: 1; }
-        .music-toggle {
-          background: none; border: 1px solid rgba(200,160,69,.3);
-          color: var(--gold); border-radius: 6px; padding: 4px 10px;
-          cursor: pointer; font-size: .72rem; transition: all .15s;
-        }
-        .music-toggle:hover { background: rgba(200,160,69,.1); }
-        input[type=range].vol-slider {
-          width: 70px; accent-color: var(--gold);
-          cursor: pointer;
-        }
         #lobby-room.show { display: flex; }
 
         .room-code-display { text-align: center; }
@@ -290,7 +227,6 @@
             align-items: center; justify-content: center;
         }
         .names-modal-overlay.show { display: flex; }
-
         .names-modal {
             background: linear-gradient(160deg, #1a3d28, #0d1f14);
             border: 1px solid rgba(200,160,69,.22);
@@ -306,25 +242,17 @@
             text-align: center; letter-spacing: 2px;
         }
         .names-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 7px;
-            max-height: 52vh;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--gold-dim) transparent;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 7px;
+            max-height: 52vh; overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent;
         }
         .name-option {
             background: rgba(255,255,255,.05);
             border: 1px solid rgba(255,255,255,.1);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
+            border-radius: 8px; padding: 9px 10px;
+            font-size: .82rem; cursor: pointer; text-align: center;
             transition: background .15s, border-color .15s, color .15s;
-            line-height: 1.2;
-            color: var(--text);
+            line-height: 1.2; color: var(--text);
         }
         .name-option:hover {
             background: rgba(200,160,69,.15);
@@ -332,18 +260,14 @@
             color: var(--gold-hi);
         }
         .name-option .nicon { display: block; font-size: 1.1rem; margin-bottom: 3px; }
-
-        .names-modal-footer {
-            display: flex; gap: 8px;
-        }
+        .names-modal-footer { display: flex; gap: 8px; }
         .btn-modal-close {
             flex: 1; padding: 8px;
             background: rgba(255,255,255,.05);
             border: 1px solid rgba(255,255,255,.1);
             border-radius: 8px; color: var(--text-dim);
             font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
+            transition: background .15s; font-family: 'Outfit', sans-serif;
         }
         .btn-modal-close:hover { background: rgba(255,255,255,.1); color: var(--text); }
         .btn-modal-shuffle {
@@ -352,8 +276,7 @@
             border: 1px solid rgba(200,160,69,.3);
             border-radius: 8px; color: var(--gold);
             font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
+            transition: background .15s; font-family: 'Outfit', sans-serif;
         }
         .btn-modal-shuffle:hover { background: rgba(200,160,69,.2); }
 
@@ -361,15 +284,14 @@
         .game-selector {
             display: flex;
             gap: 10px;
+            animation: fadeUp .5s .05s var(--eout) both;
         }
         .game-sel-btn {
-            flex: 1;
-            padding: 10px 8px;
+            flex: 1; padding: 12px 8px;
             background: rgba(0,0,0,.25);
             border: 1px solid rgba(200,160,69,.18);
             border-radius: 12px;
-            cursor: pointer;
-            text-align: center;
+            cursor: pointer; text-align: center;
             transition: background .2s, border-color .2s, transform .15s;
             user-select: none;
         }
@@ -382,55 +304,31 @@
             background: rgba(200,160,69,.15);
             border-color: rgba(200,160,69,.5);
         }
-        .game-sel-btn .gsb-icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+        .game-sel-btn .gsb-icon { font-size: 1.6rem; display: block; margin-bottom: 4px; }
         .game-sel-btn .gsb-name {
             font-family: 'Cormorant Garamond', serif;
             font-size: .95rem; color: var(--gold); letter-spacing: 1px;
         }
-        .game-sel-btn .gsb-desc {
-            font-size: .62rem; color: var(--text-dim); margin-top: 2px;
-        }
+        .game-sel-btn .gsb-desc { font-size: .62rem; color: var(--text-dim); margin-top: 2px; }
     </style>
 </head>
 <body>
-    <script>
-        (function() {
-            const token   = localStorage.getItem('token');
-            const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-            if (!token || !usuario) {
-                window.location.href = '/login';
-            }
-            window.AUTH = { token, usuario };
-        })();
-    </script>
-
     <div class="lobby-wrap">
+
+        <!-- LOGO — título cambia según juego seleccionado -->
         <div class="logo">
             <h1 id="lobby-title">Continental</h1>
             <p id="lobby-subtitle">Juego de cartas multijugador</p>
         </div>
 
-        <!-- ===== INFO USUARIO ===== -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
-            <div style="display:flex;align-items:center;gap:8px">
-                <div style="width:8px;height:8px;border-radius:50%;background:#2ecc71"></div>
-                <span id="user-display" style="font-size:.85rem;color:var(--gold-hi);font-weight:600"></span>
-                <span id="user-badge" style="font-size:.72rem;color:var(--text-dim)"></span>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button onclick="openFeedback()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">💬 Feedback</button>
-              <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
-            </div>
-        </div>
-
         <!-- ===== SELECTOR DE JUEGO ===== -->
         <div class="game-selector">
-            <div class="game-sel-btn active" id="gsb-continental" onclick="selectGame('continental')">
+            <div class="game-sel-btn active" id="gsb-continental" onclick="elegirJuego('continental')">
                 <span class="gsb-icon">🎩</span>
                 <div class="gsb-name">Continental</div>
                 <div class="gsb-desc">Tercias y corridas</div>
             </div>
-            <div class="game-sel-btn" id="gsb-pesca" onclick="selectGame('pesca')">
+            <div class="game-sel-btn" id="gsb-pesca" onclick="elegirJuego('pesca')">
                 <span class="gsb-icon">🎣</span>
                 <div class="gsb-name">Pesca</div>
                 <div class="gsb-desc">¿Tienes un...?</div>
@@ -447,6 +345,19 @@
 
             <!-- CREAR -->
             <div class="tab-panel active" id="panel-crear">
+                <div class="field-group">
+                    <label>Tu nombre</label>
+                    <div class="input-row">
+                        <input type="text" id="crear-nombre"
+                               placeholder="Nombre de jugador"
+                               maxlength="18"
+                               oninput="sanitizeName(this)"
+                               autocomplete="off" autocorrect="off" spellcheck="false">
+                        <button class="btn-random-name" onclick="openNamesModal('crear')" title="Nombres predefinidos">🎲</button>
+                    </div>
+                    <span class="field-hint" id="hint-crear-nombre"></span>
+                </div>
+
                 <!-- Solo visible en Continental -->
                 <div class="field-group" id="mode-group">
                     <label>Modo de juego</label>
@@ -475,6 +386,19 @@
             <!-- UNIRSE -->
             <div class="tab-panel" id="panel-unirse">
                 <div class="field-group">
+                    <label>Tu nombre</label>
+                    <div class="input-row">
+                        <input type="text" id="unirse-nombre"
+                               placeholder="Nombre de jugador"
+                               maxlength="18"
+                               oninput="sanitizeName(this)"
+                               autocomplete="off" autocorrect="off" spellcheck="false">
+                        <button class="btn-random-name" onclick="openNamesModal('unirse')" title="Nombres predefinidos">🎲</button>
+                    </div>
+                    <span class="field-hint" id="hint-unirse-nombre"></span>
+                </div>
+
+                <div class="field-group">
                     <label>Código de sala</label>
                     <input type="text" id="unirse-code"
                            placeholder="Ej: ABC12"
@@ -497,38 +421,6 @@
             <div class="separator"></div>
             <div class="player-list" id="player-list"></div>
             <div class="separator"></div>
-
-            <div id="mesa-picker-wrap" style="display:none">
-              <div class="mesa-picker">
-                <div class="mesa-picker-label">🎨 Color de mesa</div>
-                <div class="mesa-swatches">
-                  <div style="text-align:center">
-                    <div class="mesa-swatch active" data-color="green" onclick="setMesaColor('green')" title="Verde clásico"></div>
-                    <div class="mesa-swatch-name">Verde</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="navy" onclick="setMesaColor('navy')" title="Azul marino"></div>
-                    <div class="mesa-swatch-name">Azul</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="wine" onclick="setMesaColor('wine')" title="Rojo vino"></div>
-                    <div class="mesa-swatch-name">Vino</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="black" onclick="setMesaColor('black')" title="Negro elegante"></div>
-                    <div class="mesa-swatch-name">Negro</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="music-bar">
-              <span>🎷 Jazz de Casino</span>
-              <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="25" oninput="setVolume(this.value)">
-              <button class="music-toggle" id="music-toggle" onclick="toggleMusic()">▶ Play</button>
-            </div>
-
-            <div class="separator"></div>
             <div class="waiting-msg" id="waiting-msg">
                 Esperando jugadores<span class="dot-pulse"></span>
             </div>
@@ -536,6 +428,7 @@
                 ▶ Iniciar Partida
             </button>
         </div>
+
     </div>
 
     <!-- ===== MODAL NOMBRES PREDEFINIDOS ===== -->
@@ -552,119 +445,42 @@
 
     <div id="toast"></div>
 
-    <!-- ===== MODAL FEEDBACK ===== -->
-    <div id="feedback-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
-      <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(380px,92%);display:flex;flex-direction:column;gap:16px;animation:fadeUp .25s ease both">
-        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px">💬 Deja tu feedback</h3>
-        <p style="font-size:.78rem;color:var(--text-dim);margin:0;text-align:center">Tu opinión nos ayuda a mejorar el juego</p>
-        <div style="display:flex;justify-content:center;gap:8px" id="stars-row">
-          <span class="star" data-v="1" onclick="setStar(1)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
-          <span class="star" data-v="2" onclick="setStar(2)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
-          <span class="star" data-v="3" onclick="setStar(3)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
-          <span class="star" data-v="4" onclick="setStar(4)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
-          <span class="star" data-v="5" onclick="setStar(5)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
-        </div>
-        <textarea id="feedback-msg" placeholder="Cuéntanos qué piensas, qué mejorarías o qué te gustó..." style="background:rgba(0,0,0,.3);border:1px solid rgba(200,160,69,.2);border-radius:10px;color:var(--text);font-size:.88rem;padding:12px 14px;outline:none;resize:vertical;min-height:100px;font-family:inherit;transition:border-color .2s" onfocus="this.style.borderColor='rgba(200,160,69,.5)'" onblur="this.style.borderColor='rgba(200,160,69,.2)'"></textarea>
-        <div id="feedback-error" style="display:none;background:rgba(220,50,50,.12);border:1px solid rgba(220,50,50,.3);border-radius:8px;color:#ff7070;font-size:.78rem;padding:8px 12px;text-align:center"></div>
-        <div id="feedback-success" style="display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;color:#2ecc71;font-size:.78rem;padding:8px 12px;text-align:center"></div>
-        <div style="display:flex;gap:8px">
-          <button onclick="closeFeedback()" style="flex:1;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-dim);font-size:.82rem;cursor:pointer;font-family:inherit">Cancelar</button>
-          <button id="feedback-btn" onclick="submitFeedback()" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gold),#b8920a);border:none;border-radius:8px;color:#0b1e12;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s">Enviar ✈</button>
-        </div>
-      </div>
-    </div>
-
     <script>
-      let feedbackRating = 0;
-      function openFeedback() {
-        feedbackRating = 0;
-        document.getElementById('feedback-msg').value = '';
-        document.getElementById('feedback-error').style.display   = 'none';
-        document.getElementById('feedback-success').style.display = 'none';
-        document.querySelectorAll('.star').forEach(s => s.style.opacity = '.4');
-        document.getElementById('feedback-overlay').style.display = 'flex';
-      }
-      function closeFeedback() {
-        document.getElementById('feedback-overlay').style.display = 'none';
-      }
-      function setStar(v) {
-        feedbackRating = v;
-        document.querySelectorAll('.star').forEach(s => {
-          s.style.opacity   = Number(s.dataset.v) <= v ? '1' : '.4';
-          s.style.transform = Number(s.dataset.v) <= v ? 'scale(1.15)' : 'scale(1)';
-        });
-      }
-      async function submitFeedback() {
-        const mensaje = document.getElementById('feedback-msg').value.trim();
-        const btn     = document.getElementById('feedback-btn');
-        const errEl   = document.getElementById('feedback-error');
-        const okEl    = document.getElementById('feedback-success');
-        errEl.style.display = 'none'; okEl.style.display = 'none';
-        if (!mensaje || mensaje.length < 5) { errEl.textContent = 'Por favor escribe un mensaje.'; errEl.style.display = 'block'; return; }
-        btn.disabled = true; btn.textContent = 'Enviando...';
-        try {
-          const token = localStorage.getItem('token');
-          const res   = await fetch('/api/feedback', { method:'POST', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`}, body:JSON.stringify({mensaje, rating:feedbackRating||null}) });
-          const data  = await res.json();
-          if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
-          okEl.textContent = '¡Gracias por tu feedback! 🎉'; okEl.style.display = 'block';
-          setTimeout(closeFeedback, 1800);
-        } catch { errEl.textContent = 'Error de conexión.'; errEl.style.display = 'block'; }
-        finally { btn.disabled = false; btn.textContent = 'Enviar ✈'; }
-      }
-      document.getElementById('feedback-overlay')?.addEventListener('click', function(e) { if (e.target === this) closeFeedback(); });
-    </script>
-
-    <script src="js/socket.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const u = window.AUTH?.usuario;
-            if (u) {
-                document.getElementById('user-display').textContent = u.nombre;
-                const badgeEl = document.getElementById('user-badge');
-                if (u.badge) badgeEl.textContent = u.badge;
-            }
-        });
-
-        window.getAuthNombre = () => window.AUTH?.usuario?.nombre || '';
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('usuario');
-            window.location.href = '/login';
-        }
-
-        // ─── Selector de juego integrado en el mismo lobby ───
-        // currentGame vive en lobby.js, aquí solo actualizamos UI
-        function selectGame(game) {
-            // Actualizar botones del selector
+        // ── Selector de juego ──────────────────────────────
+        // Maneja solo UI; la lógica de qué WS enviar vive en lobby.js
+        function elegirJuego(game) {
             document.getElementById('gsb-continental').classList.toggle('active', game === 'continental');
             document.getElementById('gsb-pesca').classList.toggle('active', game === 'pesca');
 
-            // Actualizar título
             const titleEl = document.getElementById('lobby-title');
             const subtEl  = document.getElementById('lobby-subtitle');
             if (game === 'pesca') {
-                if (titleEl) titleEl.textContent = 'Pesca';
-                if (subtEl)  subtEl.textContent  = '¿Tienes un...?';
+                titleEl.textContent = 'Pesca';
+                subtEl.textContent  = '¿Tienes un...?';
             } else {
-                if (titleEl) titleEl.textContent = 'Continental';
-                if (subtEl)  subtEl.textContent  = 'Juego de cartas multijugador';
+                titleEl.textContent = 'Continental';
+                subtEl.textContent  = 'Juego de cartas multijugador';
             }
 
-            // Modo de juego solo aplica a Continental
+            // Modo async solo aplica a Continental
             const modeGroup = document.getElementById('mode-group');
             if (modeGroup) modeGroup.style.display = game === 'pesca' ? 'none' : '';
 
-            // Delegar a lobby.js (que maneja currentGame)
-            if (typeof window._selectGameLobby === 'function') window._selectGameLobby(game);
+            // Delegar a lobby.js
+            if (typeof window._setCurrentGame === 'function') window._setCurrentGame(game);
         }
 
-        // Crear/unirse usando el juego activo
-        function crearSalaActual()  { if (typeof window._crearSalaActual  === 'function') window._crearSalaActual();  }
-        function unirseActual()     { if (typeof window._unirseActual     === 'function') window._unirseActual();     }
+        // Botones del formulario llaman a lobby.js directamente
+        function crearSalaActual() {
+            if (typeof window._crearSalaActual === 'function') window._crearSalaActual();
+        }
+        function unirseActual() {
+            if (typeof window._unirseActual === 'function') window._unirseActual();
+        }
     </script>
+
+    <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.5.0</div>
+    <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.5.0</div>
 </body>
 </html>

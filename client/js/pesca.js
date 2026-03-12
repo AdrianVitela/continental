@@ -55,7 +55,7 @@ function _getSavedName() {
     return m ? decodeURIComponent(m[1]) : 'Jugador';
 }
 
-WS.on('open', () => {
+WS.on('_connected', () => {
     if (myId && roomCode) {
         const nombre = _getSavedName();
         WS.send({ type: 'join_pesca', nombre, code: roomCode, playerId: myId });

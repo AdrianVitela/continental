@@ -559,3 +559,8 @@ function showToast(msg, type = 'red') {
 window.clickSlot          = clickSlot;
 window.clickRival         = clickRival;
 window.confirmarRespuesta = confirmarRespuesta;
+
+/* ─── Arranque ──────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    WS.connect();
+});

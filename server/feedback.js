@@ -39,7 +39,7 @@ router.post('/feedback', async (req, res) => {
 
     const resendResult = await resend.emails.send({
       from: 'Continental <onboarding@resend.dev>',
-      to:   process.env.FEEDBACK_TO.split(',').map(e => e.trim()),
+      to:   process.env.FEEDBACK_TO,
       subject: `💬 Nuevo feedback de ${nombre}`,
       html: `
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;background:#0b1e12;color:#e8d5a3;padding:28px;border-radius:12px">

@@ -1,25 +1,13 @@
 'use strict';
-const express      = require('express');
-const nodemailer   = require('nodemailer');
-const pool         = require('./db');
-const jwt          = require('jsonwebtoken');
+const express    = require('express');
+const { Resend } = require('resend');
+const pool       = require('./db');
+const jwt        = require('jsonwebtoken');
 
 const router     = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
+const resend     = new Resend(process.env.RESEND_API_KEY);
 
-// Configurar transporter de Gmail
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  family: 4, // forzar IPv4
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-});
-
-// Middleware para obtener usuario del token (opcional)
 function getUsuario(req) {
   try {
     const auth = req.headers.authorization;
@@ -28,7 +16,6 @@ function getUsuario(req) {
   } catch { return null; }
 }
 
-// ── POST /api/feedback ──────────────────────────────────────────
 router.post('/feedback', async (req, res) => {
   try {
     const { mensaje, rating } = req.body;
@@ -43,36 +30,24 @@ router.post('/feedback', async (req, res) => {
     const safeRating  = rating ? Number(rating) : null;
     const nombre      = usuario?.nombre || 'Anónimo';
 
-    // Guardar en DB
     await pool.query(
       'INSERT INTO feedback (usuario_id, nombre, mensaje, rating) VALUES ($1, $2, $3, $4)',
       [usuario?.id || null, nombre, safeMensaje, safeRating]
     );
 
-    // Estrellas para el email
     const estrellas = safeRating ? '⭐'.repeat(safeRating) + ` (${safeRating}/5)` : 'Sin calificación';
 
-    // Enviar email
-    await transporter.sendMail({
-      from: `"Continental Feedback" <${process.env.GMAIL_USER}>`,
-      to:   process.env.FEEDBACK_TO,
+    await resend.emails.send({
+      from: 'Continental <onboarding@resend.dev>',
+      to:   process.env.FEEDBACK_TO.split(',').map(e => e.trim()),
       subject: `💬 Nuevo feedback de ${nombre}`,
       html: `
         <div style="font-family:sans-serif;max-width:500px;margin:0 auto;background:#0b1e12;color:#e8d5a3;padding:28px;border-radius:12px">
           <h2 style="color:#c8a045;margin-top:0">💬 Nuevo Feedback — Continental</h2>
           <table style="width:100%;border-collapse:collapse">
-            <tr>
-              <td style="padding:6px 0;color:#aaa;width:120px">Usuario</td>
-              <td style="padding:6px 0;font-weight:600">${nombre}</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;color:#aaa">Calificación</td>
-              <td style="padding:6px 0">${estrellas}</td>
-            </tr>
-            <tr>
-              <td style="padding:6px 0;color:#aaa;vertical-align:top">Mensaje</td>
-              <td style="padding:6px 0">${safeMensaje.replace(/\n/g, '<br>')}</td>
-            </tr>
+            <tr><td style="padding:6px 0;color:#aaa;width:120px">Usuario</td><td style="padding:6px 0;font-weight:600">${nombre}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa">Calificación</td><td style="padding:6px 0">${estrellas}</td></tr>
+            <tr><td style="padding:6px 0;color:#aaa;vertical-align:top">Mensaje</td><td style="padding:6px 0">${safeMensaje.replace(/\n/g, '<br>')}</td></tr>
           </table>
           <hr style="border-color:#1a3d28;margin:20px 0">
           <p style="color:#555;font-size:12px;margin:0">Continental Beta · ${new Date().toLocaleString('es-MX')}</p>

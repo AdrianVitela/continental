@@ -359,10 +359,33 @@
     </style>
 </head>
 <body>
+    <script>
+        // Verificar sesión
+        (function() {
+            const token   = localStorage.getItem('token');
+            const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+            if (!token || !usuario) {
+                window.location.href = '/login';
+            }
+            // Guardar para uso global
+            window.AUTH = { token, usuario };
+        })();
+    </script>
+
     <div class="lobby-wrap">
         <div class="logo">
             <h1>Continental</h1>
             <p>Juego de cartas multijugador</p>
+        </div>
+
+        <!-- ===== INFO USUARIO ===== -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
+            <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:8px;height:8px;border-radius:50%;background:#2ecc71"></div>
+                <span id="user-display" style="font-size:.85rem;color:var(--gold-hi);font-weight:600"></span>
+                <span id="user-badge" style="font-size:.72rem;color:var(--text-dim)"></span>
+            </div>
+            <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
         </div>
 
         <!-- ===== FORMULARIO ===== -->
@@ -375,19 +398,6 @@
 
             <!-- CREAR -->
             <div class="tab-panel active" id="panel-crear">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="crear-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               oninput="sanitizeName(this)"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" onclick="openNamesModal('crear')" title="Nombres predefinidos">🎲</button>
-                    </div>
-                    <span class="field-hint" id="hint-crear-nombre"></span>
-                </div>
-
                 <div class="field-group">
                     <label>Modo de juego</label>
                     <div class="mode-row">
@@ -414,19 +424,6 @@
 
             <!-- UNIRSE -->
             <div class="tab-panel" id="panel-unirse">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="unirse-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               oninput="sanitizeName(this)"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" onclick="openNamesModal('unirse')" title="Nombres predefinidos">🎲</button>
-                    </div>
-                    <span class="field-hint" id="hint-unirse-nombre"></span>
-                </div>
-
                 <div class="field-group">
                     <label>Código de sala</label>
                     <input type="text" id="unirse-code"
@@ -508,6 +505,26 @@
     <div id="toast"></div>
 
     <script src="js/socket.js"></script>
+    <script>
+        // Mostrar info de usuario
+        document.addEventListener('DOMContentLoaded', () => {
+            const u = window.AUTH?.usuario;
+            if (u) {
+                document.getElementById('user-display').textContent = u.nombre;
+                const badgeEl = document.getElementById('user-badge');
+                if (u.badge) badgeEl.textContent = u.badge;
+            }
+        });
+
+        // Override getNombre para usar el de la cuenta
+        window.getAuthNombre = () => window.AUTH?.usuario?.nombre || '';
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('usuario');
+            window.location.href = '/login';
+        }
+    </script>
     <script src="js/lobby.js"></script>
   <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 </body>

@@ -400,25 +400,17 @@ function toast (msg, type = 'red') {
 }
 
 function crearSala () {
-  const input  = document.getElementById('crear-nombre');
-  const nombre = input.value.trim();
-  if (!validateName(nombre, 'crear-nombre')) return;
-  saveName(nombre);
+  const nombre = (window.getAuthNombre ? window.getAuthNombre() : '');
+  if (!nombre) { window.location.href = '/login'; return; }
   WS.send({ type: 'create_room', nombre, mode: gameMode, maxPlayers });
 }
 
 function unirse () {
-  const nInput = document.getElementById('unirse-nombre');
+  const nombre = (window.getAuthNombre ? window.getAuthNombre() : '');
   const cInput = document.getElementById('unirse-code');
-  const nombre = nInput.value.trim();
   const code   = cInput.value.trim().toUpperCase();
-
-  let ok = true;
-  if (!validateName(nombre, 'unirse-nombre')) ok = false;
-  if (!validateCode(code))                    ok = false;
-  if (!ok) return;
-
-  saveName(nombre);
+  if (!nombre) { window.location.href = '/login'; return; }
+  if (!validateCode(code)) return;
   WS.send({ type: 'join_room', nombre, code });
 }
 

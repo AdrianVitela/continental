@@ -65,7 +65,7 @@
         /* ── CHAT PANEL ── */
         #chat-panel {
             position: fixed; bottom: 0; right: 0;
-            width: min(320px, 100vw); max-height: 420px;
+            width: min(320px, 100vw); max-height: 460px;
             background: rgba(4,21,32,.97); border: 1px solid var(--fish-bd);
             border-radius: 14px 0 0 0; z-index: 300;
             display: flex; flex-direction: column;
@@ -80,81 +80,152 @@
         }
         #chat-close { background: none; border: none; color: rgba(200,200,200,.5); cursor: pointer; font-size: 1rem; padding: 0 2px; }
         #chat-close:hover { color: #e8e8e8; }
+
+        /* ── SECCIÓN EMOJIS ── */
+        .chat-section-lbl {
+            font-size: .52rem; color: rgba(0,200,224,.4);
+            text-transform: uppercase; letter-spacing: 1px;
+            padding: 6px 12px 2px;
+        }
         #emoji-grid {
-            display: flex; flex-wrap: wrap; gap: 6px;
-            padding: 10px 12px 8px; border-bottom: 1px solid rgba(0,200,224,.1);
+            display: flex; flex-wrap: wrap; gap: 5px;
+            padding: 4px 12px 8px;
         }
         .emoji-btn {
             background: rgba(0,200,224,.07); border: 1px solid rgba(0,200,224,.18);
-            border-radius: 8px; padding: 5px 10px; font-size: .82rem;
+            border-radius: 8px; width: 36px; height: 36px; font-size: .9rem;
             cursor: pointer; transition: background .12s, transform .1s; color: #e8e8e8;
+            display: flex; align-items: center; justify-content: center;
         }
-        .emoji-btn:hover  { background: rgba(0,200,224,.2); transform: scale(1.1); }
-        .emoji-btn:active { transform: scale(.93); }
+        .emoji-btn:hover  { background: rgba(0,200,224,.2); transform: scale(1.15); }
+        .emoji-btn:active { transform: scale(.9); }
+
+        /* ── MENSAJES RÁPIDOS ── */
+        #quick-msgs {
+            display: flex; flex-direction: column; gap: 3px;
+            padding: 4px 10px 8px;
+            border-top: 1px solid rgba(0,200,224,.1);
+            max-height: 160px; overflow-y: auto; scrollbar-width: thin;
+        }
+        .quick-btn {
+            font-size: .67rem; color: #e8e8e8;
+            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+            border-radius: 6px; padding: 5px 9px;
+            cursor: pointer; text-align: left;
+            transition: background .15s, border-color .15s;
+            font-family: 'Outfit', sans-serif; line-height: 1.2;
+        }
+        .quick-btn:hover { background: rgba(0,200,224,.12); border-color: var(--fish-bd); color: var(--fish); }
+
+        /* ── HISTORIAL DE CHAT ── */
         #chat-messages {
             flex: 1; overflow-y: auto; padding: 8px 12px;
-            display: flex; flex-direction: column; gap: 4px; min-height: 80px;
+            display: flex; flex-direction: column; gap: 4px; min-height: 60px; max-height: 120px;
             scrollbar-width: thin; scrollbar-color: var(--fish-dim) transparent;
-        }
-        .chat-msg { font-size: .72rem; line-height: 1.4; }
-        .chat-msg .cn { color: var(--fish); font-weight: 600; margin-right: 4px; }
-        .chat-msg .ct { color: rgba(220,220,220,.75); }
-        #chat-input-row {
-            display: flex; gap: 6px; padding: 8px 10px;
             border-top: 1px solid rgba(0,200,224,.1);
         }
-        #chat-input {
-            flex: 1; background: rgba(0,200,224,.06); border: 1px solid rgba(0,200,224,.2);
-            border-radius: 8px; padding: 6px 10px; font-size: .75rem;
-            color: #e8e8e8; font-family: 'Outfit', sans-serif; outline: none;
+        .chat-msg { font-size: .72rem; line-height: 1.4;
+            padding: 3px 7px; border-radius: 7px;
+            background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.05);
         }
-        #chat-input::placeholder { color: rgba(200,200,200,.3); }
-        #chat-send {
-            background: var(--fish-bg); border: 1px solid var(--fish-bd);
-            border-radius: 8px; padding: 6px 12px; color: var(--fish); font-size: .75rem; cursor: pointer;
-        }
-        #chat-send:hover { background: rgba(0,200,224,.22); }
+        .chat-msg .cn { color: var(--fish); font-weight: 600; margin-right: 4px; }
+        .chat-msg .ct { color: rgba(220,220,220,.75); }
 
-        /* ── SPEECH BUBBLES ── */
-        .speech-bubble {
-            position: absolute; bottom: calc(100% + 6px); left: 50%;
+        /* ── SPEECH BUBBLES (igual que continental) ── */
+        .bubble-anchor {
+            position: absolute;
+            bottom: -6px; left: 50%;
             transform: translateX(-50%);
-            background: rgba(10,30,45,.95); border: 1px solid var(--fish-bd);
-            border-radius: 10px; padding: 5px 10px;
-            font-size: .72rem; color: #e8e8e8;
-            pointer-events: none; z-index: 200;
-            animation: bubblePop .2s ease both;
-            max-width: 160px; white-space: normal; text-align: center;
+            width: 0; height: 0;
+            pointer-events: none;
+            z-index: 80;
         }
-        .speech-bubble::after {
-            content: ''; position: absolute; top: 100%; left: 50%;
-            transform: translateX(-50%);
-            border: 5px solid transparent;
-            border-top-color: rgba(10,30,45,.95);
+        #my-bubble-anchor {
+            position: relative;
+            width: 0; height: 0;
+            margin: 0 auto;
+            pointer-events: none;
+            z-index: 200;
         }
-        @keyframes bubblePop {
-            from { opacity:0; transform: translateX(-50%) scale(.8); }
-            to   { opacity:1; transform: translateX(-50%) scale(1); }
+        .bubble-anchor .speech-bubble {
+            position: absolute;
+            top: 8px; bottom: auto;
+            left: 50%;
+            transform: translateX(-50%) scale(.85);
+            background: rgba(4,21,32,.97);
+            border: 1.5px solid var(--fish-bd);
+            border-radius: 10px;
+            padding: 6px 11px;
+            font-size: .73rem; color: #e8e8e0;
+            white-space: nowrap; text-align: center;
+            pointer-events: none;
+            box-shadow: 0 4px 18px rgba(0,0,0,.65);
+            opacity: 0;
+            transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+            line-height: 1.35; z-index: 80;
         }
-        #my-bubble-anchor { position: relative; }
         #my-bubble-anchor .speech-bubble {
-            bottom: auto; top: calc(100% + 6px);
+            position: absolute;
+            bottom: 12px; top: auto;
+            left: 50%;
+            transform: translateX(-50%) scale(.85);
+            background: rgba(4,21,32,.97);
+            border: 1.5px solid var(--fish-bd);
+            border-radius: 10px;
+            padding: 6px 11px;
+            font-size: .73rem; color: #e8e8e0;
+            white-space: nowrap; text-align: center;
+            pointer-events: none;
+            box-shadow: 0 4px 18px rgba(0,0,0,.65);
+            opacity: 0;
+            transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+            line-height: 1.35; z-index: 200;
+        }
+        /* Triángulo hacia arriba (para rivales: globito baja desde el rival) */
+        .bubble-anchor .speech-bubble::before {
+            content: ''; position: absolute;
+            bottom: 100%; left: 50%; transform: translateX(-50%);
+            border: 7px solid transparent;
+            border-bottom-color: var(--fish-bd);
+        }
+        .bubble-anchor .speech-bubble::after {
+            content: ''; position: absolute;
+            bottom: calc(100% - 1px); left: 50%; transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-bottom-color: rgba(4,21,32,.97);
+            z-index: 1;
+        }
+        /* Triángulo hacia abajo (para el jugador propio: globito sube) */
+        #my-bubble-anchor .speech-bubble::before {
+            content: ''; position: absolute;
+            top: 100%; left: 50%; transform: translateX(-50%);
+            border: 7px solid transparent;
+            border-top-color: var(--fish-bd);
         }
         #my-bubble-anchor .speech-bubble::after {
-            top: auto; bottom: 100%;
-            border-top-color: transparent;
-            border-bottom-color: rgba(10,30,45,.95);
+            content: ''; position: absolute;
+            top: calc(100% - 1px); left: 50%; transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: rgba(4,21,32,.97);
+            z-index: 1;
+        }
+        .bubble-anchor .speech-bubble.visible,
+        #my-bubble-anchor .speech-bubble.visible {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
         }
 
         /* ── EMOJI FLOTANTE ── */
         .reaction-float {
             position: fixed; font-size: 1.8rem; pointer-events: none; z-index: 9999;
-            animation: floatUp 1.6s ease-out forwards;
+            animation: floatUp 2s cubic-bezier(.22,1,.36,1) forwards;
         }
         @keyframes floatUp {
-            0%   { opacity: 1; transform: translateY(0) scale(1); }
-            80%  { opacity: .8; }
-            100% { opacity: 0; transform: translateY(-120px) scale(1.3); }
+            0%   { opacity:0; transform: scale(.3) translateY(0); }
+            15%  { opacity:1; transform: scale(1.25) translateY(-10px); }
+            35%  { transform: scale(1) translateY(-5px); }
+            70%  { opacity:1; transform: scale(1) translateY(-22px); }
+            100% { opacity:0; transform: scale(.8) translateY(-55px); }
         }
 
         /* ── RIVALES ── */
@@ -167,6 +238,7 @@
             border-radius: 12px; padding: 8px 12px;
             min-width: 110px; max-width: 175px; flex: 1;
             transition: all .2s; cursor: default; position: relative;
+            overflow: visible;
         }
         .rival-card.selectable   { cursor: pointer; border-color: var(--fish-bd); }
         .rival-card.selectable:hover { background: var(--fish-bg); border-color: var(--fish); transform: translateY(-2px); }
@@ -279,7 +351,6 @@
         #dame-hint.show { display: block; }
 
         /* ── MANO ── */
-        #my-bubble-anchor { position: relative; }
         #my-hand { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:10px; }
 
         /* ── CARTA ── */
@@ -369,7 +440,6 @@
     </div>
 </div>
 
-<!-- log oculto: el JS lo sigue llenando pero no se muestra -->
 <div id="log-area" style="display:none"></div>
 
 <div id="slots-section">
@@ -406,9 +476,9 @@
     </div>
     <div id="my-jugadas"></div>
     <div id="dame-hint"></div>
-    <div id="my-bubble-anchor">
-        <div id="my-hand"></div>
-    </div>
+    <!-- anchor para el globito del jugador propio -->
+    <div id="my-bubble-anchor"></div>
+    <div id="my-hand"></div>
     <div id="actions-area">
         <div id="hint-line"></div>
         <div id="action-btns"></div>
@@ -418,27 +488,33 @@
 <!-- CHAT PANEL -->
 <div id="chat-panel">
     <div id="chat-panel-header">
-        <span>💬 Chat &amp; Reacciones</span>
+        <span>💬 Reacciones</span>
         <button id="chat-close" onclick="toggleChat()">✕</button>
     </div>
+
+    <div class="chat-section-lbl">Emojis</div>
     <div id="emoji-grid">
-        <button class="emoji-btn" onclick="sendReaction('emoji','😂')">😂</button>
-        <button class="emoji-btn" onclick="sendReaction('emoji','😱')">😱</button>
-        <button class="emoji-btn" onclick="sendReaction('emoji','🔥')">🔥</button>
-        <button class="emoji-btn" onclick="sendReaction('emoji','👏')">👏</button>
-        <button class="emoji-btn" onclick="sendReaction('emoji','😤')">😤</button>
-        <button class="emoji-btn" onclick="sendReaction('emoji','🥳')">🥳</button>
-        <button class="emoji-btn" onclick="sendReaction('texto','¡PAGA!')">💳 PAGA</button>
-        <button class="emoji-btn" onclick="sendReaction('texto','¡Ya gané!')">🏆 Gané</button>
-        <button class="emoji-btn" onclick="sendReaction('texto','¡Buena!')">👍 Buena</button>
-        <button class="emoji-btn" onclick="sendReaction('texto','¡Suerte!')">🍀 Suerte</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😂')" title="Risa">😂</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😱')" title="Sorpresa">😱</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','🔥')" title="Fuego">🔥</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','👏')" title="Aplausos">👏</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😤')" title="Frustración">😤</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','🥳')" title="Celebración">🥳</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😢')" title="Tristeza">😢</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','🤬')" title="Enojo">🤬</button>
     </div>
+
+    <div class="chat-section-lbl">Mensajes rápidos</div>
+    <div id="quick-msgs">
+        <button class="quick-btn" onclick="sendReaction('msg','¡Ya dame mi carta! 😩')">¡Ya dame mi carta! 😩</button>
+        <button class="quick-btn" onclick="sendReaction('msg','¡Ya gané, jaja! 🏆')">¡Ya gané, jaja! 🏆</button>
+        <button class="quick-btn" onclick="sendReaction('msg','¡Qué mala suerte! 😭')">¡Qué mala suerte! 😭</button>
+        <button class="quick-btn" onclick="sendReaction('msg','¡Buena jugada! 👏')">¡Buena jugada! 👏</button>
+        <button class="quick-btn" onclick="sendReaction('msg','¡No mames! 😤')">¡No mames! 😤</button>
+        <button class="quick-btn" onclick="sendReaction('msg','¡Suerte! 🍀')">¡Suerte! 🍀</button>
+    </div>
+
     <div id="chat-messages"></div>
-    <div id="chat-input-row">
-        <input id="chat-input" type="text" maxlength="60" placeholder="Escribe algo…"
-               onkeydown="if(event.key==='Enter') sendChatMsg()">
-        <button id="chat-send" onclick="sendChatMsg()">➤</button>
-    </div>
 </div>
 
 <div id="fin-modal">
@@ -456,14 +532,17 @@
 <script src="js/pesca.js"></script>
 
 <!-- ═══════════════════════════════════
-     CHAT + REACCIONES
+     CHAT + REACCIONES — igual que continental
 ════════════════════════════════════ -->
 <script>
 (function () {
     'use strict';
+
+    const BUBBLE_DURATION = 3800;
     let chatOpen    = false;
     let unreadCount = 0;
 
+    /* ── Toggle panel ── */
     window.toggleChat = function () {
         chatOpen = !chatOpen;
         document.getElementById('chat-panel').classList.toggle('open', chatOpen);
@@ -477,66 +556,131 @@
         }
     };
 
+    /* Cerrar panel al hacer click fuera */
+    document.addEventListener('click', (e) => {
+        const panel  = document.getElementById('chat-panel');
+        const toggle = document.getElementById('chat-toggle');
+        if (chatOpen && !panel.contains(e.target) &&
+            e.target !== toggle && !toggle.contains(e.target)) {
+            chatOpen = false;
+            panel.classList.remove('open');
+        }
+    });
+
+    /* ── Nombre propio desde cookie ── */
     function _getNombre() {
         const m = document.cookie.match(/(?:^|; )continental_nombre=([^;]*)/);
         return m ? decodeURIComponent(m[1]) : 'Jugador';
     }
 
+    /* ── Enviar reacción ── */
     window.sendReaction = function (tipo, texto) {
         if (typeof WS === 'undefined') return;
-        WS.send({ type: 'reaccion', reaction: { tipo, texto, nombre: _getNombre() } });
+        const nombre = _getNombre();
+        WS.send({ type: 'reaccion', reaction: { tipo, texto, nombre } });
+        // mostrar localmente de inmediato
+        _showReaction({ tipo, texto, nombre });
+        // cerrar panel
+        chatOpen = false;
+        document.getElementById('chat-panel').classList.remove('open');
     };
 
-    window.sendChatMsg = function () {
-        const input = document.getElementById('chat-input');
-        const txt   = (input.value || '').trim();
-        if (!txt) return;
-        sendReaction('texto', txt);
-        input.value = '';
-    };
+    /* ── Recibir reacción de otros ── */
+    function _registerWS() {
+        if (typeof WS !== 'undefined') {
+            WS.on('reaccion', function(data) {
+                // no duplicar el propio (ya se mostró localmente)
+                if (data.nombre === _getNombre()) return;
+                _showReaction(data);
+            });
+        } else {
+            setTimeout(_registerWS, 100);
+        }
+    }
+    _registerWS();
 
-    function _handleReaccion(data) {
+    /* ── Lógica principal de visualización ── */
+    function _showReaction(data) {
         const { tipo, texto, nombre } = data;
 
-        // Emoji flotante
+        _appendChatMessage(nombre, texto);
+
         if (tipo === 'emoji') {
+            // Emoji flotante en pantalla
             const el = document.createElement('div');
             el.className = 'reaction-float';
             el.textContent = texto;
             el.style.left   = (15 + Math.random() * 65) + 'vw';
-            el.style.bottom = '130px';
+            el.style.bottom = '140px';
             document.body.appendChild(el);
-            setTimeout(() => el.remove(), 1700);
+            setTimeout(() => el.remove(), 2100);
         }
 
-        // Speech bubble
-        const bubble = document.createElement('div');
-        bubble.className   = 'speech-bubble';
-        bubble.textContent = texto;
+        // Globito de diálogo sobre el jugador/rival
+        _showSpeechBubble(nombre, texto);
+    }
 
-        // Buscar rival por nombre
-        let anchor = null;
-        document.querySelectorAll('.rival-card .r-name').forEach(el => {
-            if (el.textContent.trim().includes(nombre)) anchor = el.closest('.rival-card');
+    /* ── Globito de diálogo ── */
+    function _showSpeechBubble(nombre, texto) {
+        const anchor = _getOrCreateBubbleAnchor(nombre);
+        if (!anchor) return;
+
+        let bubble = anchor.querySelector('.speech-bubble');
+        if (!bubble) {
+            bubble = document.createElement('div');
+            bubble.className = 'speech-bubble';
+            anchor.appendChild(bubble);
+        }
+
+        bubble.textContent = texto;
+        bubble.classList.remove('visible');
+        void bubble.offsetWidth; // reflow para reiniciar animación
+        bubble.classList.add('visible');
+
+        clearTimeout(bubble._hideT);
+        bubble._hideT = setTimeout(() => {
+            bubble.classList.remove('visible');
+        }, BUBBLE_DURATION);
+    }
+
+    /* ── Encontrar o crear anchor del globito ── */
+    function _getOrCreateBubbleAnchor(nombre) {
+        // ¿Es el jugador propio?
+        if (nombre === _getNombre()) {
+            return document.getElementById('my-bubble-anchor');
+        }
+
+        // Buscar entre los rivales por nombre en .r-name
+        let rivalCard = null;
+        document.querySelectorAll('.rival-card').forEach(card => {
+            const nameEl = card.querySelector('.r-name');
+            if (nameEl && nameEl.textContent.trim().includes(nombre)) {
+                rivalCard = card;
+            }
         });
 
-        if (anchor) {
-            anchor.appendChild(bubble);
-        } else {
-            const myAnchor = document.getElementById('my-bubble-anchor');
-            if (myAnchor) myAnchor.appendChild(bubble);
-        }
-        setTimeout(() => bubble.remove(), 3200);
+        if (!rivalCard) return null;
 
-        // Agregar al panel de chat
-        const msgs = document.getElementById('chat-messages');
-        if (msgs) {
-            const div = document.createElement('div');
-            div.className = 'chat-msg';
-            div.innerHTML  = `<span class="cn">${nombre}:</span><span class="ct"> ${texto}</span>`;
-            msgs.appendChild(div);
-            if (chatOpen) msgs.scrollTop = msgs.scrollHeight;
+        // Crear o reutilizar .bubble-anchor dentro del rival
+        let anchor = rivalCard.querySelector('.bubble-anchor');
+        if (!anchor) {
+            anchor = document.createElement('div');
+            anchor.className = 'bubble-anchor';
+            rivalCard.appendChild(anchor);
         }
+        return anchor;
+    }
+
+    /* ── Historial de chat ── */
+    function _appendChatMessage(nombre, texto) {
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+        const div = document.createElement('div');
+        div.className = 'chat-msg';
+        div.innerHTML = `<span class="cn">${_esc(nombre)}:</span><span class="ct"> ${_esc(texto)}</span>`;
+        container.appendChild(div);
+        while (container.children.length > 30) container.removeChild(container.firstChild);
+        if (chatOpen) container.scrollTop = container.scrollHeight;
 
         // Badge si panel cerrado
         if (!chatOpen) {
@@ -547,15 +691,13 @@
         }
     }
 
-    // Registrar listener una vez que WS esté listo
-    function _registerWS() {
-        if (typeof WS !== 'undefined') {
-            WS.on('reaccion', _handleReaccion);
-        } else {
-            setTimeout(_registerWS, 100);
-        }
+    function _esc(str) {
+        return String(str)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;');
     }
-    _registerWS();
+
 })();
 </script>
 
@@ -565,11 +707,10 @@
 <script>
 (function () {
     'use strict';
-    let dragId       = null;  // id carta arrastrada
-    let dragFromSlot = null;  // índice de slot origen (null = mano)
-    let ghost        = null;  // clone visual
+    let dragId       = null;
+    let dragFromSlot = null;
+    let ghost        = null;
 
-    /* Expuesto para pesca.js al crear cartas */
     window._pescaDragStart = function (e, cardEl, cardId, fromSlot) {
         e.stopPropagation();
         dragId       = cardId;
@@ -577,7 +718,6 @@
 
         cardEl.classList.add('dragging');
 
-        // Clonar carta como fantasma
         ghost = cardEl.cloneNode(true);
         ghost.classList.remove('dragging', 'selected');
         ghost.style.cssText = [
@@ -599,23 +739,14 @@
         }
     };
 
-    /* Funciones de drop expuestas para pesca.js */
     window._pescaDropToSlot = function (cardId, slotIdx) {
-        // Simula click en slot con carta seleccionada de mano
-        // pesca.js ya tiene clickSlot() que hace esto
-        if (typeof clickCardDropOnSlot === 'function') {
-            clickCardDropOnSlot(cardId, slotIdx);
-        }
+        if (typeof clickCardDropOnSlot === 'function') clickCardDropOnSlot(cardId, slotIdx);
     };
     window._pescaMoveSlotToSlot = function (cardId, fromSlot, toSlot) {
-        if (typeof pescaMoveSlotToSlot === 'function') {
-            pescaMoveSlotToSlot(cardId, fromSlot, toSlot);
-        }
+        if (typeof pescaMoveSlotToSlot === 'function') pescaMoveSlotToSlot(cardId, fromSlot, toSlot);
     };
     window._pescaReturnToHand = function (cardId, fromSlot) {
-        if (typeof pescaReturnToHand === 'function') {
-            pescaReturnToHand(cardId, fromSlot);
-        }
+        if (typeof pescaReturnToHand === 'function') pescaReturnToHand(cardId, fromSlot);
     };
 
     function _posGhost(x, y) {
@@ -666,7 +797,6 @@
             return;
         }
 
-        // Volver a mano si viene de slot
         if (dragFromSlot !== null) {
             const hand = document.getElementById('my-hand');
             const area = document.getElementById('my-area');
@@ -690,6 +820,6 @@
 })();
 </script>
 
-<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.6.0</div>
+<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.6.1</div>
 </body>
 </html>

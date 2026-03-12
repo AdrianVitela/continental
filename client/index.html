@@ -385,7 +385,10 @@
                 <span id="user-display" style="font-size:.85rem;color:var(--gold-hi);font-weight:600"></span>
                 <span id="user-badge" style="font-size:.72rem;color:var(--text-dim)"></span>
             </div>
-            <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
+            <div style="display:flex;gap:6px">
+              <button onclick="openFeedback()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">💬 Feedback</button>
+              <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
+            </div>
         </div>
 
         <!-- ===== FORMULARIO ===== -->
@@ -503,6 +506,97 @@
     </div>
 
     <div id="toast"></div>
+
+    <!-- ===== MODAL FEEDBACK ===== -->
+    <div id="feedback-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+      <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(380px,92%);display:flex;flex-direction:column;gap:16px;animation:fadeUp .25s ease both">
+        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px">💬 Deja tu feedback</h3>
+        <p style="font-size:.78rem;color:var(--text-dim);margin:0;text-align:center">Tu opinión nos ayuda a mejorar el juego</p>
+
+        <!-- Estrellas -->
+        <div style="display:flex;justify-content:center;gap:8px" id="stars-row">
+          <span class="star" data-v="1" onclick="setStar(1)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
+          <span class="star" data-v="2" onclick="setStar(2)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
+          <span class="star" data-v="3" onclick="setStar(3)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
+          <span class="star" data-v="4" onclick="setStar(4)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
+          <span class="star" data-v="5" onclick="setStar(5)" style="font-size:1.8rem;cursor:pointer;opacity:.4;transition:all .15s">⭐</span>
+        </div>
+
+        <!-- Mensaje -->
+        <textarea id="feedback-msg" placeholder="Cuéntanos qué piensas, qué mejorarías o qué te gustó..." style="background:rgba(0,0,0,.3);border:1px solid rgba(200,160,69,.2);border-radius:10px;color:var(--text);font-size:.88rem;padding:12px 14px;outline:none;resize:vertical;min-height:100px;font-family:inherit;transition:border-color .2s" onfocus="this.style.borderColor='rgba(200,160,69,.5)'" onblur="this.style.borderColor='rgba(200,160,69,.2)'"></textarea>
+
+        <div id="feedback-error" style="display:none;background:rgba(220,50,50,.12);border:1px solid rgba(220,50,50,.3);border-radius:8px;color:#ff7070;font-size:.78rem;padding:8px 12px;text-align:center"></div>
+        <div id="feedback-success" style="display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;color:#2ecc71;font-size:.78rem;padding:8px 12px;text-align:center"></div>
+
+        <div style="display:flex;gap:8px">
+          <button onclick="closeFeedback()" style="flex:1;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-dim);font-size:.82rem;cursor:pointer;font-family:inherit">Cancelar</button>
+          <button id="feedback-btn" onclick="submitFeedback()" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gold),#b8920a);border:none;border-radius:8px;color:#0b1e12;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s">Enviar ✈</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let feedbackRating = 0;
+
+      function openFeedback() {
+        feedbackRating = 0;
+        document.getElementById('feedback-msg').value = '';
+        document.getElementById('feedback-error').style.display   = 'none';
+        document.getElementById('feedback-success').style.display = 'none';
+        document.querySelectorAll('.star').forEach(s => s.style.opacity = '.4');
+        const ov = document.getElementById('feedback-overlay');
+        ov.style.display = 'flex';
+      }
+      function closeFeedback() {
+        document.getElementById('feedback-overlay').style.display = 'none';
+      }
+      function setStar(v) {
+        feedbackRating = v;
+        document.querySelectorAll('.star').forEach(s => {
+          s.style.opacity = Number(s.dataset.v) <= v ? '1' : '.4';
+          s.style.transform = Number(s.dataset.v) <= v ? 'scale(1.15)' : 'scale(1)';
+        });
+      }
+      async function submitFeedback() {
+        const mensaje = document.getElementById('feedback-msg').value.trim();
+        const btn     = document.getElementById('feedback-btn');
+        const errEl   = document.getElementById('feedback-error');
+        const okEl    = document.getElementById('feedback-success');
+        errEl.style.display = 'none';
+        okEl.style.display  = 'none';
+
+        if (!mensaje || mensaje.length < 5) {
+          errEl.textContent    = 'Por favor escribe un mensaje.';
+          errEl.style.display  = 'block';
+          return;
+        }
+        btn.disabled     = true;
+        btn.textContent  = 'Enviando...';
+        try {
+          const token = localStorage.getItem('token');
+          const res   = await fetch('/api/feedback', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body:    JSON.stringify({ mensaje, rating: feedbackRating || null }),
+          });
+          const data = await res.json();
+          if (!res.ok) { errEl.textContent = data.error; errEl.style.display = 'block'; return; }
+          okEl.textContent   = '¡Gracias por tu feedback! 🎉';
+          okEl.style.display = 'block';
+          setTimeout(closeFeedback, 1800);
+        } catch {
+          errEl.textContent   = 'Error de conexión.';
+          errEl.style.display = 'block';
+        } finally {
+          btn.disabled    = false;
+          btn.textContent = 'Enviar ✈';
+        }
+      }
+      // Cerrar al click fuera
+      document.getElementById('feedback-overlay')?.addEventListener('click', function(e) {
+        if (e.target === this) closeFeedback();
+      });
+    </script>
 
     <script src="js/socket.js"></script>
     <script>

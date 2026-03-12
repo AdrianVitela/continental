@@ -15,9 +15,11 @@ const wss  = new WebSocketServer({ server: srv });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Rutas auth
-const authRouter = require('./auth');
+// Rutas auth y feedback
+const authRouter     = require('./auth');
+const feedbackRouter = require('./feedback');
 app.use('/api', authRouter);
+app.use('/api', feedbackRouter);
 
 app.get('/',         (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
 app.get('/login',    (_, res) => res.sendFile(path.join(__dirname, '../client/login.html')));

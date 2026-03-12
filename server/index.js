@@ -1,4 +1,5 @@
 'use strict';
+require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const express  = require('express');
 const http     = require('http');
 const { WebSocketServer } = require('ws');
@@ -11,9 +12,17 @@ const app  = express();
 const srv  = http.createServer(app);
 const wss  = new WebSocketServer({ server: srv });
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
-app.get('/',     (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
-app.get('/game', (_, res) => res.sendFile(path.join(__dirname, '../client/game.html')));
+
+// Rutas auth
+const authRouter = require('./auth');
+app.use('/api', authRouter);
+
+app.get('/',         (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
+app.get('/login',    (_, res) => res.sendFile(path.join(__dirname, '../client/login.html')));
+app.get('/register', (_, res) => res.sendFile(path.join(__dirname, '../client/register.html')));
+app.get('/game',     (_, res) => res.sendFile(path.join(__dirname, '../client/game.html')));
 
 const rooms   = new Map();
 const clients = new Map();
@@ -61,8 +70,6 @@ wss.on('connection', (ws) => {
     try { msg = JSON.parse(raw); } catch { return; }
     const ctx = clients.get(ws);
 
-    // Envolver todo el handler en try/catch para que ninguna excepción
-    // inesperada derribe el servidor ni desconecte al jugador
     try {
       switch (msg.type) {
 
@@ -149,7 +156,6 @@ wss.on('connection', (ws) => {
         case 'set_table_color': {
           const room = rooms.get(ctx.roomCode);
           if (!room || !ctx.playerId) return;
-          // Solo el host puede cambiar el color
           if (room.players[0]?.id !== ctx.playerId) return;
           const validColors = ['green', 'navy', 'wine', 'black'];
           const color = validColors.includes(msg.color) ? msg.color : 'green';
@@ -170,7 +176,6 @@ wss.on('connection', (ws) => {
 
       }
     } catch (err) {
-      // Captura cualquier excepción no manejada para que no derribe el server
       console.error('[index] Excepción no capturada en ws.message, tipo:', msg?.type, err);
       try { send(ws, { type: 'error', msg: 'Error interno del servidor.' }); } catch (_) {}
     }

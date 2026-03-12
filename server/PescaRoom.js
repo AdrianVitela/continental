@@ -1,5 +1,5 @@
 'use strict';
-const { PescaEngine } = require('./pescaEngine');
+const { PescaEngine } = require('./PescaEngine');
 
 const RESPUESTA_TIMEOUT_MS = 5000;
 

@@ -9,7 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
 
 // Configurar transporter de Gmail
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
+  family: 4, // forzar IPv4
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,

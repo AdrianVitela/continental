@@ -37,7 +37,7 @@ router.post('/feedback', async (req, res) => {
 
     const estrellas = safeRating ? '⭐'.repeat(safeRating) + ` (${safeRating}/5)` : 'Sin calificación';
 
-    await resend.emails.send({
+    const resendResult = await resend.emails.send({
       from: 'Continental <onboarding@resend.dev>',
       to:   process.env.FEEDBACK_TO.split(',').map(e => e.trim()),
       subject: `💬 Nuevo feedback de ${nombre}`,
@@ -55,6 +55,11 @@ router.post('/feedback', async (req, res) => {
       `,
     });
 
+    console.log('[feedback] Resend result:', JSON.stringify(resendResult));
+    if (resendResult.error) {
+      console.error('[feedback] Resend error:', resendResult.error);
+      return res.status(500).json({ error: 'Error al enviar email.' });
+    }
     res.json({ ok: true });
 
   } catch (err) {

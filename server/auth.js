@@ -7,7 +7,7 @@ const pool     = require('./db');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
 
-const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]{2,18}$/;
+const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ── POST /api/register ──────────────────────────────────────────

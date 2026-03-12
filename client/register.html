@@ -222,7 +222,7 @@
       <div class="field">
         <label>Nombre de usuario</label>
         <input type="text" id="nombre" placeholder="TuNombre" maxlength="18" autocomplete="username" oninput="sanitizeNombre(this)" onkeydown="blockSpecial(event)" onpaste="sanitizePaste(event)">
-        <span class="hint" id="hint-nombre">2–18 caracteres, solo letras y números. Sin espacios ni caracteres especiales.</span>
+        <span class="hint" id="hint-nombre">2–18 caracteres, letras, números y espacios.</span>
       </div>
 
       <div class="field">
@@ -272,7 +272,7 @@
       window.location.href = '/';
     }
 
-    const VALID_CHARS = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]$/;
+    const VALID_CHARS = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]$/;
 
     function blockSpecial(e) {
       // Permitir teclas de control (backspace, delete, arrows, etc.)
@@ -284,7 +284,7 @@
 
     function sanitizeNombre(input) {
       // Limpiar cualquier carácter inválido que haya entrado (ej: por autocompletar)
-      const clean = input.value.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]/g, '');
+      const clean = input.value.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]/g, '');
       if (input.value !== clean) input.value = clean;
       checkNombre();
     }
@@ -292,7 +292,7 @@
     function sanitizePaste(e) {
       e.preventDefault();
       const text  = (e.clipboardData || window.clipboardData).getData('text');
-      const clean = text.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]/g, '').slice(0, 18);
+      const clean = text.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]/g, '').slice(0, 18);
       const input = e.target;
       const start = input.selectionStart;
       const end   = input.selectionEnd;
@@ -301,7 +301,7 @@
       checkNombre();
     }
 
-    const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]{2,18}$/;
+    const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     function checkNombre() {
@@ -311,7 +311,7 @@
       if (!val) {
         input.classList.remove('valid','invalid');
         hint.className = 'hint';
-        hint.textContent = '2–18 caracteres, solo letras y números. Sin espacios ni caracteres especiales.';
+        hint.textContent = '2–18 caracteres, letras, números y espacios.';
         return false;
       }
       if (!NAME_RE.test(val)) {
@@ -319,7 +319,7 @@
         hint.className = 'hint error';
         hint.textContent = val.length < 2 ? 'Mínimo 2 caracteres.' :
                            val.length > 18 ? 'Máximo 18 caracteres.' :
-                           'Solo letras y números. Sin espacios ni caracteres especiales (!@#...).';
+                           'Solo letras, números y espacios.';
         return false;
       }
       input.classList.add('valid'); input.classList.remove('invalid');

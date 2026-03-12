@@ -292,11 +292,11 @@ function setMode(el, suffix) {
 
 function chgMax(d, suffix) {
   if (suffix === 'pesca') {
-    maxPlayersPesca = Math.max(2, Math.min(6, maxPlayersPesca + d));
+    maxPlayersPesca = Math.max(2, Math.min(8, maxPlayersPesca + d));
     const el = document.getElementById('max-val-pesca');
     if (el) el.textContent = maxPlayersPesca;
   } else {
-    maxPlayers = Math.max(2, Math.min(5, maxPlayers + d));
+    maxPlayers = Math.max(2, Math.min(8, maxPlayers + d));
     const el = document.getElementById(suffix ? 'max-val-cont' : 'max-val');
     if (el) el.textContent = maxPlayers;
   }
@@ -376,9 +376,11 @@ function copyCode() {
    ACCIONES — CONTINENTAL
    ================================================================ */
 function crearSala() {
-  // Soportar input original y nuevo con sufijo
-  const input  = document.getElementById('crear-nombre-cont') || document.getElementById('crear-nombre');
-  const nombre = input?.value?.trim() || '';
+  // Usar nombre autenticado si está disponible, sino leer del input
+  const nombre = (typeof getAuthNombre === 'function' && getAuthNombre())
+    || document.getElementById('crear-nombre-cont')?.value?.trim()
+    || document.getElementById('crear-nombre')?.value?.trim()
+    || '';
   const hintId = document.getElementById('crear-nombre-cont') ? 'crear-nombre-cont' : 'crear-nombre';
   if (!validateName(nombre, hintId)) return;
   saveName(nombre);
@@ -387,14 +389,18 @@ function crearSala() {
 
 function unirse(suffix) {
   if (suffix === 'pesca') { _unirseAPesca(); return; }
-  const hasCont = !!document.getElementById('unirse-nombre-cont');
-  const nId = hasCont ? 'unirse-nombre-cont' : 'unirse-nombre';
-  const cId = hasCont ? 'unirse-code-cont'   : 'unirse-code';
-  const nombre = document.getElementById(nId)?.value?.trim() || '';
-  const code   = document.getElementById(cId)?.value?.trim().toUpperCase() || '';
+  // Nombre: autenticado > input con sufijo > input original
+  const nombre = (typeof getAuthNombre === 'function' && getAuthNombre())
+    || document.getElementById('unirse-nombre-cont')?.value?.trim()
+    || document.getElementById('unirse-nombre')?.value?.trim()
+    || '';
+  const hasCont = !!document.getElementById('unirse-code-cont');
+  const cId = hasCont ? 'unirse-code-cont' : 'unirse-code';
+  const nHintId = document.getElementById('unirse-nombre-cont') ? 'unirse-nombre-cont' : 'unirse-nombre';
+  const code = document.getElementById(cId)?.value?.trim().toUpperCase() || '';
   let ok = true;
-  if (!validateName(nombre, nId)) ok = false;
-  if (!validateCode(code, cId))   ok = false;
+  if (!validateName(nombre, nHintId)) ok = false;
+  if (!validateCode(code, cId))       ok = false;
   if (!ok) return;
   saveName(nombre);
   WS.send({ type: 'join_room', nombre, code });
@@ -408,19 +414,27 @@ function iniciarJuego(suffix) {
    ACCIONES — PESCA
    ================================================================ */
 function crearSalaPesca() {
-  const input  = document.getElementById('crear-nombre-pesca');
-  const nombre = input?.value?.trim() || '';
+  const nombre = (typeof getAuthNombre === 'function' && getAuthNombre())
+    || document.getElementById('crear-nombre-pesca')?.value?.trim()
+    || '';
   if (!validateName(nombre, 'crear-nombre-pesca')) return;
   saveName(nombre);
   WS.send({ type: 'create_pesca', nombre, maxPlayers: maxPlayersPesca });
 }
 
 function _unirseAPesca() {
-  const nombre = document.getElementById('unirse-nombre-pesca')?.value?.trim() || '';
-  const code   = document.getElementById('unirse-code-pesca')?.value?.trim().toUpperCase() || '';
+  const nombre = (typeof getAuthNombre === 'function' && getAuthNombre())
+    || document.getElementById('unirse-nombre-pesca')?.value?.trim()
+    || '';
+  const code = document.getElementById('unirse-code-pesca')?.value?.trim().toUpperCase()
+    || document.getElementById('unirse-code')?.value?.trim().toUpperCase()
+    || '';
   let ok = true;
-  if (!validateName(nombre, 'unirse-nombre-pesca')) ok = false;
-  if (!validateCode(code,   'unirse-code-pesca'))   ok = false;
+  // Si viene de auth, nombre ya es válido; solo validar si viene de input
+  if (!(typeof getAuthNombre === 'function' && getAuthNombre())) {
+    if (!validateName(nombre, 'unirse-nombre-pesca')) ok = false;
+  }
+  if (!validateCode(code, 'unirse-code-pesca')) ok = false;
   if (!ok) return;
   saveName(nombre);
   WS.send({ type: 'join_pesca', nombre, code });
@@ -435,16 +449,19 @@ function showLobby(lobbyState, pid, code, host) {
   isHost = host;
 
   if (currentGame === 'pesca') {
-    // Ocultar primer card-box del lobby pesca (el formulario)
+    // HTML con lobbies separados (lobby-pesca)
     const lobbyEl = document.getElementById('lobby-pesca');
     if (lobbyEl) {
       const boxes = lobbyEl.querySelectorAll('.card-box');
       if (boxes[0]) boxes[0].style.display = 'none';
+      const room = document.getElementById('lobby-room-pesca');
+      if (room) room.style.display = 'flex';
+      const codeEl = document.getElementById('room-code-display-pesca');
+      if (codeEl) codeEl.textContent = code;
+    } else {
+      // HTML original — usar el mismo lobby-room
+      _showLobbyOriginal(code);
     }
-    const room = document.getElementById('lobby-room-pesca');
-    if (room) room.style.display = 'flex';
-    const codeEl = document.getElementById('room-code-display-pesca');
-    if (codeEl) codeEl.textContent = code;
   } else if (document.getElementById('lobby-setup-cont')) {
     document.getElementById('lobby-setup-cont').style.display = 'none';
     const room = document.getElementById('lobby-room-cont');
@@ -453,27 +470,35 @@ function showLobby(lobbyState, pid, code, host) {
     if (codeEl) codeEl.textContent = code;
   } else {
     // HTML original
-    const setup = document.getElementById('lobby-setup');
-    if (setup) setup.style.display = 'none';
-    const room = document.getElementById('lobby-room');
-    if (room) room.classList.add('show');
-    const codeEl = document.getElementById('room-code-display');
-    if (codeEl) codeEl.textContent = code;
+    _showLobbyOriginal(code);
   }
 
   updateLobbyState(lobbyState);
+}
+
+function _showLobbyOriginal(code) {
+  const setup = document.getElementById('lobby-setup');
+  if (setup) setup.style.display = 'none';
+  const room = document.getElementById('lobby-room');
+  if (room) room.classList.add('show');
+  const codeEl = document.getElementById('room-code-display');
+  if (codeEl) codeEl.textContent = code;
+  // Ocultar mesa-picker si es Pesca (no aplica)
+  const mesaPicker = document.getElementById('mesa-picker-wrap');
+  if (mesaPicker) mesaPicker.style.display = (isHost && currentGame !== 'pesca') ? 'block' : 'none';
 }
 
 function updateLobbyState(lobbyState) {
   playersList = lobbyState.players;
 
   let listId, msgId, btnId;
-  if (currentGame === 'pesca') {
+  if (currentGame === 'pesca' && document.getElementById('player-list-pesca')) {
     listId = 'player-list-pesca'; msgId = 'waiting-msg-pesca'; btnId = 'btn-start-pesca';
   } else if (document.getElementById('player-list-cont')) {
     listId = 'player-list-cont';  msgId = 'waiting-msg-cont';  btnId = 'btn-start-cont';
   } else {
-    listId = 'player-list';       msgId = 'waiting-msg';       btnId = 'btn-start';
+    // HTML original — un solo set de IDs
+    listId = 'player-list'; msgId = 'waiting-msg'; btnId = 'btn-start';
   }
 
   const list = document.getElementById(listId);
@@ -553,6 +578,8 @@ function escHtml(str) {
    INIT
    ================================================================ */
 function init() {
+  // Default: continental (para el HTML original de una sola página)
+  if (!currentGame) currentGame = 'continental';
   loadSavedName();
   setupSocketEvents();
   WS.connect();
@@ -577,5 +604,28 @@ window.closeNamesModalOutside = closeNamesModalOutside;
 window.shuffleNames           = shuffleNames;
 window.selectGame             = selectGame;
 window.goBack                 = goBack;
+
+// Para el index.html integrado (un solo lobby que cambia de juego)
+window._selectGameLobby = function(game) {
+  currentGame = game;
+  // Si hay sala activa abierta, no limpiar — solo actualizar estado
+};
+
+window._crearSalaActual = function() {
+  if (currentGame === 'pesca') crearSalaPesca();
+  else crearSala();
+};
+
+window._unirseActual = function() {
+  const code = document.getElementById('unirse-code')?.value?.trim().toUpperCase() || '';
+  if (currentGame === 'pesca') {
+    const nombre = (typeof getAuthNombre === 'function' && getAuthNombre()) || '';
+    if (!validateName(nombre, 'unirse-code')) { toast('Sin nombre de usuario'); return; }
+    if (!validateCode(code, 'unirse-code')) return;
+    WS.send({ type: 'join_pesca', nombre, code });
+  } else {
+    unirse();
+  }
+};
 
 document.addEventListener('DOMContentLoaded', init);

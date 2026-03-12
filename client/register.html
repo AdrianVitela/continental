@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental – Registro</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
+    }
+
+    .auth-wrap {
+      width: min(420px, 94%);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      padding: 20px 0;
+      animation: fadeDown .6s var(--eout) both;
+    }
+
+    .logo {
+      text-align: center;
+    }
+    .logo h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.8rem, 9vw, 4.5rem);
+      font-weight: 700;
+      color: var(--gold);
+      text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5);
+      letter-spacing: 4px;
+      margin: 0;
+    }
+    .logo p {
+      color: var(--text-dim);
+      font-size: .75rem;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .auth-card {
+      background: linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      border: 1px solid rgba(200,160,69,.2);
+      border-radius: 16px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+
+    .auth-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      color: var(--gold);
+      text-align: center;
+      margin: 0 0 4px;
+      letter-spacing: 1px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+    }
+    .field input {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(200,160,69,.2);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: .95rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      font-family: inherit;
+    }
+    .field input:focus {
+      border-color: rgba(200,160,69,.6);
+      box-shadow: 0 0 0 3px rgba(200,160,69,.08);
+    }
+    .field input::placeholder { color: rgba(255,255,255,.2); }
+    .field .hint {
+      font-size: .68rem;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    .btn-auth {
+      background: linear-gradient(135deg, var(--gold), #b8920a);
+      color: #0b1e12;
+      border: none;
+      border-radius: 12px;
+      padding: 13px;
+      font-size: .9rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      margin-top: 4px;
+    }
+    .btn-auth:hover  { opacity: .9; transform: translateY(-1px); }
+    .btn-auth:active { transform: translateY(0); opacity: 1; }
+    .btn-auth:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .auth-error {
+      background: rgba(220,50,50,.12);
+      border: 1px solid rgba(220,50,50,.3);
+      border-radius: 8px;
+      color: #ff7070;
+      font-size: .8rem;
+      padding: 10px 14px;
+      display: none;
+      text-align: center;
+    }
+    .auth-error.show { display: block; }
+
+    .auth-success {
+      background: rgba(46,204,113,.1);
+      border: 1px solid rgba(46,204,113,.3);
+      border-radius: 8px;
+      color: #2ecc71;
+      font-size: .8rem;
+      padding: 10px 14px;
+      display: none;
+      text-align: center;
+    }
+    .auth-success.show { display: block; }
+
+    .auth-footer {
+      text-align: center;
+      font-size: .8rem;
+      color: var(--text-dim);
+    }
+    .auth-footer a {
+      color: var(--gold);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-dim);
+      font-size: .72rem;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(200,160,69,.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="logo">
+      <h1>Continental</h1>
+      <p>El juego de cartas</p>
+    </div>
+
+    <div class="auth-card">
+      <h2 class="auth-title">Crear cuenta</h2>
+
+      <div class="auth-error"   id="error-msg"></div>
+      <div class="auth-success" id="success-msg"></div>
+
+      <div class="field">
+        <label>Nombre de usuario</label>
+        <input type="text" id="nombre" placeholder="TuNombre" maxlength="18" autocomplete="username">
+        <span class="hint">2–18 caracteres, solo letras y números.</span>
+      </div>
+
+      <div class="field">
+        <label>Correo electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+
+      <div class="field">
+        <label>Confirmar contraseña</label>
+        <input type="password" id="password2" placeholder="Repite tu contraseña" autocomplete="new-password">
+      </div>
+
+      <button class="btn-auth" id="btn-register" onclick="register()">Crear cuenta</button>
+
+      <div class="divider">o</div>
+
+      <div class="auth-footer">
+        ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Si ya tiene sesión, redirigir al lobby
+    if (localStorage.getItem('token')) {
+      window.location.href = '/';
+    }
+
+    async function register() {
+      const nombre    = document.getElementById('nombre').value.trim();
+      const email     = document.getElementById('email').value.trim();
+      const password  = document.getElementById('password').value;
+      const password2 = document.getElementById('password2').value;
+      const btn       = document.getElementById('btn-register');
+
+      ocultarMensajes();
+
+      if (!nombre || !email || !password || !password2) {
+        mostrarError('Por favor completa todos los campos.');
+        return;
+      }
+      if (password !== password2) {
+        mostrarError('Las contraseñas no coinciden.');
+        return;
+      }
+      if (password.length < 6) {
+        mostrarError('La contraseña debe tener al menos 6 caracteres.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Creando cuenta...';
+
+      try {
+        const res  = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, email, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          mostrarError(data.error || 'Error al crear cuenta.');
+          return;
+        }
+
+        localStorage.setItem('token',   data.token);
+        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+
+        mostrarExito('¡Cuenta creada! Redirigiendo...');
+        setTimeout(() => window.location.href = '/', 1200);
+
+      } catch (err) {
+        mostrarError('Error de conexión. Intenta de nuevo.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Crear cuenta';
+      }
+    }
+
+    function mostrarError(msg) {
+      const el = document.getElementById('error-msg');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function mostrarExito(msg) {
+      const el = document.getElementById('success-msg');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function ocultarMensajes() {
+      document.getElementById('error-msg').classList.remove('show');
+      document.getElementById('success-msg').classList.remove('show');
+    }
+
+    // Enter para submit
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter') register();
+    });
+  </script>
+</body>
+</html>

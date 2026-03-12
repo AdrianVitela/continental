@@ -49,9 +49,16 @@ const params = new URLSearchParams(location.search);
 myId = params.get('pid');
 const roomCode = params.get('room');
 
+// Nombre guardado en cookie por lobby.js
+function _getSavedName() {
+    const m = document.cookie.match(/(?:^|; )continental_nombre=([^;]*)/);
+    return m ? decodeURIComponent(m[1]) : 'Jugador';
+}
+
 WS.on('open', () => {
     if (myId && roomCode) {
-        WS.send({ type: 'join_pesca', nombre: '', code: roomCode, playerId: myId });
+        const nombre = _getSavedName();
+        WS.send({ type: 'join_pesca', nombre, code: roomCode, playerId: myId });
     }
 });
 

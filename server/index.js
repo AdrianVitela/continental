@@ -91,7 +91,7 @@ wss.on('connection', (ws) => {
                 // ─── Unirse a sala Continental ───────────
                 case 'join_room': {
                     const { nombre, code, playerId: existingId } = msg;
-                    const ne = validateNombre(nombre); if (ne) return send(ws, { type: 'error', msg: ne });
+                    if (!existingId) { const ne = validateNombre(nombre); if (ne) return send(ws, { type: 'error', msg: ne }); }
                     const ce = validateCode(code);     if (ce) return send(ws, { type: 'error', msg: ce });
                     const safeCode = code.trim().toUpperCase();
                     const room = continentalRooms.get(safeCode);
@@ -140,7 +140,8 @@ wss.on('connection', (ws) => {
                 case 'join_pesca': {
                     if (!PescaRoom) return send(ws, { type: 'error', msg: 'Juego Pesca no disponible en el servidor.' });
                     const { nombre, code, playerId: existingId } = msg;
-                    const ne = validateNombre(nombre); if (ne) return send(ws, { type: 'error', msg: ne });
+                    // Saltar validación de nombre si es reconexión (existingId presente)
+                    if (!existingId) { const ne = validateNombre(nombre); if (ne) return send(ws, { type: 'error', msg: ne }); }
                     const ce = validateCode(code);     if (ce) return send(ws, { type: 'error', msg: ce });
                     const safeCode = code.trim().toUpperCase();
                     const room = pescaRooms.get(safeCode);

@@ -1,5 +1,5 @@
 'use strict';
-const { PescaEngine } = require('./pescaEngine');
+const { PescaEngine } = require('./PescaEngine');
 const { randomUUID }  = require('crypto');
 
 const RESPUESTA_TIMEOUT_MS = 5000; // 5 segundos para responder

@@ -3,10 +3,11 @@
 // ═══════════════════════════════════════════════════
 // PESCA — Game Engine
 // Variante de Go Fish: grupos de 4 cartas iguales.
-// Jokers son cartas normales (hay 4 en 2 mazos).
+// Jokers son cartas NORMALES (valor 'JOKER', palo '★').
+// Necesitas 4 jokers para bajar — no reemplazan nada.
 // ═══════════════════════════════════════════════════
 
-const PALOS  = ['♠', '♥', '♦', '♣'];
+const PALOS   = ['♠', '♥', '♦', '♣'];
 const VALORES = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 
 let _uid = 1;
@@ -27,7 +28,7 @@ function mkMazo(numJugadores = 2) {
         for (const p of PALOS) {
             for (const v of VALORES) m.push(mkCard(v, p));
         }
-        // Jokers: 2 por baraja, cada uno como carta normal
+        // Jokers: 2 por baraja, carta normal (valor JOKER, palo ★)
         m.push(mkCard('JOKER', '★'));
         m.push(mkCard('JOKER', '★'));
     }
@@ -40,19 +41,18 @@ class PescaEngine {
         this.jugadores = jugadores.map(({ id, nombre }) => ({
             id, nombre,
             mano: [],
-            jugadas: [],      // grupos de 4 bajados
-            activo: true,     // false cuando se quedan sin cartas Y sin poder pedir
+            jugadas: [],        // grupos de 4 bajados manualmente
+            activo: true,       // false cuando se quedan sin cartas
             conectado: true,
-            terminadoEn: null // timestamp cuando se quedó sin cartas
+            terminadoEn: null,
+            penalizacion: null, // { activa, turnosRestantes } — bajada en falso
         }));
         this.mazo   = [];
-        this.turno  = 0;      // índice del jugador activo
+        this.turno  = 0;
         this.estado = 'esperando_inicio';
         this.log    = [];
         this.lastAction = Date.now();
-        // Cuando un jugador pide una carta, guardamos la petición activa
-        // para el timer de 5 segundos de respuesta.
-        this.peticionActiva = null; // { dePidx, aIdx, valor }
+        this.peticionActiva = null; // { pidx, aIdx, valor, ts }
     }
 
     get jActivo() { return this.jugadores[this.turno]; }
@@ -63,7 +63,7 @@ class PescaEngine {
     }
 
     // ─────────────────────────────────────────────
-    // Repartir 5 cartas a cada jugador e iniciar
+    // Repartir 5 cartas e iniciar
     // ─────────────────────────────────────────────
     repartir() {
         this.mazo = mkMazo(this.jugadores.length);
@@ -72,12 +72,12 @@ class PescaEngine {
             j.jugadas = [];
             j.activo = true;
             j.terminadoEn = null;
+            j.penalizacion = null;
         });
-        // Repartir 5 cartas a cada jugador
         for (let i = 0; i < 5; i++) {
             this.jugadores.forEach(j => { if (this.mazo.length) j.mano.push(this.mazo.pop()); });
         }
-        // Bajar grupos iniciales si alguien ya tiene 4 iguales
+        // Bajar grupos iniciales automáticos
         this.jugadores.forEach((j, idx) => this._bajarGruposAuto(idx));
 
         this.turno  = 0;
@@ -87,8 +87,7 @@ class PescaEngine {
     }
 
     // ─────────────────────────────────────────────
-    // acPedir: el jugador activo pide una carta a otro
-    // { dePidx: idx del que pide, aIdx: idx al que pide, valor }
+    // acPedir
     // ─────────────────────────────────────────────
     acPedir(playerId, aIdx, valor) {
         const j = this._findPlayer(playerId);
@@ -100,7 +99,6 @@ class PescaEngine {
         const destJ = this.jugadores[aIdx];
         if (!destJ || !destJ.activo) return this._err('Jugador no disponible.');
 
-        // El que pide debe tener al menos una carta del valor pedido
         if (!j.mano.some(c => c.valor === valor)) {
             return this._err('Debes tener al menos una carta del valor que pides.');
         }
@@ -109,13 +107,11 @@ class PescaEngine {
         this.estado = 'esperando_respuesta';
         this.addLog(`🙋 ${j.nombre} le pregunta a ${destJ.nombre}: ¿Tienes un ${valor}?`);
         this.lastAction = Date.now();
-
         return this._ok('peticion', { pidx, aIdx, valor });
     }
 
     // ─────────────────────────────────────────────
-    // acResponder: resolver la petición activa
-    // Puede llamarse por el timer (auto) o manualmente
+    // acResponder
     // ─────────────────────────────────────────────
     acResponder() {
         if (this.estado !== 'esperando_respuesta' || !this.peticionActiva) {
@@ -124,27 +120,23 @@ class PescaEngine {
         const { pidx, aIdx, valor } = this.peticionActiva;
         this.peticionActiva = null;
 
-        const quePide  = this.jugadores[pidx];
+        const quePide   = this.jugadores[pidx];
         const queRecibe = this.jugadores[aIdx];
-
-        // Buscar todas las cartas del valor pedido en la mano del que responde
         const cartasDelValor = queRecibe.mano.filter(c => c.valor === valor);
 
         if (cartasDelValor.length > 0) {
-            // Transferir las cartas
             queRecibe.mano = queRecibe.mano.filter(c => c.valor !== valor);
             quePide.mano.push(...cartasDelValor);
-
             this.addLog(`✅ ${queRecibe.nombre} tenía ${cartasDelValor.length}x ${valor} → pasan a ${quePide.nombre}.`);
 
-            // Bajar grupos si se completaron
+            // Bajar grupos automáticos
             this._bajarGruposAuto(pidx);
             this._bajarGruposAuto(aIdx);
-
-            // Revisar si alguien se quedó sin cartas
             this._checkSinCartas();
 
-            // El que acertó sigue pidiendo (si aún tiene cartas y hay activos)
+            // Descontar penalización al avanzar turno
+            this._descontarPenalizacion();
+
             const sigueActivo = quePide.activo && quePide.mano.length > 0;
             if (sigueActivo && this._hayOtrosActivos(pidx)) {
                 this.estado = 'esperando_peticion';
@@ -153,13 +145,9 @@ class PescaEngine {
                 this._avanzarTurno();
             }
 
-            return this._ok('respuesta_si', {
-                pidx, aIdx, valor,
-                cartas: cartasDelValor,
-                sigueTurno: pidx
-            });
+            return this._ok('respuesta_si', { pidx, aIdx, valor, cartas: cartasDelValor, sigueTurno: pidx });
+
         } else {
-            // No tenía — el que pidió roba del mazo
             this.addLog(`❌ ${queRecibe.nombre} no tenía ${valor}.`);
             let cartaRobada = null;
             let cartaEsLaBuscada = false;
@@ -170,10 +158,10 @@ class PescaEngine {
                 cartaEsLaBuscada = cartaRobada.valor === valor;
                 this.addLog(`🎴 ${quePide.nombre} robó del mazo${cartaEsLaBuscada ? ' — ¡era la carta buscada!' : ''}.`);
 
-                // Si sacó justo la carta que pedía, puede volver a pedir
                 if (cartaEsLaBuscada) {
                     this._bajarGruposAuto(pidx);
                     this._checkSinCartas();
+                    this._descontarPenalizacion();
                     const sigueActivo = quePide.activo && quePide.mano.length > 0;
                     if (sigueActivo && this._hayOtrosActivos(pidx)) {
                         this.estado = 'esperando_peticion';
@@ -183,12 +171,13 @@ class PescaEngine {
                 } else {
                     this._bajarGruposAuto(pidx);
                     this._checkSinCartas();
+                    this._descontarPenalizacion();
                     this._avanzarTurno();
                 }
             } else {
-                // Mazo vacío — avanzar turno sin robar
                 this.addLog('🃏 Mazo vacío — sin carta para robar.');
                 this._checkSinCartas();
+                this._descontarPenalizacion();
                 this._avanzarTurno();
             }
 
@@ -196,13 +185,110 @@ class PescaEngine {
                 pidx, aIdx, valor,
                 cartaRobada: cartaEsLaBuscada ? cartaRobada : null,
                 cartaOculta: !cartaEsLaBuscada && cartaRobada ? { id: cartaRobada.id } : null,
-                cartaEsLaBuscada
+                cartaEsLaBuscada,
             });
         }
     }
 
     // ─────────────────────────────────────────────
+    // acBajar — bajar jugadas manualmente desde los slots del cliente
+    //
+    // slotsData: array de { cartas: [{id, valor, palo}] }
+    //   Cada elemento = un slot que el usuario quiere bajar.
+    //   Se ignoran los slots vacíos.
+    //
+    // Validación:
+    //   - Cada slot debe tener exactamente 4 cartas del MISMO valor.
+    //   - Joker (valor 'JOKER') solo agrupa con otros jokers.
+    //   - Las cartas deben estar en la mano del jugador.
+    //   - Si falla: penalización 2 turnos, mensaje de error.
+    //   - Si pasa: bajar esas jugadas, quitarlas de la mano.
+    // ─────────────────────────────────────────────
+    acBajar(playerId, slotsData) {
+        const j = this._findPlayer(playerId);
+        if (!j) return this._err('Jugador no encontrado.');
+        const pidx = this.jugadores.indexOf(j);
+        if (pidx !== this.turno) return this._err('No es tu turno.');
+        if (this.estado !== 'esperando_peticion') return this._err('No es momento de bajar.');
+
+        if (j.penalizacion?.activa) {
+            return this._err(`Penalización activa: ${j.penalizacion.turnosRestantes} turno(s) sin bajar.`);
+        }
+
+        // Filtrar slots vacíos
+        const slots = (slotsData || []).filter(s => s && s.cartas && s.cartas.length > 0);
+        if (slots.length === 0) return this._err('No hay jugadas para bajar.');
+
+        // ── Validar cada slot ──
+        const errores = [];
+        const jugadasValidas = [];
+
+        for (let i = 0; i < slots.length; i++) {
+            const { cartas } = slots[i];
+
+            // Verificar que las cartas estén en la mano
+            for (const c of cartas) {
+                if (!j.mano.some(m => m.id === c.id)) {
+                    errores.push(`Carta ${c.valor}${c.palo || ''} no está en tu mano`);
+                }
+            }
+
+            // Exactamente 4 cartas
+            if (cartas.length !== 4) {
+                errores.push(`Jugada ${i + 1}: necesitas exactamente 4 cartas (tienes ${cartas.length})`);
+                continue;
+            }
+
+            // Todas del mismo valor
+            const primerValor = cartas[0].valor;
+            const todasIguales = cartas.every(c => c.valor === primerValor);
+            if (!todasIguales) {
+                const valores = [...new Set(cartas.map(c => c.valor))].join(', ');
+                errores.push(`Jugada ${i + 1}: las 4 cartas deben ser del mismo valor (tienes: ${valores})`);
+                continue;
+            }
+
+            jugadasValidas.push({ valor: primerValor, cartas });
+        }
+
+        // ── Si hay errores → bajada en falso ──
+        if (errores.length > 0) {
+            j.penalizacion = { activa: true, turnosRestantes: 2 };
+            const motivo = errores.join('; ');
+            this.addLog(`⚠️ ¡BAJADA EN FALSO! ${j.nombre}: ${motivo}. Penalizado 2 turnos.`);
+            return this._err(`¡BAJADA EN FALSO! ${motivo}. Penalizado 2 turnos sin bajar.`);
+        }
+
+        // ── Bajar jugadas válidas ──
+        const idsABajar = new Set();
+        jugadasValidas.forEach(jug => jug.cartas.forEach(c => idsABajar.add(c.id)));
+
+        // Obtener referencias reales desde la mano (no del cliente)
+        const jugadasFinales = jugadasValidas.map(jug => ({
+            valor: jug.valor,
+            cartas: jug.cartas.map(c => j.mano.find(m => m.id === c.id)).filter(Boolean),
+        }));
+
+        jugadasFinales.forEach(jug => {
+            j.jugadas.push(jug);
+            this.addLog(`🏆 ${j.nombre} bajó 4x ${jug.valor}!`);
+        });
+
+        j.mano = j.mano.filter(c => !idsABajar.has(c.id));
+
+        this._checkSinCartas();
+        this.lastAction = Date.now();
+
+        return this._ok('bajar_manual', {
+            pidx,
+            jugadas: jugadasFinales,
+            manoRestante: j.mano.length,
+        });
+    }
+
+    // ─────────────────────────────────────────────
     // Bajar automáticamente grupos de 4 iguales
+    // (solo al repartir y al recibir cartas — NO durante el turno normal)
     // ─────────────────────────────────────────────
     _bajarGruposAuto(idx) {
         const j = this.jugadores[idx];
@@ -222,6 +308,21 @@ class PescaEngine {
     }
 
     // ─────────────────────────────────────────────
+    // Descontar penalización al avanzar turno
+    // ─────────────────────────────────────────────
+    _descontarPenalizacion() {
+        this.jugadores.forEach(jug => {
+            if (jug.penalizacion?.activa) {
+                jug.penalizacion.turnosRestantes--;
+                if (jug.penalizacion.turnosRestantes <= 0) {
+                    jug.penalizacion = null;
+                    this.addLog(`✅ ${jug.nombre} ya puede bajar nuevamente.`);
+                }
+            }
+        });
+    }
+
+    // ─────────────────────────────────────────────
     // Revisar si alguien se quedó sin cartas
     // ─────────────────────────────────────────────
     _checkSinCartas() {
@@ -232,7 +333,6 @@ class PescaEngine {
                 this.addLog(`🚪 ${j.nombre} se quedó sin cartas.`);
             }
         });
-        // Verificar fin de juego
         const activos = this.jugadores.filter(j => j.activo);
         if (activos.length <= 1) {
             if (activos.length === 1) {
@@ -256,7 +356,6 @@ class PescaEngine {
             intentos++;
         }
         if (!this.jugadores[sig].activo) {
-            // No hay más activos
             this._finJuego();
             return;
         }
@@ -271,12 +370,10 @@ class PescaEngine {
     }
 
     // ─────────────────────────────────────────────
-    // Fin del juego — calcular ganador
+    // Fin del juego
     // ─────────────────────────────────────────────
     _finJuego() {
         this.estado = 'fin_juego';
-        // Ganador: más jugadas bajadas.
-        // Desempate: el que terminó primero (terminadoEn menor).
         const sorted = [...this.jugadores].sort((a, b) => {
             if (b.jugadas.length !== a.jugadas.length) return b.jugadas.length - a.jugadas.length;
             const tA = a.terminadoEn || Infinity;
@@ -310,7 +407,6 @@ class PescaEngine {
         const base = this.publicState();
         base.jugadores = this.jugadores.map(j => {
             if (j.id === playerId) return { ...j };
-            // Ocultar mano de otros, solo mostrar cantidad
             return { ...j, mano: j.mano.map(() => ({ hidden: true })) };
         });
         return base;
@@ -330,6 +426,7 @@ class PescaEngine {
                 activo: j.activo,
                 conectado: j.conectado,
                 terminadoEn: j.terminadoEn,
+                penalizacion: j.penalizacion,
                 mano: [],
             })),
             log: this.log.slice(-8).map(l => l.msg),

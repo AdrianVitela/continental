@@ -1,15 +1,14 @@
 'use strict';
-const { PescaEngine } = require('./PescaEngine');
-const { randomUUID }  = require('crypto');
+const { PescaEngine } = require('./pescaEngine');
 
-const RESPUESTA_TIMEOUT_MS = 5000; // 5 segundos para responder
+const RESPUESTA_TIMEOUT_MS = 5000;
 
 class PescaRoom {
     constructor({ code, host, maxPlayers = 5 }) {
         this.code       = code;
         this.maxPlayers = maxPlayers;
         this.status     = 'lobby';
-        this.players    = []; // [{ id, nombre, ws, conectado }]
+        this.players    = [];
         this.engine     = null;
         this.createdAt  = Date.now();
         this.host       = host;
@@ -69,11 +68,18 @@ class PescaRoom {
                     result = this.engine.acPedir(playerId, msg.aIdx, msg.valor);
                     if (result.ok) this._startRespTimer();
                     break;
+
                 case 'responder':
-                    // El jugador al que le pidieron confirma manualmente (antes del timer)
                     this._clearRespTimer();
                     result = this.engine.acResponder();
                     break;
+
+                // ── Bajar jugadas manualmente desde los slots ──
+                // msg.slots: array de { cartas: [{id, valor, palo}] }
+                case 'bajar':
+                    result = this.engine.acBajar(playerId, msg.slots);
+                    break;
+
                 default:
                     return { ok: false, error: `Acción desconocida: ${msg.type}` };
             }
@@ -82,13 +88,21 @@ class PescaRoom {
             return { ok: false, error: 'Error interno procesando la acción.' };
         }
 
-        if (!result || !result.ok) return result || { ok: false, error: 'Sin resultado.' };
+        if (!result || !result.ok) {
+            // Enviar error solo al jugador que lo causó
+            const p = this.players.find(p => p.id === playerId);
+            if (p) this._send(p, { type: 'error', msg: result?.error || 'Error desconocido' });
+            // Si fue bajada en falso, también broadcast el state actualizado (con penalización)
+            if (result?.error?.includes('BAJADA EN FALSO')) {
+                this._broadcastState('bajada_falso', { playerId });
+            }
+            return result || { ok: false, error: 'Sin resultado.' };
+        }
 
         this._broadcastState(result.event, result.data);
         return result;
     }
 
-    // Timer de 5 segundos — si no responde manualmente, se resuelve automático
     _startRespTimer() {
         this._clearRespTimer();
         this._respTimer = setTimeout(() => {

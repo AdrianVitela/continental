@@ -398,7 +398,7 @@ function mkCardEl(c, opts = {}) {
                 document.removeEventListener('mouseup', onUp);
                 // DRAG — mover carta (sin restricción de turno)
                 if (typeof window._pescaDragStart === 'function') {
-                    window._pescaDragStart(e, c.id, fromSlot, el);
+                    window._pescaDragStart(e, el, c.id, fromSlot);
                 }
             }
         };
@@ -430,7 +430,7 @@ function mkCardEl(c, opts = {}) {
                 el.removeEventListener('touchend', onEnd);
                 // SWIPE — drag
                 if (typeof window._pescaDragStart === 'function') {
-                    window._pescaDragStart(e, c.id, fromSlot, el);
+                    window._pescaDragStart(e, el, c.id, fromSlot);
                 }
             }
         };
@@ -684,6 +684,11 @@ window.clickSlot          = clickSlot;
 window.clickRival         = clickRival;
 window.confirmarRespuesta = confirmarRespuesta;
 window.acBajar            = acBajar;
+
+// Aliases que usa el IIFE de drag en pesca.html
+window.clickCardDropOnSlot = window._pescaMoveToSlot;
+window.pescaMoveSlotToSlot = window._pescaMoveSlotToSlot;
+window.pescaReturnToHand   = window._pescaMoveToHand;
 
 /* ─── Arranque ──────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {

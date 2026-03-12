@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesca</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --fish:     #00c8e0;
+            --fish-dim: rgba(0,200,224,.45);
+            --fish-bg:  rgba(0,200,224,.1);
+            --fish-bd:  rgba(0,200,224,.3);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(ellipse at 50% 0%, #0d3d54 0%, #041520 100%);
+            min-height: 100vh; color: #e8e8e8; overflow-x: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* ── HEADER ── */
+        #header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 14px; background: rgba(0,0,0,.4);
+            border-bottom: 1px solid var(--fish-dim); backdrop-filter: blur(8px);
+            position: sticky; top: 0; z-index: 100; gap: 8px;
+        }
+        .h-title {
+            font-family: 'Cormorant Garamond', serif; font-size: 1.25rem;
+            color: var(--fish); letter-spacing: 3px; white-space: nowrap;
+        }
+        #turn-pill {
+            font-size: .72rem; padding: 4px 12px; border-radius: 20px;
+            background: var(--fish-bg); border: 1px solid var(--fish-bd);
+            color: var(--fish); transition: all .3s; white-space: nowrap; text-align: center;
+        }
+        #turn-pill.my-turn {
+            background: rgba(0,200,224,.25); border-color: var(--fish);
+            animation: pulse-pill 1.4s infinite;
+        }
+        @keyframes pulse-pill {
+            0%,100% { box-shadow: 0 0 0 0 rgba(0,200,224,.45); }
+            50%      { box-shadow: 0 0 0 6px rgba(0,200,224,0); }
+        }
+        .h-mazo { font-size: .7rem; color: var(--fish-dim); white-space: nowrap; }
+
+        /* ── RIVALES ── */
+        #rivals-area {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            padding: 10px 12px 6px; justify-content: center;
+        }
+        .rival-card {
+            background: rgba(0,0,0,.3); border: 1px solid rgba(0,200,224,.14);
+            border-radius: 12px; padding: 8px 12px;
+            min-width: 110px; max-width: 175px; flex: 1;
+            transition: all .2s; cursor: default; position: relative;
+        }
+        .rival-card.selectable   { cursor: pointer; border-color: var(--fish-bd); }
+        .rival-card.selectable:hover { background: var(--fish-bg); border-color: var(--fish); transform: translateY(-2px); }
+        .rival-card.selected     { background: rgba(0,200,224,.15); border-color: var(--fish); box-shadow: 0 0 12px rgba(0,200,224,.3); }
+        .rival-card.inactive     { opacity: .4; pointer-events: none; }
+        .rival-card.being-asked  { animation: ask-blink .5s ease-in-out infinite alternate; }
+        @keyframes ask-blink {
+            from { border-color: rgba(255,200,0,.3); }
+            to   { border-color: rgba(255,200,0,.9); box-shadow: 0 0 14px rgba(255,200,0,.3); }
+        }
+        .r-name {
+            font-size: .8rem; font-weight: 600; margin-bottom: 5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            display: flex; align-items: center; gap: 5px;
+        }
+        .r-dot { width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; flex-shrink: 0; }
+        .r-dot.away { background: #555; }
+        .r-stats { font-size: .65rem; color: rgba(200,200,200,.55); margin-bottom: 5px; display: flex; gap: 8px; }
+        .r-jugadas { display: flex; flex-wrap: wrap; gap: 3px; }
+        .r-jugada-badge {
+            background: var(--fish-bg); border: 1px solid var(--fish-bd);
+            border-radius: 4px; padding: 2px 6px;
+            font-size: .65rem; color: var(--fish);
+            font-family: 'Cormorant Garamond', serif; font-weight: 700;
+        }
+        .rival-turno-dot {
+            position: absolute; top: 7px; right: 7px;
+            width: 7px; height: 7px; border-radius: 50%; background: #ffe066;
+            box-shadow: 0 0 6px rgba(255,220,0,.6);
+        }
+
+        /* ── PETICIÓN ACTIVA ── */
+        #peticion-wrap { padding: 0 12px 4px; display: flex; justify-content: center; }
+        #peticion-box {
+            display: none; background: rgba(0,0,0,.55); border: 2px solid var(--fish);
+            border-radius: 14px; padding: 12px 18px; text-align: center;
+            max-width: 440px; width: 100%; box-shadow: 0 0 20px rgba(0,200,224,.2);
+            animation: fadeUp .3s var(--eout) both;
+        }
+        #peticion-box.show { display: block; }
+        #pet-texto { font-size: .9rem; line-height: 1.5; margin-bottom: 8px; }
+        #pet-texto strong { color: var(--fish); }
+        .v-hi { font-size: 1.15em; color: #ffe066; font-family:'Cormorant Garamond',serif; font-weight:700; }
+        #pet-timer-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+        #pet-timer { font-size: 1.5rem; font-family:'Cormorant Garamond',serif; color: var(--fish); font-weight:700; min-width:2ch; }
+        #pet-timer.urgent { color: #ff6b6b; animation: urgent-pulse .35s infinite alternate; }
+        @keyframes urgent-pulse { to { opacity: .4; } }
+        #btn-confirmar {
+            padding: 6px 16px; border-radius: 8px; background: var(--fish-bg);
+            border: 1px solid var(--fish-bd); color: var(--fish); font-size: .8rem;
+            font-family: 'Outfit', sans-serif; cursor: pointer; transition: background .15s; display: none;
+        }
+        #btn-confirmar:hover { background: rgba(0,200,224,.25); }
+
+        /* ── LOG ── */
+        #log-area { padding: 0 12px 4px; display: flex; flex-direction: column; gap: 3px; }
+        .log-item { font-size: .7rem; color: rgba(200,200,200,.5); padding: 2px 8px; border-left: 2px solid rgba(0,200,224,.12); animation: fadeIn .3s ease both; }
+        .log-item.fresh { color: #ddd; border-left-color: var(--fish); }
+        @keyframes fadeIn { from { opacity:0; transform:translateX(-5px); } }
+
+        /* ── SLOTS ESTILO CONTINENTAL ── */
+        #slots-section { padding: 6px 10px 4px; }
+        .slots-lbl { font-size: .62rem; color: var(--fish-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; padding-left:2px; }
+        .building-row {
+            display: flex; gap: 6px; justify-content: center; align-items: flex-start;
+            width: 100%; overflow-x: auto; overflow-y: visible; padding: 0 2px;
+            min-height: calc(var(--ch,72px) + 28px);
+            scrollbar-width: thin; scrollbar-color: var(--fish-dim) transparent;
+        }
+        .building-slot {
+            flex: 1 1 auto;
+            min-width: calc(var(--cw,52px) * 3 + 16px);
+            max-width: calc(var(--cw,52px) * 6 + 36px);
+            display: flex; flex-direction: column;
+            background: rgba(0,0,0,.22); border: 2px solid rgba(0,200,224,.18);
+            border-radius: 6px; padding: 3px;
+            transition: border-color .2s, background .2s; overflow: visible; cursor: pointer;
+        }
+        .building-slot:hover    { border-color: var(--fish); background: rgba(0,200,224,.06); }
+        .building-slot.complete { border-color: #2ecc71 !important; background: rgba(46,204,113,.08); }
+        .building-slot.sel-slot { border-color: #ffe066 !important; background: rgba(255,220,0,.07); box-shadow: 0 0 10px rgba(255,220,0,.2); }
+        .slot-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1px; padding:0 2px; font-size:.58rem; flex-shrink:0; }
+        .slot-title  { color: var(--fish); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+        .slot-count  { font-size:.5rem; color:rgba(255,255,255,.4); background:rgba(0,0,0,.3); padding:1px 4px; border-radius:6px; }
+        .slot-count.valid { color: #2ecc71; background: rgba(46,204,113,.2); }
+        .slot-cards {
+            display: flex; gap: 2px; flex-wrap: wrap;
+            align-items: flex-start; justify-content: center;
+            padding: 2px; overflow: visible;
+            min-height: calc(var(--ch,72px) + 4px); width: 100%;
+        }
+
+        /* ── MI ÁREA ── */
+        #my-area {
+            background: rgba(0,0,0,.3); border-top: 1px solid rgba(0,200,224,.1);
+            padding: 10px 12px 14px; margin-top: auto;
+        }
+        #my-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+        #my-name-lbl  { font-size:.78rem; color:var(--fish); font-weight:600; }
+        #my-jugadas-lbl { font-size:.68rem; color:var(--fish-dim); }
+        #my-jugadas { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; min-height:0; }
+        .my-jugada-pill {
+            background:var(--fish-bg); border:1px solid var(--fish-bd);
+            border-radius:20px; padding:3px 10px; font-size:.75rem;
+            font-family:'Cormorant Garamond',serif; font-weight:700;
+            color:var(--fish); display:flex; align-items:center; gap:4px;
+        }
+        .pill-sub { font-size:.58rem; color:var(--fish-dim); }
+
+        /* ── HINT "DAME TUS X" ── */
+        #dame-hint {
+            display: none; background: rgba(255,220,0,.1); border: 1px solid rgba(255,220,0,.35);
+            border-radius: 8px; padding: 6px 14px; font-size: .78rem; color: #ffe066;
+            text-align: center; margin-bottom: 6px; animation: fadeUp .3s var(--eout) both;
+        }
+        #dame-hint.show { display: block; }
+
+        /* ── MANO ── */
+        #my-hand { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:10px; }
+
+        /* ── CARTA genérica ── */
+        .p-card {
+            width: var(--cw,52px); height: var(--ch,72px);
+            background: #f9f5eb; border-radius: 7px; border: 2px solid transparent;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size:.82rem; font-weight:700; font-family:'Cormorant Garamond',serif;
+            color:#222; cursor:pointer; transition: transform .15s, border-color .15s, box-shadow .15s;
+            user-select:none; flex-shrink:0; position:relative;
+        }
+        .p-card.red   { color: #c0392b; }
+        .p-card.joker { background: #2a0d4a; color: #ffe066; border-color: rgba(140,60,200,.3); }
+        .p-card:hover { transform: translateY(-4px); }
+        .p-card.selectable:hover { border-color: var(--fish); box-shadow: 0 4px 12px rgba(0,200,224,.35); }
+        .p-card.selected {
+            transform: translateY(-9px) !important;
+            border-color: #ffe066 !important;
+            box-shadow: 0 6px 16px rgba(255,220,0,.5) !important;
+        }
+        .p-card.in-slot { opacity:.35; pointer-events:none; transform:none !important; }
+        .p-card.in-slot.selected { opacity:.6; pointer-events:all; }
+        .cv { font-size:.72rem; line-height:1; }
+        .cp { font-size:.88rem; line-height:1; }
+
+        /* ── ACCIONES ── */
+        #actions-area { display:flex; flex-direction:column; gap:6px; }
+        #hint-line { font-size:.7rem; color:rgba(0,200,224,.6); text-align:center; min-height:16px; }
+        #action-btns { display:flex; gap:7px; flex-wrap:wrap; justify-content:center; }
+        .abtn {
+            padding: 8px 16px; border-radius:8px; font-size:.8rem;
+            cursor:pointer; font-family:'Outfit',sans-serif;
+            transition:background .15s, transform .1s; border:1px solid transparent;
+        }
+        .abtn:active { transform:scale(.96); }
+        .abtn-primary { background:var(--fish-bg); border-color:var(--fish-bd); color:var(--fish); }
+        .abtn-primary:hover { background:rgba(0,200,224,.22); }
+        .abtn-cancel  { background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.1); color:rgba(200,200,200,.6); }
+        .abtn-cancel:hover { background:rgba(255,255,255,.1); color:#e8e8e8; }
+        .abtn-green   { background:rgba(46,204,113,.12); border-color:rgba(46,204,113,.35); color:#2ecc71; }
+        .abtn-green:hover { background:rgba(46,204,113,.22); }
+
+        /* ── MODAL FIN ── */
+        #fin-modal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; }
+        #fin-modal.show { display:flex; }
+        .fin-box { background:linear-gradient(160deg,#0a2a3a,#041520); border:2px solid var(--fish); border-radius:18px; padding:26px 22px; width:min(360px,92%); text-align:center; animation:fadeUp .3s var(--eout) both; box-shadow:0 0 40px rgba(0,200,224,.2); }
+        .fin-box h2 { font-family:'Cormorant Garamond',serif; font-size:1.6rem; color:var(--fish); margin-bottom:16px; letter-spacing:2px; }
+        .result-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; margin-bottom:5px; background:rgba(255,255,255,.04); }
+        .result-row.winner { background:var(--fish-bg); border:1px solid var(--fish-bd); }
+        .result-rank { font-size:.85rem; color:rgba(200,200,200,.5); width:24px; }
+        .result-name { flex:1; text-align:left; font-size:.88rem; }
+        .result-score { font-size:.8rem; color:var(--fish); font-family:'Cormorant Garamond',serif; font-weight:700; }
+
+        /* ── TOAST ── */
+        #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:rgba(180,50,50,.9); color:#fff; padding:8px 18px; border-radius:8px; font-size:.8rem; display:none; z-index:999; white-space:nowrap; max-width:90vw; }
+        #toast.show  { display:block; }
+        #toast.green { background:rgba(40,160,80,.9); }
+        #toast.fish  { background:rgba(0,140,160,.9); }
+
+        @media (max-width:480px) {
+            :root { --cw:42px; --ch:58px; }
+            .building-slot { min-width:calc(var(--cw)*2 + 12px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <div class="h-title">🎣 Pesca</div>
+    <div id="turn-pill">—</div>
+    <div class="h-mazo">🃏 <span id="mazo-count">—</span></div>
+</div>
+
+<div id="rivals-area"></div>
+
+<div id="peticion-wrap">
+    <div id="peticion-box">
+        <div id="pet-texto"></div>
+        <div id="pet-timer-row">
+            <div id="pet-timer">5</div>
+            <button id="btn-confirmar" onclick="confirmarRespuesta()">✅ Listo</button>
+        </div>
+    </div>
+</div>
+
+<div id="log-area"></div>
+
+<div id="slots-section">
+    <div class="slots-lbl">Jugadas en construcción</div>
+    <div class="building-row" id="building-row">
+        <div class="building-slot" data-slot="0" onclick="clickSlot(0)">
+            <div class="slot-header">
+                <span class="slot-title">Jugada 1</span>
+                <span class="slot-count" id="slot-count-0">0/4</span>
+            </div>
+            <div class="slot-cards" id="slot-cards-0"></div>
+        </div>
+        <div class="building-slot" data-slot="1" onclick="clickSlot(1)">
+            <div class="slot-header">
+                <span class="slot-title">Jugada 2</span>
+                <span class="slot-count" id="slot-count-1">0/4</span>
+            </div>
+            <div class="slot-cards" id="slot-cards-1"></div>
+        </div>
+        <div class="building-slot" data-slot="2" onclick="clickSlot(2)">
+            <div class="slot-header">
+                <span class="slot-title">Jugada 3</span>
+                <span class="slot-count" id="slot-count-2">0/4</span>
+            </div>
+            <div class="slot-cards" id="slot-cards-2"></div>
+        </div>
+    </div>
+</div>
+
+<div id="my-area">
+    <div id="my-header">
+        <div id="my-name-lbl">Tu mano</div>
+        <div id="my-jugadas-lbl"></div>
+    </div>
+    <div id="my-jugadas"></div>
+    <div id="dame-hint"></div>
+    <div id="my-hand"></div>
+    <div id="actions-area">
+        <div id="hint-line"></div>
+        <div id="action-btns"></div>
+    </div>
+</div>
+
+<div id="fin-modal">
+    <div class="fin-box">
+        <h2>🏆 Fin del Juego</h2>
+        <div id="fin-results"></div>
+        <button class="abtn abtn-primary" style="width:100%;margin-top:16px"
+                onclick="window.location.href='/'">← Volver al inicio</button>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="js/socket.js"></script>
+<script src="js/pesca.js"></script>
+<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.5.0</div>
+</body>
+</html>

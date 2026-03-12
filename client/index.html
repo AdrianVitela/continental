@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Continental - Lobby</title>
+    <title>Juegos de Cartas</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         body {
@@ -14,6 +14,83 @@
             background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
         }
 
+        /* ─── SELECTOR DE JUEGO ─── */
+        #game-selector {
+            width: min(520px, 96%);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px 0;
+            animation: fadeDown .6s var(--eout) both;
+        }
+        .selector-title {
+            text-align: center;
+        }
+        .selector-title h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.8rem, 6vw, 2.8rem);
+            color: var(--gold);
+            letter-spacing: 3px;
+            text-shadow: 0 0 40px rgba(200,160,69,.35);
+        }
+        .selector-title p {
+            color: var(--text-dim);
+            font-size: .78rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        .game-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .game-card {
+            background: rgba(0,0,0,.35);
+            border: 1px solid rgba(200,160,69,.18);
+            border-radius: 16px;
+            padding: 24px 18px;
+            cursor: pointer;
+            text-align: center;
+            transition: background .2s, border-color .2s, transform .2s;
+            backdrop-filter: blur(12px);
+            animation: fadeUp .5s var(--eout) both;
+            user-select: none;
+        }
+        .game-card:nth-child(2) { animation-delay: .07s; }
+        .game-card:hover {
+            background: rgba(200,160,69,.1);
+            border-color: rgba(200,160,69,.4);
+            transform: translateY(-3px);
+        }
+        .game-card:active { transform: translateY(0); }
+        .game-card .gc-icon { font-size: 2.4rem; margin-bottom: 10px; display: block; }
+        .game-card .gc-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.3rem;
+            color: var(--gold);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+        .game-card .gc-desc {
+            font-size: .72rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+        .game-card .gc-badge {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: .65rem;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(200,160,69,.15);
+            border: 1px solid rgba(200,160,69,.3);
+            color: var(--gold-hi);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* ─── LOBBY (reutilizado) ─── */
         .lobby-wrap {
             position: relative;
             z-index: 1;
@@ -23,29 +100,32 @@
             gap: 24px;
             padding: 20px 0;
         }
-
-        /* ===== LOGO ===== */
-        .logo {
-            text-align: center;
-            animation: fadeDown .7s var(--eout) both;
-        }
+        .logo { text-align: center; animation: fadeDown .7s var(--eout) both; }
         .logo h1 {
             font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(3rem, 9vw, 5.5rem);
+            font-size: clamp(2.8rem, 8vw, 5rem);
             font-weight: 700;
             color: var(--gold);
             text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5);
             letter-spacing: 4px;
         }
-        .logo p {
+        .logo p { color: var(--text-dim); font-size: .8rem; letter-spacing: 4px; text-transform: uppercase; margin-top: 4px; }
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: none;
             color: var(--text-dim);
-            font-size: .8rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-top: 4px;
+            font-size: .78rem;
+            cursor: pointer;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+            transition: color .2s;
+            letter-spacing: 1px;
         }
+        .back-btn:hover { color: var(--gold); }
 
-        /* ===== CARD ===== */
         .card-box {
             background: rgba(0,0,0,.35);
             border: 1px solid rgba(200,160,69,.18);
@@ -62,371 +142,238 @@
             margin-bottom: 18px;
             letter-spacing: 2px;
         }
-
-        /* ===== TABS ===== */
-        .tabs {
-            display: flex;
-            background: rgba(0,0,0,.3);
-            border-radius: 10px;
-            padding: 3px;
-            margin-bottom: 20px;
-        }
-        .tab {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: .85rem;
-            color: var(--text-dim);
-            transition: background .2s, color .2s;
-            user-select: none;
-        }
-        .tab.active {
-            background: rgba(200,160,69,.2);
-            color: var(--gold-hi);
-            font-weight: 600;
-        }
+        .tabs { display: flex; background: rgba(0,0,0,.3); border-radius: 10px; padding: 3px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 8px; text-align: center; border-radius: 8px; cursor: pointer; font-size: .85rem; color: var(--text-dim); transition: background .2s, color .2s; user-select: none; }
+        .tab.active { background: rgba(200,160,69,.2); color: var(--gold-hi); font-weight: 600; }
         .tab-panel { display: none; }
-        .tab-panel.active {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* ===== FIELDS ===== */
-        .field-group {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .field-group label {
-            font-size: .78rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Fila input + botón de dados */
-        .input-row {
-            display: flex;
-            gap: 6px;
-            align-items: stretch;
-        }
-        .input-row input {
-            flex: 1;
-        }
-
-        /* Botón de nombre aleatorio */
+        .tab-panel.active { display: flex; flex-direction: column; gap: 12px; }
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-group label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+        .input-row { display: flex; gap: 6px; align-items: stretch; }
+        .input-row input { flex: 1; }
         .btn-random-name {
-            flex-shrink: 0;
-            width: 38px;
-            height: 38px;  /* igual que input */
-            background: rgba(200,160,69,.1);
-            border: 1px solid rgba(200,160,69,.3);
-            border-radius: 9px;
-            color: var(--gold);
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background .2s, transform .15s;
-            line-height: 1;
+            flex-shrink: 0; width: 38px; height: 38px;
+            background: rgba(200,160,69,.1); border: 1px solid rgba(200,160,69,.3);
+            border-radius: 9px; color: var(--gold); font-size: 1.1rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background .2s, transform .15s; line-height: 1;
         }
-        .btn-random-name:hover {
-            background: rgba(200,160,69,.22);
-            transform: rotate(20deg) scale(1.08);
-        }
-        .btn-random-name:active { transform: rotate(0deg) scale(.95); }
-
-        /* Hint de validación */
-        .field-hint {
-            font-size: .68rem;
-            color: var(--red-hi);
-            min-height: 14px;
-            line-height: 1.3;
-            display: none;
-        }
+        .btn-random-name:hover { background: rgba(200,160,69,.22); transform: rotate(20deg) scale(1.08); }
+        .field-hint { font-size: .68rem; color: var(--red-hi); min-height: 14px; display: none; }
         .field-hint.show { display: block; }
-
-        /* ===== MODO DE JUEGO ===== */
         .mode-row { display: flex; gap: 8px; }
         .mode-btn {
-            flex: 1;
-            padding: 10px;
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 9px;
-            color: var(--text-dim);
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
-            transition: background .2s, border-color .2s, color .2s;
-            user-select: none;
+            flex: 1; padding: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+            border-radius: 9px; color: var(--text-dim); font-size: .82rem; cursor: pointer; text-align: center;
+            transition: background .2s, border-color .2s, color .2s; user-select: none;
         }
-        .mode-btn.active {
-            background: rgba(200,160,69,.15);
-            border-color: rgba(200,160,69,.4);
-            color: var(--gold-hi);
-        }
-        .mode-btn small {
-            display: block;
-            font-size: .68rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
-
-        /* ===== JUGADORES MAX ===== */
-        .player-count {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .player-count label {
-            font-size: .78rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .mode-btn.active { background: rgba(200,160,69,.15); border-color: rgba(200,160,69,.4); color: var(--gold-hi); }
+        .mode-btn small { display: block; font-size: .68rem; color: var(--text-muted); margin-top: 2px; }
+        .player-count { display: flex; align-items: center; justify-content: space-between; }
+        .player-count label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .pc-ctrl { display: flex; align-items: center; gap: 10px; }
-        .pc-btn {
-            width: 30px; height: 30px; border-radius: 50%;
-            background: rgba(200,160,69,.12);
-            border: 1px solid rgba(200,160,69,.3);
-            color: var(--gold); font-size: 1rem;
-            cursor: pointer; display: flex; align-items: center; justify-content: center;
-            transition: background .15s;
-        }
+        .pc-btn { width: 30px; height: 30px; border-radius: 50%; background: rgba(200,160,69,.12); border: 1px solid rgba(200,160,69,.3); color: var(--gold); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; }
         .pc-btn:hover { background: rgba(200,160,69,.25); }
         .pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
+        #unirse-code { text-transform: uppercase; letter-spacing: 5px; font-size: 1.2rem; text-align: center; font-family: 'Cormorant Garamond', serif; }
 
-        /* ===== INPUT CÓDIGO DE SALA ===== */
-        #unirse-code {
-            text-transform: uppercase;
-            letter-spacing: 5px;
-            font-size: 1.2rem;
-            text-align: center;
-            font-family: 'Cormorant Garamond', serif;
-        }
-
-        /* ===== SALA DE ESPERA ===== */
         #lobby-room { display: none; flex-direction: column; gap: 16px; }
         #lobby-room.show { display: flex; }
-
         .room-code-display { text-align: center; }
         .room-code-display .code {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 2.5rem; font-weight: 700;
-            color: var(--gold); letter-spacing: 8px;
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(200,160,69,.25);
-            border-radius: 12px; padding: 10px 20px;
-            display: inline-block; cursor: pointer;
-            transition: background .2s;
+            font-family: 'Cormorant Garamond', serif; font-size: 2.5rem; font-weight: 700;
+            color: var(--gold); letter-spacing: 8px; background: rgba(0,0,0,.3);
+            border: 1px solid rgba(200,160,69,.25); border-radius: 12px; padding: 10px 20px;
+            display: inline-block; cursor: pointer; transition: background .2s;
         }
         .room-code-display .code:hover { background: rgba(200,160,69,.1); }
         .room-code-display p { font-size: .75rem; color: var(--text-dim); margin-top: 6px; }
-
         .player-list { display: flex; flex-direction: column; gap: 6px; }
-        .player-item {
-            display: flex; align-items: center; gap: 10px;
-            background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
-            animation: popIn .3s var(--spring) both;
-        }
+        .player-item { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px; animation: popIn .3s var(--spring) both; }
         .player-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
         .player-dot.away { background: var(--text-muted); }
         .player-badge { font-size: .72rem; color: var(--gold); margin-left: auto; }
-
         .separator { height: 1px; background: rgba(255,255,255,.08); }
         .waiting-msg { text-align: center; font-size: .82rem; color: var(--text-dim); }
-
-        @keyframes dots {
-            0%,20% { content: '.'; }
-            40%     { content: '..'; }
-            60%,100%{ content: '...'; }
-        }
+        @keyframes dots { 0%,20% { content: '.'; } 40% { content: '..'; } 60%,100%{ content: '...'; } }
         .dot-pulse::after { content: '...'; animation: dots 1.2s infinite; }
 
-        /* ===== MODAL DE NOMBRES ===== */
-        .names-modal-overlay {
-            display: none;
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,.72);
-            backdrop-filter: blur(5px);
-            align-items: center; justify-content: center;
-        }
+        /* Modal nombres */
+        .names-modal-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.72); backdrop-filter: blur(5px); align-items: center; justify-content: center; }
         .names-modal-overlay.show { display: flex; }
-
-        .names-modal {
-            background: linear-gradient(160deg, #1a3d28, #0d1f14);
-            border: 1px solid rgba(200,160,69,.22);
-            border-radius: 16px;
-            padding: 22px 20px 18px;
-            width: min(340px, 92%);
-            display: flex; flex-direction: column; gap: 14px;
-            animation: fadeUp .25s var(--eout) both;
-        }
-        .names-modal h3 {
-            font-family: 'Cormorant Garamond', serif;
-            color: var(--gold); font-size: 1.05rem;
-            text-align: center; letter-spacing: 2px;
-        }
-        .names-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 7px;
-            max-height: 52vh;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--gold-dim) transparent;
-        }
-        .name-option {
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
-            transition: background .15s, border-color .15s, color .15s;
-            line-height: 1.2;
-            color: var(--text);
-        }
-        .name-option:hover {
-            background: rgba(200,160,69,.15);
-            border-color: rgba(200,160,69,.4);
-            color: var(--gold-hi);
-        }
+        .names-modal { background: linear-gradient(160deg, #1a3d28, #0d1f14); border: 1px solid rgba(200,160,69,.22); border-radius: 16px; padding: 22px 20px 18px; width: min(340px, 92%); display: flex; flex-direction: column; gap: 14px; animation: fadeUp .25s var(--eout) both; }
+        .names-modal h3 { font-family: 'Cormorant Garamond', serif; color: var(--gold); font-size: 1.05rem; text-align: center; letter-spacing: 2px; }
+        .names-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; max-height: 52vh; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--gold-dim) transparent; }
+        .name-option { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; padding: 9px 10px; font-size: .82rem; cursor: pointer; text-align: center; transition: background .15s, border-color .15s, color .15s; line-height: 1.2; color: var(--text); }
+        .name-option:hover { background: rgba(200,160,69,.15); border-color: rgba(200,160,69,.4); color: var(--gold-hi); }
         .name-option .nicon { display: block; font-size: 1.1rem; margin-bottom: 3px; }
-
-        .names-modal-footer {
-            display: flex; gap: 8px;
-        }
-        .btn-modal-close {
-            flex: 1; padding: 8px;
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 8px; color: var(--text-dim);
-            font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
-        }
+        .names-modal-footer { display: flex; gap: 8px; }
+        .btn-modal-close { flex: 1; padding: 8px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 8px; color: var(--text-dim); font-size: .8rem; cursor: pointer; transition: background .15s; font-family: 'Outfit', sans-serif; }
         .btn-modal-close:hover { background: rgba(255,255,255,.1); color: var(--text); }
-        .btn-modal-shuffle {
-            flex: 1; padding: 8px;
-            background: rgba(200,160,69,.1);
-            border: 1px solid rgba(200,160,69,.3);
-            border-radius: 8px; color: var(--gold);
-            font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
-        }
+        .btn-modal-shuffle { flex: 1; padding: 8px; background: rgba(200,160,69,.1); border: 1px solid rgba(200,160,69,.3); border-radius: 8px; color: var(--gold); font-size: .8rem; cursor: pointer; transition: background .15s; font-family: 'Outfit', sans-serif; }
         .btn-modal-shuffle:hover { background: rgba(200,160,69,.2); }
     </style>
 </head>
 <body>
-    <div class="lobby-wrap">
-        <div class="logo">
-            <h1>Continental</h1>
-            <p>Juego de cartas multijugador</p>
+
+    <!-- ===== SELECTOR DE JUEGO ===== -->
+    <div id="game-selector">
+        <div class="selector-title">
+            <h1>🃏 Juegos de Cartas</h1>
+            <p>Elige un juego para empezar</p>
         </div>
-
-        <!-- ===== FORMULARIO ===== -->
-        <div class="card-box" id="lobby-setup">
-            <h2>Unirse o Crear Sala</h2>
-            <div class="tabs">
-                <div class="tab active" onclick="switchTab('crear')">Crear sala</div>
-                <div class="tab" onclick="switchTab('unirse')">Unirse</div>
+        <div class="game-cards">
+            <div class="game-card" onclick="selectGame('continental')">
+                <span class="gc-icon">🎩</span>
+                <div class="gc-name">Continental</div>
+                <div class="gc-desc">7 rondas. Forma tercias y corridas. El clásico de la familia.</div>
+                <span class="gc-badge">2–5 jugadores</span>
             </div>
-
-            <!-- CREAR -->
-            <div class="tab-panel active" id="panel-crear">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="crear-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               oninput="sanitizeName(this)"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" onclick="openNamesModal('crear')" title="Nombres predefinidos">🎲</button>
-                    </div>
-                    <span class="field-hint" id="hint-crear-nombre"></span>
-                </div>
-
-                <div class="field-group">
-                    <label>Modo de juego</label>
-                    <div class="mode-row">
-                        <div class="mode-btn active" data-mode="realtime" onclick="setMode(this)">
-                            Tiempo real <small>Todos conectados</small>
-                        </div>
-                        <div class="mode-btn" data-mode="async" onclick="setMode(this)">
-                            Asíncrono <small>Juega cuando puedas</small>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="player-count">
-                    <label>Jugadores máx.</label>
-                    <div class="pc-ctrl">
-                        <button class="pc-btn" onclick="chgMax(-1)">−</button>
-                        <span class="pc-val" id="max-val">4</span>
-                        <button class="pc-btn" onclick="chgMax(1)">+</button>
-                    </div>
-                </div>
-
-                <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSala()">🃏 Crear Sala</button>
+            <div class="game-card" onclick="selectGame('pesca')">
+                <span class="gc-icon">🎣</span>
+                <div class="gc-name">Pesca</div>
+                <div class="gc-desc">Pide cartas a otros jugadores. Forma grupos de 4 iguales.</div>
+                <span class="gc-badge">2–6 jugadores</span>
             </div>
-
-            <!-- UNIRSE -->
-            <div class="tab-panel" id="panel-unirse">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="unirse-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               oninput="sanitizeName(this)"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" onclick="openNamesModal('unirse')" title="Nombres predefinidos">🎲</button>
-                    </div>
-                    <span class="field-hint" id="hint-unirse-nombre"></span>
-                </div>
-
-                <div class="field-group">
-                    <label>Código de sala</label>
-                    <input type="text" id="unirse-code"
-                           placeholder="Ej: ABC12"
-                           maxlength="5"
-                           oninput="sanitizeCode(this)"
-                           autocomplete="off" autocorrect="off" spellcheck="false">
-                    <span class="field-hint" id="hint-unirse-code"></span>
-                </div>
-
-                <button class="btn btn-gold" style="width:100%" onclick="unirse()">Unirse →</button>
-            </div>
-        </div>
-
-        <!-- ===== SALA DE ESPERA ===== -->
-        <div class="card-box" id="lobby-room">
-            <div class="room-code-display">
-                <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar">????</div>
-                <p>Comparte este código con tus amigos</p>
-            </div>
-            <div class="separator"></div>
-            <div class="player-list" id="player-list"></div>
-            <div class="separator"></div>
-            <div class="waiting-msg" id="waiting-msg">
-                Esperando jugadores<span class="dot-pulse"></span>
-            </div>
-            <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start" onclick="iniciarJuego()">
-                ▶ Iniciar Partida
-            </button>
         </div>
     </div>
 
-    <!-- ===== MODAL NOMBRES PREDEFINIDOS ===== -->
+    <!-- ===== LOBBY CONTINENTAL ===== -->
+    <div id="lobby-continental" style="display:none">
+        <div class="lobby-wrap">
+            <div class="logo">
+                <button class="back-btn" onclick="goBack()">← Volver</button>
+                <h1>Continental</h1>
+                <p>Juego de cartas multijugador</p>
+            </div>
+            <div class="card-box" id="lobby-setup-cont">
+                <h2>Unirse o Crear Sala</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('crear','cont')">Crear sala</div>
+                    <div class="tab" onclick="switchTab('unirse','cont')">Unirse</div>
+                </div>
+                <div class="tab-panel active" id="panel-crear-cont">
+                    <div class="field-group">
+                        <label>Tu nombre</label>
+                        <div class="input-row">
+                            <input type="text" id="crear-nombre-cont" placeholder="Nombre de jugador" maxlength="18" oninput="sanitizeName(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                            <button class="btn-random-name" onclick="openNamesModal('crear-cont')" title="Nombres predefinidos">🎲</button>
+                        </div>
+                        <span class="field-hint" id="hint-crear-nombre-cont"></span>
+                    </div>
+                    <div class="field-group">
+                        <label>Modo de juego</label>
+                        <div class="mode-row">
+                            <div class="mode-btn active" data-mode="realtime" onclick="setMode(this,'cont')">Tiempo real <small>Todos conectados</small></div>
+                            <div class="mode-btn" data-mode="async" onclick="setMode(this,'cont')">Asíncrono <small>Juega cuando puedas</small></div>
+                        </div>
+                    </div>
+                    <div class="player-count">
+                        <label>Jugadores máx.</label>
+                        <div class="pc-ctrl">
+                            <button class="pc-btn" onclick="chgMax(-1,'cont')">−</button>
+                            <span class="pc-val" id="max-val-cont">4</span>
+                            <button class="pc-btn" onclick="chgMax(1,'cont')">+</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSala()">🃏 Crear Sala</button>
+                </div>
+                <div class="tab-panel" id="panel-unirse-cont">
+                    <div class="field-group">
+                        <label>Tu nombre</label>
+                        <div class="input-row">
+                            <input type="text" id="unirse-nombre-cont" placeholder="Nombre de jugador" maxlength="18" oninput="sanitizeName(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                            <button class="btn-random-name" onclick="openNamesModal('unirse-cont')" title="Nombres predefinidos">🎲</button>
+                        </div>
+                        <span class="field-hint" id="hint-unirse-nombre-cont"></span>
+                    </div>
+                    <div class="field-group">
+                        <label>Código de sala</label>
+                        <input type="text" id="unirse-code-cont" placeholder="Ej: ABC12" maxlength="5" oninput="sanitizeCode(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                        <span class="field-hint" id="hint-unirse-code-cont"></span>
+                    </div>
+                    <button class="btn btn-gold" style="width:100%" onclick="unirse('cont')">Unirse →</button>
+                </div>
+            </div>
+            <div class="card-box" id="lobby-room-cont" style="display:none">
+                <div class="room-code-display">
+                    <div class="code" id="room-code-display-cont" onclick="copyCode()" title="Clic para copiar">????</div>
+                    <p>Comparte este código con tus amigos</p>
+                </div>
+                <div class="separator"></div>
+                <div class="player-list" id="player-list-cont"></div>
+                <div class="separator"></div>
+                <div class="waiting-msg" id="waiting-msg-cont">Esperando jugadores<span class="dot-pulse"></span></div>
+                <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start-cont" onclick="iniciarJuego('cont')">▶ Iniciar Partida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== LOBBY PESCA ===== -->
+    <div id="lobby-pesca" style="display:none">
+        <div class="lobby-wrap">
+            <div class="logo">
+                <button class="back-btn" onclick="goBack()">← Volver</button>
+                <h1>Pesca</h1>
+                <p>¿Tienes un...?</p>
+            </div>
+            <div class="card-box">
+                <h2>Unirse o Crear Sala</h2>
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('crear','pesca')">Crear sala</div>
+                    <div class="tab" onclick="switchTab('unirse','pesca')">Unirse</div>
+                </div>
+                <div class="tab-panel active" id="panel-crear-pesca">
+                    <div class="field-group">
+                        <label>Tu nombre</label>
+                        <div class="input-row">
+                            <input type="text" id="crear-nombre-pesca" placeholder="Nombre de jugador" maxlength="18" oninput="sanitizeName(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                            <button class="btn-random-name" onclick="openNamesModal('crear-pesca')" title="Nombres predefinidos">🎲</button>
+                        </div>
+                        <span class="field-hint" id="hint-crear-nombre-pesca"></span>
+                    </div>
+                    <div class="player-count">
+                        <label>Jugadores máx.</label>
+                        <div class="pc-ctrl">
+                            <button class="pc-btn" onclick="chgMax(-1,'pesca')">−</button>
+                            <span class="pc-val" id="max-val-pesca">4</span>
+                            <button class="pc-btn" onclick="chgMax(1,'pesca')">+</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSalaPesca()">🎣 Crear Sala</button>
+                </div>
+                <div class="tab-panel" id="panel-unirse-pesca">
+                    <div class="field-group">
+                        <label>Tu nombre</label>
+                        <div class="input-row">
+                            <input type="text" id="unirse-nombre-pesca" placeholder="Nombre de jugador" maxlength="18" oninput="sanitizeName(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                            <button class="btn-random-name" onclick="openNamesModal('unirse-pesca')" title="Nombres predefinidos">🎲</button>
+                        </div>
+                        <span class="field-hint" id="hint-unirse-nombre-pesca"></span>
+                    </div>
+                    <div class="field-group">
+                        <label>Código de sala</label>
+                        <input type="text" id="unirse-code-pesca" placeholder="Ej: ABC12" maxlength="5" oninput="sanitizeCode(this)" autocomplete="off" autocorrect="off" spellcheck="false">
+                        <span class="field-hint" id="hint-unirse-code-pesca"></span>
+                    </div>
+                    <button class="btn btn-gold" style="width:100%" onclick="unirse('pesca')">Unirse →</button>
+                </div>
+            </div>
+            <div class="card-box" id="lobby-room-pesca" style="display:none">
+                <div class="room-code-display">
+                    <div class="code" id="room-code-display-pesca" onclick="copyCode()" title="Clic para copiar">????</div>
+                    <p>Comparte este código con tus amigos</p>
+                </div>
+                <div class="separator"></div>
+                <div class="player-list" id="player-list-pesca"></div>
+                <div class="separator"></div>
+                <div class="waiting-msg" id="waiting-msg-pesca">Esperando jugadores<span class="dot-pulse"></span></div>
+                <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start-pesca" onclick="iniciarJuego('pesca')">▶ Iniciar Partida</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODAL NOMBRES ===== -->
     <div class="names-modal-overlay" id="names-modal" onclick="closeNamesModalOutside(event)">
         <div class="names-modal">
             <h3>🎲 Elige un nombre</h3>
@@ -439,9 +386,8 @@
     </div>
 
     <div id="toast"></div>
-
     <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
+    <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.5.0</div>
 </body>
 </html>

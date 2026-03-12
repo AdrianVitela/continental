@@ -5,21 +5,15 @@
    CONSTANTES
    ================================================================ */
 
-/** Sólo letras (incluyendo acentos y ñ) y números. Sin espacios ni especiales. */
 const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/;
-
-/** Código de sala: sólo letras mayúsculas y números (sin caracteres ambiguos) */
 const CODE_RE  = /^[A-Z0-9]+$/;
-
 const COOKIE_KEY  = 'continental_nombre';
 const COOKIE_DAYS = 365;
 
 /* ================================================================
-   POOL DE NOMBRES PREDEFINIDOS
-   120 opciones agrupadas con icono + nombre base
+   POOL DE NOMBRES PREDEFINIDOS — 120 opciones
    ================================================================ */
 const NOMBRE_POOL = [
-  // Míticos / épicos
   { icon: '⚔️',  nombre: 'AceViper'    },
   { icon: '🦁',  nombre: 'LeonBravo'   },
   { icon: '🐉',  nombre: 'DrakeFuego'  },
@@ -40,7 +34,6 @@ const NOMBRE_POOL = [
   { icon: '🏴‍☠️', nombre: 'CorsarioK'   },
   { icon: '🗡️',  nombre: 'EspadaVerde' },
   { icon: '🛡️',  nombre: 'EscudoFirme' },
-  // Cartas / apuestas
   { icon: '🃏',  nombre: 'Joker777'    },
   { icon: '🎴',  nombre: 'CartaMaestra'},
   { icon: '♠️',  nombre: 'EspadaNegra' },
@@ -51,7 +44,6 @@ const NOMBRE_POOL = [
   { icon: '🎲',  nombre: 'DadosMalos'  },
   { icon: '🏆',  nombre: 'CampeonPuro' },
   { icon: '🥇',  nombre: 'OroMexicano' },
-  // Sabor picante / bravucón
   { icon: '🌶️',  nombre: 'ChileVerde'  },
   { icon: '🔫',  nombre: 'GatilloX'    },
   { icon: '💣',  nombre: 'BombaLista'  },
@@ -62,7 +54,6 @@ const NOMBRE_POOL = [
   { icon: '🦾',  nombre: 'BrazoFuerte' },
   { icon: '🥊',  nombre: 'BoxerBravo'  },
   { icon: '💪',  nombre: 'MuscleKing'  },
-  // Naturaleza / animales
   { icon: '🐻',  nombre: 'OsoFuerte'   },
   { icon: '🐯',  nombre: 'TigreSalvaj' },
   { icon: '🦋',  nombre: 'MariposaMal' },
@@ -73,7 +64,6 @@ const NOMBRE_POOL = [
   { icon: '🐘',  nombre: 'ElefanteK'   },
   { icon: '🦁',  nombre: 'Simba2025'   },
   { icon: '🐆',  nombre: 'GuepaVeloz'  },
-  // Espacial / tech
   { icon: '🚀',  nombre: 'RocketMan'   },
   { icon: '🛸',  nombre: 'OvniRider'   },
   { icon: '🤖',  nombre: 'RobotMalo'   },
@@ -84,7 +74,6 @@ const NOMBRE_POOL = [
   { icon: '🌌',  nombre: 'GalaxiaPro'  },
   { icon: '🪐',  nombre: 'SaturnoK'    },
   { icon: '☄️',  nombre: 'CometaRoja'  },
-  // Mexicano / latam
   { icon: '🎸',  nombre: 'GuitarHero'  },
   { icon: '🌮',  nombre: 'TacoFuerte'  },
   { icon: '🍺',  nombre: 'CervezaBrav' },
@@ -95,7 +84,6 @@ const NOMBRE_POOL = [
   { icon: '🏜️',  nombre: 'DesiertoRex' },
   { icon: '🌵',  nombre: 'CactusFiero' },
   { icon: '🦅',  nombre: 'AguilaCalli' },
-  // Comida / random divertido
   { icon: '🍕',  nombre: 'PizzaKing'   },
   { icon: '🍣',  nombre: 'SushiMaster' },
   { icon: '🌯',  nombre: 'BurritoX'    },
@@ -106,7 +94,6 @@ const NOMBRE_POOL = [
   { icon: '🧃',  nombre: 'JugoMango'   },
   { icon: '☕',  nombre: 'CafeSolo'    },
   { icon: '🍫',  nombre: 'ChocoLoco'   },
-  // Legendarios / histórico
   { icon: '🏛️',  nombre: 'CesarPRO'    },
   { icon: '⚔️',  nombre: 'AquilesX'   },
   { icon: '🗺️',  nombre: 'ColonMaster' },
@@ -117,7 +104,6 @@ const NOMBRE_POOL = [
   { icon: '🎻',  nombre: 'MozartBeat'  },
   { icon: '⚗️',  nombre: 'AlquimistaZ' },
   { icon: '📜',  nombre: 'ManuscritoK' },
-  // Sport / competencia
   { icon: '⚽',  nombre: 'GolazoK'     },
   { icon: '🏀',  nombre: 'DunkMaster'  },
   { icon: '🎾',  nombre: 'ServeAce'    },
@@ -128,7 +114,6 @@ const NOMBRE_POOL = [
   { icon: '🥋',  nombre: 'KarateKid2'  },
   { icon: '🎯',  nombre: 'TiroAlBlanco'},
   { icon: '🏇',  nombre: 'JineteRex'   },
-  // Humor / random
   { icon: '🤓',  nombre: 'NerdPower'   },
   { icon: '😎',  nombre: 'CoolDude99'  },
   { icon: '🥸',  nombre: 'DisguisePro' },
@@ -144,172 +129,197 @@ const NOMBRE_POOL = [
 /* ================================================================
    ESTADO DEL MÓDULO
    ================================================================ */
-let maxPlayers  = 4;
-let gameMode    = 'realtime';
-let myId        = null;
-let myCode      = null;
-let isHost      = false;
-let playersList = [];
+let maxPlayers      = 4;
+let maxPlayersPesca = 4;
+let gameMode        = 'realtime';
+let myId            = null;
+let myCode          = null;
+let isHost          = false;
+let playersList     = [];
+let currentGame     = null; // 'continental' | 'pesca'
 
-// Para el modal de nombres: qué input está activo
 let _activeNameTarget = 'crear';
-// Índice de inicio del shuffle actual
-let _shuffleOffset = 0;
-const NAMES_PER_PAGE = 12;
+let _shuffleOffset    = 0;
+const NAMES_PER_PAGE  = 12;
 
 /* ================================================================
    COOKIES
    ================================================================ */
-function setCookie (key, value, days) {
+function setCookie(key, value, days) {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
   document.cookie = `${key}=${encodeURIComponent(value)};expires=${expires};path=/;SameSite=Lax`;
 }
 
-function getCookie (key) {
+function getCookie(key) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : '';
 }
 
-/* Carga el nombre guardado en ambos inputs al iniciar */
-function loadSavedName () {
+function loadSavedName() {
   const saved = getCookie(COOKIE_KEY);
   if (!saved) return;
-  const a = document.getElementById('crear-nombre');
-  const b = document.getElementById('unirse-nombre');
-  if (a) a.value = saved;
-  if (b) b.value = saved;
+  [
+    'crear-nombre', 'unirse-nombre',
+    'crear-nombre-cont', 'unirse-nombre-cont',
+    'crear-nombre-pesca', 'unirse-nombre-pesca'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.value) el.value = saved;
+  });
 }
 
-/* Guarda el nombre en cookie y sincroniza los dos inputs */
-function saveName (nombre) {
+function saveName(nombre) {
   if (!nombre) return;
   setCookie(COOKIE_KEY, nombre, COOKIE_DAYS);
-  // Sincronizar ambos campos para que siempre estén iguales
-  const a = document.getElementById('crear-nombre');
-  const b = document.getElementById('unirse-nombre');
-  if (a && a.value !== nombre) a.value = nombre;
-  if (b && b.value !== nombre) b.value = nombre;
+  [
+    'crear-nombre', 'unirse-nombre',
+    'crear-nombre-cont', 'unirse-nombre-cont',
+    'crear-nombre-pesca', 'unirse-nombre-pesca'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.value !== nombre) el.value = nombre;
+  });
 }
 
 /* ================================================================
    VALIDACIÓN / SANITIZACIÓN
    ================================================================ */
-
-/**
- * Limpia un input de nombre:
- * - Elimina todo lo que no sea letra (incluyendo acentos/ñ) o número
- * - Actualiza el campo y la cookie
- */
-function sanitizeName (input) {
+function sanitizeName(input) {
   const raw   = input.value;
   const clean = raw.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]/g, '');
   if (raw !== clean) input.value = clean;
-  hideHint(input.id === 'crear-nombre' ? 'crear-nombre' : 'unirse-nombre');
-  // Guardar en cookie mientras escribe
+  hideHint(input.id);
   if (clean.length >= 2) saveName(clean);
 }
 
-/**
- * Limpia un input de código de sala:
- * - Solo letras y números (sin guiones ni especiales)
- * - Convierte a mayúsculas
- */
-function sanitizeCode (input) {
+function sanitizeCode(input) {
   const raw   = input.value;
   const clean = raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (raw !== clean || input.value !== clean) input.value = clean;
-  hideHint('unirse-code');
+  hideHint(input.id);
 }
 
-/** Muestra un hint de error bajo un campo */
-function showHint (id, msg) {
-  const el = document.getElementById('hint-' + id);
+function showHint(id, msg) {
+  const elId = id.startsWith('hint-') ? id : 'hint-' + id;
+  const el = document.getElementById(elId);
   if (!el) return;
   el.textContent = msg;
   el.classList.add('show');
 }
 
-function hideHint (id) {
-  const el = document.getElementById('hint-' + id);
+function hideHint(id) {
+  const elId = id.startsWith('hint-') ? id : 'hint-' + id;
+  const el = document.getElementById(elId);
   if (el) el.classList.remove('show');
 }
 
-/** Valida nombre, retorna true si es válido */
-function validateName (value, hintId) {
+function validateName(value, hintId) {
   const v = value.trim();
-  if (!v) {
-    showHint(hintId, 'El nombre no puede estar vacío.');
-    return false;
-  }
-  if (v.length < 2) {
-    showHint(hintId, 'Mínimo 2 caracteres.');
-    return false;
-  }
-  if (!NAME_RE.test(v)) {
-    showHint(hintId, 'Solo letras y números, sin espacios ni símbolos.');
-    return false;
-  }
+  if (!v) { showHint(hintId, 'El nombre no puede estar vacío.'); return false; }
+  if (v.length < 2) { showHint(hintId, 'Mínimo 2 caracteres.'); return false; }
+  if (!NAME_RE.test(v)) { showHint(hintId, 'Solo letras y números, sin espacios ni símbolos.'); return false; }
   hideHint(hintId);
   return true;
 }
 
-/** Valida código de sala, retorna true si es válido */
-function validateCode (value) {
+function validateCode(value, hintId) {
+  hintId = hintId || 'unirse-code';
   const v = value.trim().toUpperCase();
-  if (!v || v.length < 4) {
-    showHint('unirse-code', 'Ingresa el código de sala (4-5 caracteres).');
-    return false;
-  }
-  if (!CODE_RE.test(v)) {
-    showHint('unirse-code', 'Solo letras y números.');
-    return false;
-  }
-  hideHint('unirse-code');
+  if (!v || v.length < 4) { showHint(hintId, 'Ingresa el código de sala (4-5 caracteres).'); return false; }
+  if (!CODE_RE.test(v))   { showHint(hintId, 'Solo letras y números.'); return false; }
+  hideHint(hintId);
   return true;
+}
+
+/* ================================================================
+   SELECTOR DE JUEGO (nuevo HTML con game-selector)
+   ================================================================ */
+function selectGame(game) {
+  currentGame = game;
+  const sel = document.getElementById('game-selector');
+  if (sel) sel.style.display = 'none';
+  const lobbyEl = document.getElementById(game === 'pesca' ? 'lobby-pesca' : 'lobby-continental');
+  if (lobbyEl) lobbyEl.style.display = 'block';
+  loadSavedName();
+}
+
+function goBack() {
+  ['lobby-continental','lobby-pesca'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const sel = document.getElementById('game-selector');
+  if (sel) sel.style.display = 'block';
+  currentGame = null;
 }
 
 /* ================================================================
    TABS / MODO / JUGADORES
    ================================================================ */
-function switchTab (t) {
-  document.querySelectorAll('.tab').forEach((el, i) =>
-    el.classList.toggle('active', (i === 0 && t === 'crear') || (i === 1 && t === 'unirse'))
-  );
-  document.getElementById('panel-crear').classList.toggle('active', t === 'crear');
-  document.getElementById('panel-unirse').classList.toggle('active', t === 'unirse');
+function switchTab(t, suffix) {
+  if (suffix) {
+    ['crear','unirse'].forEach(tab => {
+      const panel = document.getElementById(`panel-${tab}-${suffix}`);
+      if (panel) panel.classList.toggle('active', tab === t);
+    });
+    const lobbyId = suffix === 'cont' ? 'lobby-continental' : 'lobby-pesca';
+    const lobby = document.getElementById(lobbyId);
+    if (lobby) {
+      lobby.querySelectorAll('.tab').forEach((el, i) => {
+        el.classList.toggle('active', (i === 0 && t === 'crear') || (i === 1 && t === 'unirse'));
+      });
+    }
+  } else {
+    // HTML original sin sufijos
+    document.querySelectorAll('.tab').forEach((el, i) =>
+      el.classList.toggle('active', (i === 0 && t === 'crear') || (i === 1 && t === 'unirse'))
+    );
+    ['panel-crear','panel-unirse'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active', id === 'panel-' + t);
+    });
+  }
 }
 
-function setMode (el) {
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+function setMode(el, suffix) {
+  const scope = suffix
+    ? document.getElementById(suffix === 'cont' ? 'lobby-continental' : 'lobby-pesca')
+    : document;
+  if (scope) scope.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
   gameMode = el.dataset.mode;
 }
 
-function chgMax (d) {
-  maxPlayers = Math.max(2, Math.min(5, maxPlayers + d));
-  document.getElementById('max-val').textContent = maxPlayers;
+function chgMax(d, suffix) {
+  if (suffix === 'pesca') {
+    maxPlayersPesca = Math.max(2, Math.min(6, maxPlayersPesca + d));
+    const el = document.getElementById('max-val-pesca');
+    if (el) el.textContent = maxPlayersPesca;
+  } else {
+    maxPlayers = Math.max(2, Math.min(5, maxPlayers + d));
+    const el = document.getElementById(suffix ? 'max-val-cont' : 'max-val');
+    if (el) el.textContent = maxPlayers;
+  }
 }
 
 /* ================================================================
    MODAL DE NOMBRES PREDEFINIDOS
    ================================================================ */
-
-/** Abre el modal y muestra una página de nombres */
-function openNamesModal (target) {
+function openNamesModal(target) {
   _activeNameTarget = target;
-  _shuffleOffset    = Math.floor(Math.random() * NOMBRE_POOL.length); // inicio aleatorio
+  _shuffleOffset    = Math.floor(Math.random() * NOMBRE_POOL.length);
   renderNamesGrid();
   document.getElementById('names-modal').classList.add('show');
 }
 
-/** Muestra la siguiente tanda de nombres */
-function shuffleNames () {
+function shuffleNames() {
   _shuffleOffset = (_shuffleOffset + NAMES_PER_PAGE) % NOMBRE_POOL.length;
   renderNamesGrid();
 }
 
-function renderNamesGrid () {
+function renderNamesGrid() {
   const grid = document.getElementById('names-grid');
+  if (!grid) return;
   grid.innerHTML = '';
   for (let i = 0; i < NAMES_PER_PAGE; i++) {
     const entry = NOMBRE_POOL[(_shuffleOffset + i) % NOMBRE_POOL.length];
@@ -321,36 +331,35 @@ function renderNamesGrid () {
   }
 }
 
-/** El usuario eligió un nombre del modal */
-function pickName (nombre) {
-  const inputId = _activeNameTarget === 'crear' ? 'crear-nombre' : 'unirse-nombre';
+function pickName(nombre) {
+  const map = {
+    'crear':        'crear-nombre',
+    'unirse':       'unirse-nombre',
+    'crear-cont':   'crear-nombre-cont',
+    'unirse-cont':  'unirse-nombre-cont',
+    'crear-pesca':  'crear-nombre-pesca',
+    'unirse-pesca': 'unirse-nombre-pesca',
+  };
+  const inputId = map[_activeNameTarget] || _activeNameTarget;
   const input   = document.getElementById(inputId);
-  if (input) {
-    input.value = nombre;
-    saveName(nombre);
-    hideHint(_activeNameTarget === 'crear' ? 'crear-nombre' : 'unirse-nombre');
-  }
+  if (input) { input.value = nombre; saveName(nombre); hideHint(inputId); }
   closeNamesModal();
 }
 
-function closeNamesModal () {
+function closeNamesModal() {
   document.getElementById('names-modal').classList.remove('show');
 }
 
-function closeNamesModalOutside (e) {
+function closeNamesModalOutside(e) {
   if (e.target === document.getElementById('names-modal')) closeNamesModal();
 }
 
 /* ================================================================
-   ACCIONES DE LOBBY
+   TOAST
    ================================================================ */
-function copyCode () {
-  navigator.clipboard?.writeText(myCode);
-  toast('¡Código copiado!', 'green');
-}
-
-function toast (msg, type = 'red') {
+function toast(msg, type = 'red') {
   const t = document.getElementById('toast');
+  if (!t) return;
   t.textContent = msg;
   t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' : 'rgba(180,50,50,.9)';
   t.style.display = 'block';
@@ -358,92 +367,172 @@ function toast (msg, type = 'red') {
   t._t = setTimeout(() => (t.style.display = 'none'), 2500);
 }
 
-function crearSala () {
-  const input  = document.getElementById('crear-nombre');
-  const nombre = input.value.trim();
-  if (!validateName(nombre, 'crear-nombre')) return;
+function copyCode() {
+  navigator.clipboard?.writeText(myCode);
+  toast('¡Código copiado!', 'green');
+}
+
+/* ================================================================
+   ACCIONES — CONTINENTAL
+   ================================================================ */
+function crearSala() {
+  // Soportar input original y nuevo con sufijo
+  const input  = document.getElementById('crear-nombre-cont') || document.getElementById('crear-nombre');
+  const nombre = input?.value?.trim() || '';
+  const hintId = document.getElementById('crear-nombre-cont') ? 'crear-nombre-cont' : 'crear-nombre';
+  if (!validateName(nombre, hintId)) return;
   saveName(nombre);
   WS.send({ type: 'create_room', nombre, mode: gameMode, maxPlayers });
 }
 
-function unirse () {
-  const nInput = document.getElementById('unirse-nombre');
-  const cInput = document.getElementById('unirse-code');
-  const nombre = nInput.value.trim();
-  const code   = cInput.value.trim().toUpperCase();
-
+function unirse(suffix) {
+  if (suffix === 'pesca') { _unirseAPesca(); return; }
+  const hasCont = !!document.getElementById('unirse-nombre-cont');
+  const nId = hasCont ? 'unirse-nombre-cont' : 'unirse-nombre';
+  const cId = hasCont ? 'unirse-code-cont'   : 'unirse-code';
+  const nombre = document.getElementById(nId)?.value?.trim() || '';
+  const code   = document.getElementById(cId)?.value?.trim().toUpperCase() || '';
   let ok = true;
-  if (!validateName(nombre, 'unirse-nombre')) ok = false;
-  if (!validateCode(code))                    ok = false;
+  if (!validateName(nombre, nId)) ok = false;
+  if (!validateCode(code, cId))   ok = false;
   if (!ok) return;
-
   saveName(nombre);
   WS.send({ type: 'join_room', nombre, code });
 }
 
-function iniciarJuego () {
-  WS.send({ type: 'start_game' });
+function iniciarJuego(suffix) {
+  WS.send({ type: suffix === 'pesca' ? 'start_pesca' : 'start_game' });
+}
+
+/* ================================================================
+   ACCIONES — PESCA
+   ================================================================ */
+function crearSalaPesca() {
+  const input  = document.getElementById('crear-nombre-pesca');
+  const nombre = input?.value?.trim() || '';
+  if (!validateName(nombre, 'crear-nombre-pesca')) return;
+  saveName(nombre);
+  WS.send({ type: 'create_pesca', nombre, maxPlayers: maxPlayersPesca });
+}
+
+function _unirseAPesca() {
+  const nombre = document.getElementById('unirse-nombre-pesca')?.value?.trim() || '';
+  const code   = document.getElementById('unirse-code-pesca')?.value?.trim().toUpperCase() || '';
+  let ok = true;
+  if (!validateName(nombre, 'unirse-nombre-pesca')) ok = false;
+  if (!validateCode(code,   'unirse-code-pesca'))   ok = false;
+  if (!ok) return;
+  saveName(nombre);
+  WS.send({ type: 'join_pesca', nombre, code });
 }
 
 /* ================================================================
    SALA DE ESPERA
    ================================================================ */
-function showLobby (lobbyState, pid, code, host) {
+function showLobby(lobbyState, pid, code, host) {
   myId   = pid;
   myCode = code;
   isHost = host;
 
-  document.getElementById('lobby-setup').style.display = 'none';
-  const lr = document.getElementById('lobby-room');
-  lr.classList.add('show');
-  document.getElementById('room-code-display').textContent = code;
+  if (currentGame === 'pesca') {
+    // Ocultar primer card-box del lobby pesca (el formulario)
+    const lobbyEl = document.getElementById('lobby-pesca');
+    if (lobbyEl) {
+      const boxes = lobbyEl.querySelectorAll('.card-box');
+      if (boxes[0]) boxes[0].style.display = 'none';
+    }
+    const room = document.getElementById('lobby-room-pesca');
+    if (room) room.style.display = 'flex';
+    const codeEl = document.getElementById('room-code-display-pesca');
+    if (codeEl) codeEl.textContent = code;
+  } else if (document.getElementById('lobby-setup-cont')) {
+    document.getElementById('lobby-setup-cont').style.display = 'none';
+    const room = document.getElementById('lobby-room-cont');
+    if (room) room.style.display = 'flex';
+    const codeEl = document.getElementById('room-code-display-cont');
+    if (codeEl) codeEl.textContent = code;
+  } else {
+    // HTML original
+    const setup = document.getElementById('lobby-setup');
+    if (setup) setup.style.display = 'none';
+    const room = document.getElementById('lobby-room');
+    if (room) room.classList.add('show');
+    const codeEl = document.getElementById('room-code-display');
+    if (codeEl) codeEl.textContent = code;
+  }
+
   updateLobbyState(lobbyState);
 }
 
-function updateLobbyState (lobbyState) {
+function updateLobbyState(lobbyState) {
   playersList = lobbyState.players;
 
-  const list = document.getElementById('player-list');
-  list.innerHTML = playersList.map((p, i) => `
-    <div class="player-item">
-      <div class="player-dot ${p.conectado ? '' : 'away'}"></div>
-      <span>${escHtml(p.nombre)}</span>
-      ${i === 0 ? '<span class="player-badge">HOST</span>' : ''}
-    </div>
-  `).join('');
+  let listId, msgId, btnId;
+  if (currentGame === 'pesca') {
+    listId = 'player-list-pesca'; msgId = 'waiting-msg-pesca'; btnId = 'btn-start-pesca';
+  } else if (document.getElementById('player-list-cont')) {
+    listId = 'player-list-cont';  msgId = 'waiting-msg-cont';  btnId = 'btn-start-cont';
+  } else {
+    listId = 'player-list';       msgId = 'waiting-msg';       btnId = 'btn-start';
+  }
+
+  const list = document.getElementById(listId);
+  if (list) {
+    list.innerHTML = playersList.map((p, i) => `
+      <div class="player-item">
+        <div class="player-dot ${p.conectado ? '' : 'away'}"></div>
+        <span>${escHtml(p.nombre)}</span>
+        ${i === 0 ? '<span class="player-badge">HOST</span>' : ''}
+      </div>
+    `).join('');
+  }
 
   const canStart = playersList.length >= 2 && lobbyState.status === 'lobby';
-  const btn      = document.getElementById('btn-start');
   const soyHost  = playersList.length > 0 && myId && playersList[0].id === myId;
-  btn.style.display = canStart && soyHost ? 'block' : 'none';
+  const btn = document.getElementById(btnId);
+  if (btn) btn.style.display = canStart && soyHost ? 'block' : 'none';
 
-  const waiting = document.getElementById('waiting-msg');
-  waiting.innerHTML = canStart
-    ? `<span style="color:var(--gold-hi)">${playersList.length} jugadores listos</span>`
-    : `Esperando jugadores<span class="dot-pulse"></span>`;
+  const waiting = document.getElementById(msgId);
+  if (waiting) {
+    waiting.innerHTML = canStart
+      ? `<span style="color:var(--gold-hi)">${playersList.length} jugadores listos</span>`
+      : `Esperando jugadores<span class="dot-pulse"></span>`;
+  }
 }
 
 /* ================================================================
    EVENTOS DEL SOCKET
    ================================================================ */
-function setupSocketEvents () {
+function setupSocketEvents() {
   WS.on('room_created', ({ code, playerId, lobbyState }) => {
     showLobby(lobbyState, playerId, code, true);
-    localStorage.setItem('cid_' + code, playerId);
+    try { localStorage.setItem('cid_' + code, playerId); } catch(_) {}
   });
 
   WS.on('room_joined', ({ code, playerId, lobbyState }) => {
     showLobby(lobbyState, playerId, code, false);
-    localStorage.setItem('cid_' + code, playerId);
+    try { localStorage.setItem('cid_' + code, playerId); } catch(_) {}
   });
 
   WS.on('player_joined', ({ lobbyState }) => {
     if (lobbyState) updateLobbyState(lobbyState);
   });
 
+  WS.on('player_reconnected', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
+  WS.on('player_disconnected', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
   WS.on('state_update', ({ event }) => {
     if (event === 'game_started' || event === 'nueva_ronda') {
-      window.location.href = `/game?code=${myCode}&pid=${myId}`;
+      if (currentGame === 'pesca') {
+        window.location.href = `/pesca?room=${myCode}&pid=${myId}`;
+      } else {
+        window.location.href = `/game?code=${myCode}&pid=${myId}`;
+      }
     }
   });
 
@@ -451,34 +540,42 @@ function setupSocketEvents () {
 }
 
 /* ================================================================
-   INIT
+   HELPERS
    ================================================================ */
-function escHtml (str) {
+function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 }
 
-function init () {
+/* ================================================================
+   INIT
+   ================================================================ */
+function init() {
   loadSavedName();
   setupSocketEvents();
   WS.connect();
 }
 
-/* Exponer globales que usa el HTML */
-window.switchTab           = switchTab;
-window.setMode             = setMode;
-window.chgMax              = chgMax;
-window.copyCode            = copyCode;
-window.crearSala           = crearSala;
-window.unirse              = unirse;
-window.iniciarJuego        = iniciarJuego;
-window.sanitizeName        = sanitizeName;
-window.sanitizeCode        = sanitizeCode;
-window.openNamesModal      = openNamesModal;
-window.closeNamesModal     = closeNamesModal;
+/* ================================================================
+   GLOBALES
+   ================================================================ */
+window.switchTab              = switchTab;
+window.setMode                = setMode;
+window.chgMax                 = chgMax;
+window.copyCode               = copyCode;
+window.crearSala              = crearSala;
+window.crearSalaPesca         = crearSalaPesca;
+window.unirse                 = unirse;
+window.iniciarJuego           = iniciarJuego;
+window.sanitizeName           = sanitizeName;
+window.sanitizeCode           = sanitizeCode;
+window.openNamesModal         = openNamesModal;
+window.closeNamesModal        = closeNamesModal;
 window.closeNamesModalOutside = closeNamesModalOutside;
-window.shuffleNames        = shuffleNames;
+window.shuffleNames           = shuffleNames;
+window.selectGame             = selectGame;
+window.goBack                 = goBack;
 
 document.addEventListener('DOMContentLoaded', init);

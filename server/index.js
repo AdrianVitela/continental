@@ -5,7 +5,12 @@ const { WebSocketServer } = require('ws');
 const path     = require('path');
 const { randomUUID } = require('crypto');
 const { GameRoom  } = require('./GameRoom');
-const { PescaRoom } = require('./PescaRoom');
+let PescaRoom;
+try {
+  ({ PescaRoom } = require('./PescaRoom'));
+} catch (e) {
+  console.warn('\u26a0\ufe0f  PescaRoom no disponible - sube PescaRoom.js y PescaEngine.js:', e.message);
+}
 
 const PORT = process.env.PORT || 3000;
 const app  = express();
@@ -119,6 +124,7 @@ wss.on('connection', (ws) => {
 
                 // ─── Crear sala Pesca ────────────────────
                 case 'create_pesca': {
+                    if (!PescaRoom) return send(ws, { type: 'error', msg: 'Juego Pesca no disponible en el servidor.' });
                     const { nombre, maxPlayers = 5 } = msg;
                     const err = validateNombre(nombre);
                     if (err) return send(ws, { type: 'error', msg: err });
@@ -137,6 +143,7 @@ wss.on('connection', (ws) => {
 
                 // ─── Unirse a sala Pesca ─────────────────
                 case 'join_pesca': {
+                    if (!PescaRoom) return send(ws, { type: 'error', msg: 'Juego Pesca no disponible en el servidor.' });
                     const { nombre, code, playerId: existingId } = msg;
                     const ne = validateNombre(nombre); if (ne) return send(ws, { type: 'error', msg: ne });
                     const ce = validateCode(code);     if (ce) return send(ws, { type: 'error', msg: ce });

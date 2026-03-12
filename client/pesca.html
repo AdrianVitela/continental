@@ -46,6 +46,117 @@
         }
         .h-mazo { font-size: .7rem; color: var(--fish-dim); white-space: nowrap; }
 
+        /* ── CHAT TOGGLE ── */
+        #chat-toggle {
+            position: relative; background: rgba(0,200,224,.08);
+            border: 1px solid rgba(0,200,224,.25); border-radius: 8px;
+            color: var(--fish); font-size: .75rem; padding: 4px 10px;
+            cursor: pointer; white-space: nowrap; transition: background .15s;
+        }
+        #chat-toggle:hover { background: rgba(0,200,224,.18); }
+        #chat-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: #e74c3c; color: #fff; font-size: .55rem;
+            border-radius: 50%; width: 14px; height: 14px;
+            display: none; align-items: center; justify-content: center; font-weight: 700;
+        }
+        #chat-badge.show { display: flex; }
+
+        /* ── CHAT PANEL ── */
+        #chat-panel {
+            position: fixed; bottom: 0; right: 0;
+            width: min(320px, 100vw); max-height: 420px;
+            background: rgba(4,21,32,.97); border: 1px solid var(--fish-bd);
+            border-radius: 14px 0 0 0; z-index: 300;
+            display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform .25s ease;
+            box-shadow: -4px -4px 20px rgba(0,0,0,.5);
+        }
+        #chat-panel.open { transform: translateY(0); }
+        #chat-panel-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px 8px; border-bottom: 1px solid rgba(0,200,224,.15);
+            font-size: .75rem; color: var(--fish); font-weight: 600;
+        }
+        #chat-close { background: none; border: none; color: rgba(200,200,200,.5); cursor: pointer; font-size: 1rem; padding: 0 2px; }
+        #chat-close:hover { color: #e8e8e8; }
+        #emoji-grid {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            padding: 10px 12px 8px; border-bottom: 1px solid rgba(0,200,224,.1);
+        }
+        .emoji-btn {
+            background: rgba(0,200,224,.07); border: 1px solid rgba(0,200,224,.18);
+            border-radius: 8px; padding: 5px 10px; font-size: .82rem;
+            cursor: pointer; transition: background .12s, transform .1s; color: #e8e8e8;
+        }
+        .emoji-btn:hover  { background: rgba(0,200,224,.2); transform: scale(1.1); }
+        .emoji-btn:active { transform: scale(.93); }
+        #chat-messages {
+            flex: 1; overflow-y: auto; padding: 8px 12px;
+            display: flex; flex-direction: column; gap: 4px; min-height: 80px;
+            scrollbar-width: thin; scrollbar-color: var(--fish-dim) transparent;
+        }
+        .chat-msg { font-size: .72rem; line-height: 1.4; }
+        .chat-msg .cn { color: var(--fish); font-weight: 600; margin-right: 4px; }
+        .chat-msg .ct { color: rgba(220,220,220,.75); }
+        #chat-input-row {
+            display: flex; gap: 6px; padding: 8px 10px;
+            border-top: 1px solid rgba(0,200,224,.1);
+        }
+        #chat-input {
+            flex: 1; background: rgba(0,200,224,.06); border: 1px solid rgba(0,200,224,.2);
+            border-radius: 8px; padding: 6px 10px; font-size: .75rem;
+            color: #e8e8e8; font-family: 'Outfit', sans-serif; outline: none;
+        }
+        #chat-input::placeholder { color: rgba(200,200,200,.3); }
+        #chat-send {
+            background: var(--fish-bg); border: 1px solid var(--fish-bd);
+            border-radius: 8px; padding: 6px 12px; color: var(--fish); font-size: .75rem; cursor: pointer;
+        }
+        #chat-send:hover { background: rgba(0,200,224,.22); }
+
+        /* ── SPEECH BUBBLES ── */
+        .speech-bubble {
+            position: absolute; bottom: calc(100% + 6px); left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10,30,45,.95); border: 1px solid var(--fish-bd);
+            border-radius: 10px; padding: 5px 10px;
+            font-size: .72rem; color: #e8e8e8;
+            pointer-events: none; z-index: 200;
+            animation: bubblePop .2s ease both;
+            max-width: 160px; white-space: normal; text-align: center;
+        }
+        .speech-bubble::after {
+            content: ''; position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: rgba(10,30,45,.95);
+        }
+        @keyframes bubblePop {
+            from { opacity:0; transform: translateX(-50%) scale(.8); }
+            to   { opacity:1; transform: translateX(-50%) scale(1); }
+        }
+        #my-bubble-anchor { position: relative; }
+        #my-bubble-anchor .speech-bubble {
+            bottom: auto; top: calc(100% + 6px);
+        }
+        #my-bubble-anchor .speech-bubble::after {
+            top: auto; bottom: 100%;
+            border-top-color: transparent;
+            border-bottom-color: rgba(10,30,45,.95);
+        }
+
+        /* ── EMOJI FLOTANTE ── */
+        .reaction-float {
+            position: fixed; font-size: 1.8rem; pointer-events: none; z-index: 9999;
+            animation: floatUp 1.6s ease-out forwards;
+        }
+        @keyframes floatUp {
+            0%   { opacity: 1; transform: translateY(0) scale(1); }
+            80%  { opacity: .8; }
+            100% { opacity: 0; transform: translateY(-120px) scale(1.3); }
+        }
+
         /* ── RIVALES ── */
         #rivals-area {
             display: flex; flex-wrap: wrap; gap: 8px;
@@ -93,7 +204,6 @@
             display: none; background: rgba(0,0,0,.55); border: 2px solid var(--fish);
             border-radius: 14px; padding: 12px 18px; text-align: center;
             max-width: 440px; width: 100%; box-shadow: 0 0 20px rgba(0,200,224,.2);
-            animation: fadeUp .3s var(--eout) both;
         }
         #peticion-box.show { display: block; }
         #pet-texto { font-size: .9rem; line-height: 1.5; margin-bottom: 8px; }
@@ -110,13 +220,7 @@
         }
         #btn-confirmar:hover { background: rgba(0,200,224,.25); }
 
-        /* ── LOG ── */
-        #log-area { padding: 0 12px 4px; display: flex; flex-direction: column; gap: 3px; }
-        .log-item { font-size: .7rem; color: rgba(200,200,200,.5); padding: 2px 8px; border-left: 2px solid rgba(0,200,224,.12); animation: fadeIn .3s ease both; }
-        .log-item.fresh { color: #ddd; border-left-color: var(--fish); }
-        @keyframes fadeIn { from { opacity:0; transform:translateX(-5px); } }
-
-        /* ── SLOTS ESTILO CONTINENTAL ── */
+        /* ── SLOTS ── */
         #slots-section { padding: 6px 10px 4px; }
         .slots-lbl { font-size: .62rem; color: var(--fish-dim); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px; padding-left:2px; }
         .building-row {
@@ -137,6 +241,7 @@
         .building-slot:hover    { border-color: var(--fish); background: rgba(0,200,224,.06); }
         .building-slot.complete { border-color: #2ecc71 !important; background: rgba(46,204,113,.08); }
         .building-slot.sel-slot { border-color: #ffe066 !important; background: rgba(255,220,0,.07); box-shadow: 0 0 10px rgba(255,220,0,.2); }
+        .building-slot.drag-over { border-color: var(--fish) !important; background: rgba(0,200,224,.18) !important; box-shadow: 0 0 16px rgba(0,200,224,.35); }
         .slot-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1px; padding:0 2px; font-size:.58rem; flex-shrink:0; }
         .slot-title  { color: var(--fish); font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
         .slot-count  { font-size:.5rem; color:rgba(255,255,255,.4); background:rgba(0,0,0,.3); padding:1px 4px; border-radius:6px; }
@@ -165,26 +270,28 @@
         }
         .pill-sub { font-size:.58rem; color:var(--fish-dim); }
 
-        /* ── HINT "DAME TUS X" ── */
+        /* ── DAME HINT ── */
         #dame-hint {
             display: none; background: rgba(255,220,0,.1); border: 1px solid rgba(255,220,0,.35);
             border-radius: 8px; padding: 6px 14px; font-size: .78rem; color: #ffe066;
-            text-align: center; margin-bottom: 6px; animation: fadeUp .3s var(--eout) both;
+            text-align: center; margin-bottom: 6px;
         }
         #dame-hint.show { display: block; }
 
         /* ── MANO ── */
+        #my-bubble-anchor { position: relative; }
         #my-hand { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:10px; }
 
-        /* ── CARTA genérica ── */
+        /* ── CARTA ── */
         .p-card {
             width: var(--cw,52px); height: var(--ch,72px);
             background: #f9f5eb; border-radius: 7px; border: 2px solid transparent;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-size:.82rem; font-weight:700; font-family:'Cormorant Garamond',serif;
-            color:#222; cursor:pointer; transition: transform .15s, border-color .15s, box-shadow .15s;
+            color:#222; cursor:grab; transition: transform .15s, border-color .15s, box-shadow .15s;
             user-select:none; flex-shrink:0; position:relative;
         }
+        .p-card:active { cursor: grabbing; }
         .p-card.red   { color: #c0392b; }
         .p-card.joker { background: #2a0d4a; color: #ffe066; border-color: rgba(140,60,200,.3); }
         .p-card:hover { transform: translateY(-4px); }
@@ -194,8 +301,7 @@
             border-color: #ffe066 !important;
             box-shadow: 0 6px 16px rgba(255,220,0,.5) !important;
         }
-        .p-card.in-slot { opacity:.35; pointer-events:none; transform:none !important; }
-        .p-card.in-slot.selected { opacity:.6; pointer-events:all; }
+        .p-card.dragging { opacity: .3; transform: none !important; pointer-events: none; }
         .cv { font-size:.72rem; line-height:1; }
         .cp { font-size:.88rem; line-height:1; }
 
@@ -219,7 +325,7 @@
         /* ── MODAL FIN ── */
         #fin-modal { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.75); backdrop-filter:blur(8px); align-items:center; justify-content:center; }
         #fin-modal.show { display:flex; }
-        .fin-box { background:linear-gradient(160deg,#0a2a3a,#041520); border:2px solid var(--fish); border-radius:18px; padding:26px 22px; width:min(360px,92%); text-align:center; animation:fadeUp .3s var(--eout) both; box-shadow:0 0 40px rgba(0,200,224,.2); }
+        .fin-box { background:linear-gradient(160deg,#0a2a3a,#041520); border:2px solid var(--fish); border-radius:18px; padding:26px 22px; width:min(360px,92%); text-align:center; box-shadow:0 0 40px rgba(0,200,224,.2); }
         .fin-box h2 { font-family:'Cormorant Garamond',serif; font-size:1.6rem; color:var(--fish); margin-bottom:16px; letter-spacing:2px; }
         .result-row { display:flex; align-items:center; gap:10px; padding:8px 12px; border-radius:8px; margin-bottom:5px; background:rgba(255,255,255,.04); }
         .result-row.winner { background:var(--fish-bg); border:1px solid var(--fish-bd); }
@@ -233,6 +339,9 @@
         #toast.green { background:rgba(40,160,80,.9); }
         #toast.fish  { background:rgba(0,140,160,.9); }
 
+        /* ── HAND drag-over highlight ── */
+        #my-hand.drag-over { background: rgba(0,200,224,.08); border-radius: 8px; outline: 2px dashed var(--fish-bd); }
+
         @media (max-width:480px) {
             :root { --cw:42px; --ch:58px; }
             .building-slot { min-width:calc(var(--cw)*2 + 12px); }
@@ -245,6 +354,7 @@
     <div class="h-title">🎣 Pesca</div>
     <div id="turn-pill">—</div>
     <div class="h-mazo">🃏 <span id="mazo-count">—</span></div>
+    <button id="chat-toggle" onclick="toggleChat()">💬 Chat <span id="chat-badge"></span></button>
 </div>
 
 <div id="rivals-area"></div>
@@ -259,7 +369,8 @@
     </div>
 </div>
 
-<div id="log-area"></div>
+<!-- log oculto: el JS lo sigue llenando pero no se muestra -->
+<div id="log-area" style="display:none"></div>
 
 <div id="slots-section">
     <div class="slots-lbl">Jugadas en construcción</div>
@@ -295,10 +406,38 @@
     </div>
     <div id="my-jugadas"></div>
     <div id="dame-hint"></div>
-    <div id="my-hand"></div>
+    <div id="my-bubble-anchor">
+        <div id="my-hand"></div>
+    </div>
     <div id="actions-area">
         <div id="hint-line"></div>
         <div id="action-btns"></div>
+    </div>
+</div>
+
+<!-- CHAT PANEL -->
+<div id="chat-panel">
+    <div id="chat-panel-header">
+        <span>💬 Chat &amp; Reacciones</span>
+        <button id="chat-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div id="emoji-grid">
+        <button class="emoji-btn" onclick="sendReaction('emoji','😂')">😂</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😱')">😱</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','🔥')">🔥</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','👏')">👏</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','😤')">😤</button>
+        <button class="emoji-btn" onclick="sendReaction('emoji','🥳')">🥳</button>
+        <button class="emoji-btn" onclick="sendReaction('texto','¡PAGA!')">💳 PAGA</button>
+        <button class="emoji-btn" onclick="sendReaction('texto','¡Ya gané!')">🏆 Gané</button>
+        <button class="emoji-btn" onclick="sendReaction('texto','¡Buena!')">👍 Buena</button>
+        <button class="emoji-btn" onclick="sendReaction('texto','¡Suerte!')">🍀 Suerte</button>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-row">
+        <input id="chat-input" type="text" maxlength="60" placeholder="Escribe algo…"
+               onkeydown="if(event.key==='Enter') sendChatMsg()">
+        <button id="chat-send" onclick="sendChatMsg()">➤</button>
     </div>
 </div>
 
@@ -315,6 +454,242 @@
 
 <script src="js/socket.js"></script>
 <script src="js/pesca.js"></script>
-<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.5.0</div>
+
+<!-- ═══════════════════════════════════
+     CHAT + REACCIONES
+════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+    let chatOpen    = false;
+    let unreadCount = 0;
+
+    window.toggleChat = function () {
+        chatOpen = !chatOpen;
+        document.getElementById('chat-panel').classList.toggle('open', chatOpen);
+        if (chatOpen) {
+            unreadCount = 0;
+            const badge = document.getElementById('chat-badge');
+            badge.classList.remove('show');
+            badge.textContent = '';
+            const msgs = document.getElementById('chat-messages');
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+        }
+    };
+
+    function _getNombre() {
+        const m = document.cookie.match(/(?:^|; )continental_nombre=([^;]*)/);
+        return m ? decodeURIComponent(m[1]) : 'Jugador';
+    }
+
+    window.sendReaction = function (tipo, texto) {
+        if (typeof WS === 'undefined') return;
+        WS.send({ type: 'reaccion', reaction: { tipo, texto, nombre: _getNombre() } });
+    };
+
+    window.sendChatMsg = function () {
+        const input = document.getElementById('chat-input');
+        const txt   = (input.value || '').trim();
+        if (!txt) return;
+        sendReaction('texto', txt);
+        input.value = '';
+    };
+
+    function _handleReaccion(data) {
+        const { tipo, texto, nombre } = data;
+
+        // Emoji flotante
+        if (tipo === 'emoji') {
+            const el = document.createElement('div');
+            el.className = 'reaction-float';
+            el.textContent = texto;
+            el.style.left   = (15 + Math.random() * 65) + 'vw';
+            el.style.bottom = '130px';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1700);
+        }
+
+        // Speech bubble
+        const bubble = document.createElement('div');
+        bubble.className   = 'speech-bubble';
+        bubble.textContent = texto;
+
+        // Buscar rival por nombre
+        let anchor = null;
+        document.querySelectorAll('.rival-card .r-name').forEach(el => {
+            if (el.textContent.trim().includes(nombre)) anchor = el.closest('.rival-card');
+        });
+
+        if (anchor) {
+            anchor.appendChild(bubble);
+        } else {
+            const myAnchor = document.getElementById('my-bubble-anchor');
+            if (myAnchor) myAnchor.appendChild(bubble);
+        }
+        setTimeout(() => bubble.remove(), 3200);
+
+        // Agregar al panel de chat
+        const msgs = document.getElementById('chat-messages');
+        if (msgs) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML  = `<span class="cn">${nombre}:</span><span class="ct"> ${texto}</span>`;
+            msgs.appendChild(div);
+            if (chatOpen) msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        // Badge si panel cerrado
+        if (!chatOpen) {
+            unreadCount++;
+            const badge = document.getElementById('chat-badge');
+            badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+            badge.classList.add('show');
+        }
+    }
+
+    // Registrar listener una vez que WS esté listo
+    function _registerWS() {
+        if (typeof WS !== 'undefined') {
+            WS.on('reaccion', _handleReaccion);
+        } else {
+            setTimeout(_registerWS, 100);
+        }
+    }
+    _registerWS();
+})();
+</script>
+
+<!-- ═══════════════════════════════════
+     DRAG & DROP: mano ↔ slots
+════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+    let dragId       = null;  // id carta arrastrada
+    let dragFromSlot = null;  // índice de slot origen (null = mano)
+    let ghost        = null;  // clone visual
+
+    /* Expuesto para pesca.js al crear cartas */
+    window._pescaDragStart = function (e, cardEl, cardId, fromSlot) {
+        e.stopPropagation();
+        dragId       = cardId;
+        dragFromSlot = (fromSlot !== undefined && fromSlot !== null) ? fromSlot : null;
+
+        cardEl.classList.add('dragging');
+
+        // Clonar carta como fantasma
+        ghost = cardEl.cloneNode(true);
+        ghost.classList.remove('dragging', 'selected');
+        ghost.style.cssText = [
+            'position:fixed', 'z-index:9000', 'pointer-events:none',
+            'opacity:.88', 'transform:rotate(5deg) scale(1.1)',
+            'box-shadow:0 10px 28px rgba(0,0,0,.55)', 'transition:none'
+        ].join(';');
+        document.body.appendChild(ghost);
+
+        const pt = e.touches ? e.touches[0] : e;
+        _posGhost(pt.clientX, pt.clientY);
+
+        if (e.type === 'mousedown') {
+            document.addEventListener('mousemove', _onMove);
+            document.addEventListener('mouseup',   _onUp);
+        } else {
+            document.addEventListener('touchmove', _onTMove, { passive: false });
+            document.addEventListener('touchend',  _onTEnd);
+        }
+    };
+
+    /* Funciones de drop expuestas para pesca.js */
+    window._pescaDropToSlot = function (cardId, slotIdx) {
+        // Simula click en slot con carta seleccionada de mano
+        // pesca.js ya tiene clickSlot() que hace esto
+        if (typeof clickCardDropOnSlot === 'function') {
+            clickCardDropOnSlot(cardId, slotIdx);
+        }
+    };
+    window._pescaMoveSlotToSlot = function (cardId, fromSlot, toSlot) {
+        if (typeof pescaMoveSlotToSlot === 'function') {
+            pescaMoveSlotToSlot(cardId, fromSlot, toSlot);
+        }
+    };
+    window._pescaReturnToHand = function (cardId, fromSlot) {
+        if (typeof pescaReturnToHand === 'function') {
+            pescaReturnToHand(cardId, fromSlot);
+        }
+    };
+
+    function _posGhost(x, y) {
+        if (!ghost) return;
+        const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cw')) || 52;
+        const ch = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ch')) || 72;
+        ghost.style.left = (x - cw / 2) + 'px';
+        ghost.style.top  = (y - ch / 2) + 'px';
+    }
+
+    function _onMove(e)  { _posGhost(e.clientX, e.clientY); _hl(e.clientX, e.clientY); }
+    function _onTMove(e) { e.preventDefault(); const t = e.touches[0]; _posGhost(t.clientX, t.clientY); _hl(t.clientX, t.clientY); }
+    function _onUp(e)    { _drop(e.clientX, e.clientY); _cleanup(); }
+    function _onTEnd(e)  { const t = e.changedTouches[0]; _drop(t.clientX, t.clientY); _cleanup(); }
+
+    function _hl(x, y) {
+        document.querySelectorAll('.building-slot').forEach(s => s.classList.remove('drag-over'));
+        document.getElementById('my-hand')?.classList.remove('drag-over');
+        ghost.style.display = 'none';
+        const under = document.elementFromPoint(x, y);
+        ghost.style.display = '';
+        if (!under) return;
+        const slot = under.closest('.building-slot');
+        if (slot) { slot.classList.add('drag-over'); return; }
+        if (dragFromSlot !== null) {
+            const hand = document.getElementById('my-hand');
+            const area = document.getElementById('my-area');
+            if (hand && (hand === under || hand.contains(under))) hand.classList.add('drag-over');
+            else if (area && (area === under || area.contains(under)) && !under.closest('.building-slot')) hand.classList.add('drag-over');
+        }
+    }
+
+    function _drop(x, y) {
+        if (dragId === null) return;
+        ghost.style.display = 'none';
+        const under = document.elementFromPoint(x, y);
+        ghost.style.display = '';
+        if (!under) return;
+
+        const slot = under.closest('.building-slot');
+        if (slot) {
+            const idx = parseInt(slot.dataset.slot);
+            if (dragFromSlot !== null) {
+                if (dragFromSlot !== idx) window._pescaMoveSlotToSlot(dragId, dragFromSlot, idx);
+            } else {
+                window._pescaDropToSlot(dragId, idx);
+            }
+            return;
+        }
+
+        // Volver a mano si viene de slot
+        if (dragFromSlot !== null) {
+            const hand = document.getElementById('my-hand');
+            const area = document.getElementById('my-area');
+            const inHand = hand && (hand === under || hand.contains(under));
+            const inArea = area && (area === under || area.contains(under)) && !under.closest('.building-slot') && !under.closest('#slots-section');
+            if (inHand || inArea) window._pescaReturnToHand(dragId, dragFromSlot);
+        }
+    }
+
+    function _cleanup() {
+        document.querySelectorAll('.p-card.dragging').forEach(c => c.classList.remove('dragging'));
+        document.querySelectorAll('.building-slot').forEach(s => s.classList.remove('drag-over'));
+        document.getElementById('my-hand')?.classList.remove('drag-over');
+        if (ghost) { ghost.remove(); ghost = null; }
+        document.removeEventListener('mousemove', _onMove);
+        document.removeEventListener('mouseup',   _onUp);
+        document.removeEventListener('touchmove', _onTMove);
+        document.removeEventListener('touchend',  _onTEnd);
+        dragId = null; dragFromSlot = null;
+    }
+})();
+</script>
+
+<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.6.0</div>
 </body>
 </html>

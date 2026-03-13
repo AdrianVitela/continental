@@ -653,7 +653,7 @@
     window.sendReaction = function (tipo, texto) {
         if (typeof WS === 'undefined') return;
         const nombre = _getNombre();
-        WS.send({ type: 'reaccion', reaction: { tipo, texto, nombre } });
+        WS.send({ type: 'reaction', tipo, texto, nombre });
         // mostrar localmente de inmediato
         _showReaction({ tipo, texto, nombre });
         // cerrar panel
@@ -664,7 +664,7 @@
     /* ── Recibir reacción de otros ── */
     function _registerWS() {
         if (typeof WS !== 'undefined') {
-            WS.on('reaccion', function(data) {
+            WS.on('reaction', function(data) {
                 // no duplicar el propio (ya se mostró localmente)
                 if (data.nombre === _getNombre()) return;
                 _showReaction(data);

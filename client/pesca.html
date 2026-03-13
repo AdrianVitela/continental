@@ -7,12 +7,34 @@
   <link rel="stylesheet" href="css/style.css">
 
   <style>
-/* ===== VARIABLES PESCA ===== */
+/* ===== VARIABLES PESCA — sobreescriben las del continental ===== */
 :root {
-  --fish:     #00c8e0;
-  --fish-dim: rgba(0,200,224,.45);
-  --fish-bg:  rgba(0,200,224,.1);
-  --fish-bd:  rgba(0,200,224,.3);
+  --fish:      #00c8e0;
+  --fish-dim:  rgba(0,200,224,.45);
+  --fish-bg:   rgba(0,200,224,.1);
+  --fish-bd:   rgba(0,200,224,.3);
+
+  /* Fondo azul-oscuro oceánico (reemplaza el verde felt del continental) */
+  --felt-deep: radial-gradient(ellipse at 50% 0%, #0d3d54 0%, #041520 100%);
+
+  /* Textos */
+  --text:       #e8e8e8;
+  --text-dim:   rgba(200,200,200,.55);
+  --text-muted: rgba(180,180,180,.35);
+
+  /* Redirige las vars de continental al azul-cian */
+  --gold:    #00c8e0;
+  --gold-hi: #4ae0f5;
+  --gold-dim: rgba(0,200,224,.3);
+  --eout: ease;
+  --spring: cubic-bezier(.34,1.56,.64,1);
+}
+
+/* ===== BODY — fondo oceánico ===== */
+body {
+  background: radial-gradient(ellipse at 50% 0%, #0d3d54 0%, #041520 100%) !important;
+  font-family: 'Outfit', sans-serif;
+  color: #e8e8e8;
 }
 
 /* ===== LAYOUT PRINCIPAL (igual que continental) ===== */

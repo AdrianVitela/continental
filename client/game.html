@@ -1137,6 +1137,172 @@
   }
 
 })();
+
+/* ================================================================
+   SISTEMA DE SONIDOS - Efectos de audio
+   ================================================================ */
+(function() {
+  'use strict';
+
+  const AudioSystem = {
+    sonidos: {},
+    inicializado: false,
+    
+    // Inicializar todos los sonidos
+    init: function() {
+      if (this.inicializado) return;
+      
+      // Lista de sonidos a cargar
+      const sonidosACargar = [
+        { nombre: 'golpe', archivo: 'sounds/golpe.mp3', volumen: 0.6 },
+        { nombre: 'jaja', archivo: 'sounds/jaja.mp3', volumen: 0.5 },
+        { nombre: 'cara_enojada', archivo: 'sounds/cara_enojada.mp3', volumen: 0.55 },
+        { nombre: 'dame_carta', archivo: 'sounds/dame_carta.mp3', volumen: 0.6 },
+        { nombre: 'castigate', archivo: 'sounds/castigate.mp3', volumen: 0.6 },
+        { nombre: 'gane', archivo: 'sounds/gane.mp3', volumen: 0.55 },
+        // Aquí puedes agregar más sonidos en el futuro
+      ];
+      
+      sonidosACargar.forEach(s => {
+        try {
+          const audio = new Audio();
+          audio.src = s.archivo;
+          audio.volume = s.volumen;
+          audio.load(); // Precargar
+          this.sonidos[s.nombre] = audio;
+          console.log(`✅ Sonido cargado: ${s.nombre}`);
+        } catch (e) {
+          console.warn(`❌ Error cargando sonido ${s.nombre}:`, e);
+          this.sonidos[s.nombre] = null;
+        }
+      });
+      
+      this.inicializado = true;
+    },
+    
+    // Reproducir un sonido
+    play: function(nombre, volumen = 0.6) {
+      // Asegurar que los sonidos están inicializados
+      if (!this.inicializado) {
+        this.init();
+      }
+      
+      const audio = this.sonidos[nombre];
+      if (!audio) {
+        console.warn(`Sonido no encontrado: ${nombre}`);
+        return;
+      }
+      
+      try {
+        // Clonar para reproducción simultánea
+        const clone = audio.cloneNode();
+        clone.volume = volumen;
+        
+        // Intentar reproducir
+        const playPromise = clone.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(e => {
+            console.log(`Error reproduciendo ${nombre}:`, e);
+          });
+        }
+      } catch (e) {
+        console.warn(`Error con sonido ${nombre}:`, e);
+      }
+    },
+    
+    // Métodos específicos para cada sonido
+    golpe: function() {
+      this.play('golpe', 0.65);
+    },
+    
+    jaja: function() {
+      this.play('jaja', 0.5);
+    },
+    
+    caraEnojada: function() {
+      this.play('cara_enojada', 0.55);
+    },
+    
+    dameCarta: function() {
+      this.play('dame_carta', 0.6);
+    },
+    
+    castigate: function() {
+      this.play('castigate', 0.6);
+    },
+    
+    gane: function() {
+      this.play('gane', 0.55);
+    }
+  };
+
+  // Exponer al ámbito global
+  window.AudioSystem = AudioSystem;
+  
+  // Guardar referencia a la función sendReaction original
+  const sendReactionOriginal = window.sendReaction;
+  
+  // Sobrescribir sendReaction para incluir sonidos
+  window.sendReaction = function(tipo, texto) {
+    // Reproducir sonido según el tipo y contenido
+    if (tipo === 'emoji') {
+      switch(texto) {
+        case '😂':
+          AudioSystem.jaja();
+          break;
+        case '🤬':
+          AudioSystem.caraEnojada();
+          break;
+        // Puedes agregar más emojis con sonidos aquí
+      }
+    } else if (tipo === 'msg' || tipo === 'golpe') {
+      switch(texto) {
+        case '¡Ya dame mi carta! 😩':
+          AudioSystem.dameCarta();
+          break;
+        case '¡Castígate! 😈':
+          AudioSystem.castigate();
+          break;
+        case '¡Ya gané, jaja! 🏆':
+          AudioSystem.gane();
+          break;
+        case '¡¡¡PAGA!!!':
+          AudioSystem.golpe();
+          break;
+        // Puedes agregar más mensajes con sonidos aquí
+      }
+    }
+    
+    // Llamar a la función original
+    if (sendReactionOriginal) {
+      sendReactionOriginal(tipo, texto);
+    }
+  };
+
+  // Modificar la función triggerPaga existente
+  const triggerPagaOriginal = window.triggerPaga;
+  window.triggerPaga = function(nombre) {
+    // Reproducir sonido de golpe (por si se llama directamente)
+    AudioSystem.golpe();
+    
+    // Llamar a la función original
+    if (triggerPagaOriginal) {
+      triggerPagaOriginal(nombre);
+    }
+  };
+
+  // Precargar sonidos cuando el usuario interactúe por primera vez
+  function primerClick() {
+    AudioSystem.init();
+    document.removeEventListener('click', primerClick);
+    document.removeEventListener('touchstart', primerClick);
+    console.log('🎵 Sistema de sonidos activado');
+  }
+  
+  document.addEventListener('click', primerClick);
+  document.addEventListener('touchstart', primerClick);
+
+})();
 </script>
   <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.5</div>
 </body>

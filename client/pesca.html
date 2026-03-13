@@ -413,6 +413,62 @@
         /* ── HAND drag-over highlight ── */
         #my-hand.drag-over { background: rgba(0,200,224,.08); border-radius: 8px; outline: 2px dashed var(--fish-bd); }
 
+        /* ── TABLE BAJADAS ── */
+        #table-bajadas-section {
+            padding: 4px 10px 2px;
+        }
+        .table-bajadas-lbl {
+            font-size: .6rem; color: var(--fish-dim);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 4px; padding-left: 2px;
+        }
+        #table-bajadas {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            padding: 6px; background: rgba(0,0,0,.15);
+            border-radius: 10px; min-height: 48px;
+        }
+        .bajada-pile {
+            background: rgba(0,0,0,.25); border: 1px solid var(--fish-bd);
+            border-radius: 8px; padding: 5px;
+            display: inline-flex; flex-direction: column;
+        }
+        .bajada-pile-label {
+            font-size: .52rem; color: var(--fish-dim);
+            text-align: center; margin-bottom: 3px;
+        }
+        .bajada-pile-cards { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
+
+        /* ── PENALIZACIÓN BANNER ── */
+        #penalizacion-banner {
+            display: none;
+            background: rgba(180,50,30,.9); border: 2px solid #ff7050;
+            border-radius: 8px; padding: 6px 14px; font-size: .78rem;
+            color: #ffd0c0; text-align: center; margin-bottom: 6px;
+            animation: pen-pulse 1.4s infinite;
+        }
+        @keyframes pen-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(255,100,60,.4); }
+            50%      { box-shadow: 0 0 0 6px rgba(255,100,60,0); }
+        }
+
+        /* ── CHAT INPUT ── */
+        #chat-input-row {
+            display: flex; gap: 6px; padding: 8px 10px;
+            border-top: 1px solid rgba(0,200,224,.1);
+        }
+        #chat-input {
+            flex: 1; background: rgba(0,200,224,.06); border: 1px solid rgba(0,200,224,.2);
+            border-radius: 8px; padding: 6px 10px; font-size: .75rem;
+            color: #e8e8e8; font-family: 'Outfit', sans-serif; outline: none;
+        }
+        #chat-input::placeholder { color: rgba(200,200,200,.3); }
+        #chat-send {
+            background: var(--fish-bg); border: 1px solid var(--fish-bd);
+            border-radius: 8px; padding: 6px 12px; color: var(--fish);
+            font-size: .75rem; cursor: pointer;
+        }
+        #chat-send:hover { background: rgba(0,200,224,.22); }
+
         @media (max-width:480px) {
             :root { --cw:42px; --ch:58px; }
             .building-slot { min-width:calc(var(--cw)*2 + 12px); }
@@ -441,6 +497,11 @@
 </div>
 
 <div id="log-area" style="display:none"></div>
+
+<div id="table-bajadas-section">
+    <div class="table-bajadas-lbl">🏆 Jugadas bajadas</div>
+    <div id="table-bajadas"></div>
+</div>
 
 <div id="slots-section">
     <div class="slots-lbl">Jugadas en construcción</div>
@@ -475,6 +536,7 @@
         <div id="my-jugadas-lbl"></div>
     </div>
     <div id="my-jugadas"></div>
+    <div id="penalizacion-banner"></div>
     <div id="dame-hint"></div>
     <!-- anchor para el globito del jugador propio -->
     <div id="my-bubble-anchor"></div>
@@ -515,6 +577,11 @@
     </div>
 
     <div id="chat-messages"></div>
+    <div id="chat-input-row">
+        <input id="chat-input" type="text" maxlength="80" placeholder="Escribe un mensaje…"
+               onkeydown="if(event.key==='Enter') sendChatInput()">
+        <button id="chat-send" onclick="sendChatInput()">➤</button>
+    </div>
 </div>
 
 <div id="fin-modal">
@@ -572,6 +639,15 @@
         const m = document.cookie.match(/(?:^|; )continental_nombre=([^;]*)/);
         return m ? decodeURIComponent(m[1]) : 'Jugador';
     }
+
+    /* ── Enviar mensaje de texto libre ── */
+    window.sendChatInput = function () {
+        const input = document.getElementById('chat-input');
+        const txt   = (input.value || '').trim();
+        if (!txt) return;
+        window.sendReaction('msg', txt);
+        input.value = '';
+    };
 
     /* ── Enviar reacción ── */
     window.sendReaction = function (tipo, texto) {
@@ -820,6 +896,6 @@
 })();
 </script>
 
-<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.6.1</div>
+<div style="position:fixed;bottom:6px;left:10px;font-size:.6rem;color:rgba(0,200,224,.22);pointer-events:none;z-index:9999;">beta v0.6.2</div>
 </body>
 </html>

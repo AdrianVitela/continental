@@ -105,6 +105,7 @@ function render() {
     if (!G) return;
     renderHeader();
     renderRivals();
+    renderTableBajadas();
     renderSlots();
     renderLog();
     renderMyArea();
@@ -590,6 +591,44 @@ function enviarPeticion() {
 /* ─── Confirmar respuesta ───────────────────── */
 function confirmarRespuesta() {
     WS.send({ type: 'responder' });
+}
+
+/* ─── Bajadas en la mesa ────────────────────── */
+function renderTableBajadas() {
+    const container = document.getElementById('table-bajadas');
+    if (!container) return;
+
+    // Recopilar todas las jugadas bajadas de todos los jugadores
+    const allJugadas = [];
+    G.jugadores.forEach((j) => {
+        j.jugadas.forEach(jg => {
+            allJugadas.push({ nombre: j.nombre, jugada: jg });
+        });
+    });
+
+    if (allJugadas.length === 0) {
+        container.innerHTML = '<div style="font-size:.65rem;color:rgba(0,200,224,.3);padding:8px;text-align:center;">Sin bajadas aún</div>';
+        return;
+    }
+
+    container.innerHTML = '';
+    allJugadas.forEach(({ nombre, jugada }) => {
+        const pile = document.createElement('div');
+        pile.className = 'bajada-pile';
+        pile.innerHTML = `<div class="bajada-pile-label">${nombre} · ${jugada.valor}×4</div>
+            <div class="bajada-pile-cards">
+                ${jugada.cartas.map(c => {
+                    const isRed = ['♥','♦'].includes(c.palo);
+                    const isJoker = c.valor === 'JOKER';
+                    const cls = `p-card${isJoker ? ' joker' : isRed ? ' red' : ''}`;
+                    return `<div class="${cls}" style="cursor:default;transform:none;">
+                        <span class="cv">${c.valor}</span>
+                        <span class="cp">${c.palo || '★'}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        container.appendChild(pile);
+    });
 }
 
 /* ─── Bajar jugadas de los slots ────────────── */

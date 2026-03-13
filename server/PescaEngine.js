@@ -129,9 +129,6 @@ class PescaEngine {
             quePide.mano.push(...cartasDelValor);
             this.addLog(`✅ ${queRecibe.nombre} tenía ${cartasDelValor.length}x ${valor} → pasan a ${quePide.nombre}.`);
 
-            // Bajar grupos automáticos
-            this._bajarGruposAuto(pidx);
-            this._bajarGruposAuto(aIdx);
             this._checkSinCartas();
 
             // Descontar penalización al avanzar turno
@@ -159,7 +156,6 @@ class PescaEngine {
                 this.addLog(`🎴 ${quePide.nombre} robó del mazo${cartaEsLaBuscada ? ' — ¡era la carta buscada!' : ''}.`);
 
                 if (cartaEsLaBuscada) {
-                    this._bajarGruposAuto(pidx);
                     this._checkSinCartas();
                     this._descontarPenalizacion();
                     const sigueActivo = quePide.activo && quePide.mano.length > 0;
@@ -169,7 +165,6 @@ class PescaEngine {
                         this._avanzarTurno();
                     }
                 } else {
-                    this._bajarGruposAuto(pidx);
                     this._checkSinCartas();
                     this._descontarPenalizacion();
                     this._avanzarTurno();

@@ -1034,83 +1034,75 @@
     }
   });
 
+  // Función para reproducir sonido según tipo y texto
+  function reproducirSonidoReaccion(tipo, texto) {
+    if (tipo === 'emoji') {
+      switch(texto) {
+        case '😂':
+          AudioSystem.jaja();
+          break;
+        case '🤬':
+          AudioSystem.caraEnojada();
+          break;
+        default:
+          console.log('Emoji sin sonido asignado:', texto);
+      }
+    } else if (tipo === 'msg' || tipo === 'golpe') {
+      switch(texto) {
+        case '¡Ya dame mi carta! 😩':
+          AudioSystem.dameCarta();
+          break;
+        case '¡Castígate! 😈':
+          AudioSystem.castigate();
+          break;
+        case '¡Ya gané, jaja! 🏆':
+          AudioSystem.gane();
+          break;
+        case '¡¡¡PAGA!!!':
+          AudioSystem.golpe();
+          break;
+        default:
+          console.log('Mensaje sin sonido asignado:', texto);
+      }
+    }
+  }
+
   window.sendReaction = function (tipo, texto) {
     if (typeof G === 'undefined' || !G) return;
     const nombre = G.jugadores[myIdx]?.nombre || 'Yo';
+    
+    // 1. Reproducir sonido localmente (para quien hace clic)
+    reproducirSonidoReaccion(tipo, texto);
+    
+    // 2. Enviar al servidor para que lo retransmita a otros
     WS.send({ type: 'reaction', tipo, texto, nombre });
-    showReaction({ tipo, texto, nombre });
+    
+    // 3. Mostrar la reacción visual localmente (sin sonido, ya lo reprodujimos)
+    showReaction({ tipo, texto, nombre }, false);
+    
+    // 4. Cerrar el panel de chat
     document.getElementById('chat-panel').classList.remove('open');
   };
 
   WS.on('reaction', (msg) => {
-  if (typeof G !== 'undefined' && G &&
-      G.jugadores[myIdx]?.nombre === msg.nombre) return;
-  
-  // Mostrar la reacción visualmente
-  showReaction(msg);
-  
-  // Reproducir el sonido para reacciones de OTROS jugadores
-  if (msg.tipo === 'emoji') {
-    switch(msg.texto) {
-      case '😂':
-        AudioSystem.jaja();
-        break;
-      case '😤':
-        // Puedes agregar sonido para frustración si lo tienes
-        console.log('Sonido para 😤 no disponible');
-        break;
-      case '😢':
-        // Puedes agregar sonido para tristeza si lo tienes
-        console.log('Sonido para 😢 no disponible');
-        break;
-      case '😱':
-        // Puedes agregar sonido para sorpresa si lo tienes
-        console.log('Sonido para 😱 no disponible');
-        break;
-      case '🥳':
-        // Puedes agregar sonido para celebración si lo tienes
-        console.log('Sonido para 🥳 no disponible');
-        break;
-      case '🤬':
-        AudioSystem.caraEnojada();
-        break;
-      default:
-        console.log('Emoji sin sonido asignado:', msg.texto);
-    }
-  } else if (msg.tipo === 'msg' || msg.tipo === 'golpe') {
-    switch(msg.texto) {
-      case '¡Ya dame mi carta! 😩':
-        AudioSystem.dameCarta();
-        break;
-      case '¡Castígate! 😈':
-        AudioSystem.castigate();
-        break;
-      case '¡Ya gané, jaja! 🏆':
-        AudioSystem.gane();
-        break;
-      case '¡Qué mala suerte! 😭':
-        // Puedes agregar sonido para mala suerte si lo tienes
-        console.log('Sonido para mensaje de mala suerte no disponible');
-        break;
-      case '¡Buena jugada! 👏':
-        // Puedes agregar sonido para buena jugada si lo tienes
-        console.log('Sonido para buena jugada no disponible');
-        break;
-      case '¡No mames! 😤':
-        // Puedes agregar sonido para "No mames" si lo tienes
-        console.log('Sonido para ¡No mames! no disponible');
-        break;
-      case '¡¡¡PAGA!!!':
-        AudioSystem.golpe();
-        break;
-      default:
-        console.log('Mensaje sin sonido asignado:', msg.texto);
-    }
-  }
-});
+    // Ignorar nuestros propios mensajes (ya los mostramos localmente)
+    if (typeof G !== 'undefined' && G &&
+        G.jugadores[myIdx]?.nombre === msg.nombre) return;
+    
+    // Mostrar la reacción de OTROS jugadores CON sonido
+    showReaction(msg, true);
+  });
 
-  function showReaction ({ tipo, texto, nombre }) {
+  function showReaction ({ tipo, texto, nombre }, reproducirSonido = true) {
+    // Siempre mostrar el mensaje en el chat
     appendChatMessage(nombre, texto);
+    
+    // Reproducir sonido si se solicita
+    if (reproducirSonido) {
+      reproducirSonidoReaccion(tipo, texto);
+    }
+    
+    // Mostrar burbuja visual
     if (tipo === 'golpe') {
       triggerPaga(nombre);
     } else {
@@ -1299,53 +1291,6 @@
 
   // Exponer al ámbito global
   window.AudioSystem = AudioSystem;
-  
-  // Guardar referencia a la función sendReaction original
-  const sendReactionOriginal = window.sendReaction;
-  
-  // Sobrescribir sendReaction para incluir sonidos
-  window.sendReaction = function(tipo, texto) {
-  if (typeof G === 'undefined' || !G) return;
-  const nombre = G.jugadores[myIdx]?.nombre || 'Yo';
-  
-  // Reproducir sonido localmente (para quien hace clic)
-  if (tipo === 'emoji') {
-    switch(texto) {
-      case '😂':
-        AudioSystem.jaja();
-        break;
-      case '🤬':
-        AudioSystem.caraEnojada();
-        break;
-      // Puedes agregar más emojis con sonidos aquí
-    }
-  } else if (tipo === 'msg' || tipo === 'golpe') {
-    switch(texto) {
-      case '¡Ya dame mi carta! 😩':
-        AudioSystem.dameCarta();
-        break;
-      case '¡Castígate! 😈':
-        AudioSystem.castigate();
-        break;
-      case '¡Ya gané, jaja! 🏆':
-        AudioSystem.gane();
-        break;
-      case '¡¡¡PAGA!!!':
-        AudioSystem.golpe();
-        break;
-      // Puedes agregar más mensajes con sonidos aquí
-    }
-  }
-  
-  // Enviar al servidor para que lo retransmita a otros
-  WS.send({ type: 'reaction', tipo, texto, nombre });
-  
-  // Mostrar la reacción localmente
-  showReaction({ tipo, texto, nombre });
-  
-  // Cerrar el panel de chat
-  document.getElementById('chat-panel').classList.remove('open');
-};
 
   // Modificar la función triggerPaga existente
   const triggerPagaOriginal = window.triggerPaga;

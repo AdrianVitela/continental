@@ -1394,52 +1394,54 @@ body {
     }, BUBBLE_DURATION);
   }
 
-  // ========== OBTENER ANCLA PARA LA BURBUJA DE UN JUGADOR ==========
   function getBubbleAnchorForPlayer(nombre) {
-    // Si es el jugador actual, usar su anchor fijo
-    if (nombre === _getNombre()) {
-      return document.getElementById('my-bubble-anchor');
-    }
-    
-    // Buscar el elemento del rival
-    let rivalElement = null;
-    
-    // Buscar por nombre exacto en rival-card
-    document.querySelectorAll('.rival-card').forEach(card => {
-      const nameEl = card.querySelector('.r-name');
+  // Detectar el nombre propio: primero variable global de pesca.js,
+  // luego cookie, luego el label del DOM
+  const miNombre = (typeof myName !== 'undefined' && myName)
+    || (typeof G !== 'undefined' && G && G.jugadores && G.jugadores[myIdx]?.nombre)
+    || _getNombre()
+    || document.getElementById('my-name-lbl')?.textContent?.trim();
+
+  // Si es el jugador actual, usar su anchor fijo
+  if (nombre === miNombre) {
+    return document.getElementById('my-bubble-anchor');
+  }
+
+  // Buscar el elemento del rival
+  let rivalElement = null;
+
+  // 1) Por data-nombre (si pesca.js lo pone al renderizar)
+  rivalElement = document.querySelector(`[data-nombre="${CSS.escape(nombre)}"]`);
+
+  // 2) Por texto en cualquier clase de nombre que use pesca.js
+  if (!rivalElement) {
+    document.querySelectorAll('.rival-card, .opp').forEach(card => {
+      const nameEl = card.querySelector('.r-name, .opp-name, .opp-label');
       if (nameEl && nameEl.textContent.trim() === nombre) {
         rivalElement = card;
       }
     });
-    
-    if (!rivalElement) {
-      return null;
-    }
-    
-    // Buscar o crear anchor dentro del elemento rival
-    let anchor = rivalElement.querySelector('.bubble-anchor');
-    if (!anchor) {
-      anchor = document.createElement('div');
-      anchor.className = 'bubble-anchor';
-      
-      // Estilos para que aparezca debajo de la tarjeta del rival
-      anchor.style.position = 'absolute';
-      anchor.style.bottom = '-30px';
-      anchor.style.left = '50%';
-      anchor.style.transform = 'translateX(-50%)';
-      anchor.style.width = '0';
-      anchor.style.height = '0';
-      anchor.style.zIndex = '100';
-      
-      rivalElement.style.position = 'relative';
-      rivalElement.style.overflow = 'visible';
-      rivalElement.style.marginBottom = '40px';
-      
-      rivalElement.appendChild(anchor);
-    }
-    
-    return anchor;
   }
+
+  if (!rivalElement) {
+    console.warn(`⚠️ No se encontró elemento rival para "${nombre}"`);
+    return null;
+  }
+
+  // Buscar o crear anchor dentro del elemento rival
+  let anchor = rivalElement.querySelector('.bubble-anchor');
+  if (!anchor) {
+    anchor = document.createElement('div');
+    anchor.className = 'bubble-anchor';
+    anchor.style.cssText = 'position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:0;height:0;z-index:100;';
+    rivalElement.style.position = 'relative';
+    rivalElement.style.overflow = 'visible';
+    rivalElement.style.marginBottom = '40px';
+    rivalElement.appendChild(anchor);
+  }
+
+  return anchor;
+}
 
   // ========== AGREGAR MENSAJE AL PANEL DE CHAT ==========
   function _appendChatMessage(nombre, texto) {

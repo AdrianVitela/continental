@@ -14,15 +14,12 @@
   --fish-bg:   rgba(0,200,224,.1);
   --fish-bd:   rgba(0,200,224,.3);
 
-  /* Fondo azul-oscuro oceánico (reemplaza el verde felt del continental) */
   --felt-deep: radial-gradient(ellipse at 50% 0%, #0d3d54 0%, #041520 100%);
 
-  /* Textos */
   --text:       #e8e8e8;
   --text-dim:   rgba(200,200,200,.55);
   --text-muted: rgba(180,180,180,.35);
 
-  /* Redirige las vars de continental al azul-cian */
   --gold:    #00c8e0;
   --gold-hi: #4ae0f5;
   --gold-dim: rgba(0,200,224,.3);
@@ -30,14 +27,14 @@
   --spring: cubic-bezier(.34,1.56,.64,1);
 }
 
-/* ===== BODY — fondo oceánico ===== */
+/* ===== BODY ===== */
 body {
   background: radial-gradient(ellipse at 50% 0%, #0d3d54 0%, #041520 100%) !important;
   font-family: 'Outfit', sans-serif;
   color: #e8e8e8;
 }
 
-/* ===== LAYOUT PRINCIPAL (igual que continental) ===== */
+/* ===== LAYOUT PRINCIPAL ===== */
 #game {
   position: fixed;
   inset: 0;
@@ -99,7 +96,7 @@ body {
   overflow: hidden;
 }
 
-/* RIVALES (como opponents-row del continental) */
+/* ===== RIVALES ===== */
 .opponents-row {
   flex-shrink: 0;
   display: flex;
@@ -108,6 +105,32 @@ body {
   flex-wrap: wrap;
 }
 
+/* rival-card: necesita overflow visible y espacio arriba para la burbuja */
+.rival-card {
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  padding: 5px 10px;
+  text-align: center;
+  min-width: 80px;
+  position: relative;
+  overflow: visible !important;
+  cursor: default;
+  transition: all .2s;
+  margin-top: 36px; /* espacio para la burbuja encima */
+}
+.rival-card.turn        { border-color: #ffe066; box-shadow: 0 0 12px rgba(255,220,0,.25); }
+.rival-card.selectable  { cursor: pointer; border-color: var(--fish-bd); }
+.rival-card.selectable:hover { background: var(--fish-bg); border-color: var(--fish); transform: translateY(-2px); }
+.rival-card.selected    { background: rgba(0,200,224,.15); border-color: var(--fish); box-shadow: 0 0 12px rgba(0,200,224,.3); }
+.rival-card.inactive    { opacity: .4; pointer-events: none; }
+.rival-card.being-asked { animation: ask-blink .5s ease-in-out infinite alternate; }
+@keyframes ask-blink {
+  from { border-color: rgba(255,200,0,.3); }
+  to   { border-color: rgba(255,200,0,.9); box-shadow: 0 0 14px rgba(255,200,0,.3); }
+}
+
+/* clases .opp como alias (por si algún código las usa) */
 .opp {
   background: rgba(0,0,0,.28);
   border: 1px solid rgba(255,255,255,.07);
@@ -119,29 +142,28 @@ body {
   overflow: visible !important;
   cursor: default;
   transition: all .2s;
+  margin-top: 36px;
 }
-.opp.turn        { border-color: #ffe066; box-shadow: 0 0 12px rgba(255,220,0,.25); }
-.opp.selectable  { cursor: pointer; border-color: var(--fish-bd); }
-.opp.selectable:hover { background: var(--fish-bg); border-color: var(--fish); transform: translateY(-2px); }
-.opp.selected    { background: rgba(0,200,224,.15); border-color: var(--fish); box-shadow: 0 0 12px rgba(0,200,224,.3); }
-.opp.inactive    { opacity: .4; pointer-events: none; }
-.opp.being-asked { animation: ask-blink .5s ease-in-out infinite alternate; }
-@keyframes ask-blink {
-  from { border-color: rgba(255,200,0,.3); }
-  to   { border-color: rgba(255,200,0,.9); box-shadow: 0 0 14px rgba(255,200,0,.3); }
+
+.r-name, .opp-name {
+  font-size: .68rem; color: var(--text-dim); margin-bottom: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
 }
-.opp-name   { font-size: .68rem; color: var(--text-dim); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 4px; }
-.opp-dot    { width: 5px; height: 5px; border-radius: 50%; background: #2ecc71; flex-shrink: 0; }
-.opp-dot.away { background: #555; }
-.opp-stats  { font-size: .6rem; color: rgba(200,200,200,.45); margin-bottom: 3px; }
-.opp-jugadas { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
-.opp-jugada-badge {
+.r-dot, .opp-dot { width: 5px; height: 5px; border-radius: 50%; background: #2ecc71; flex-shrink: 0; }
+.r-dot.away, .opp-dot.away { background: #555; }
+.r-stats, .opp-stats  { font-size: .6rem; color: rgba(200,200,200,.45); margin-bottom: 3px; }
+.r-jugadas, .opp-jugadas { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+.r-jugada-badge, .opp-jugada-badge {
   background: var(--fish-bg); border: 1px solid var(--fish-bd);
   border-radius: 4px; padding: 1px 5px;
   font-size: .6rem; color: var(--fish);
   font-family: 'Cormorant Garamond', serif; font-weight: 700;
 }
-.opp-backs  { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
+.rival-turno-dot {
+  position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #ffe066; box-shadow: 0 0 6px rgba(255,220,0,.6);
+}
 .cback-xs {
   width: 12px; height: 17px; border-radius: 2px;
   background: linear-gradient(135deg, #1a3680, #0d2050);
@@ -160,7 +182,7 @@ body {
   padding: 0 4px;
 }
 
-/* ===== BAJADAS (mesa principal) ===== */
+/* ===== BAJADAS ===== */
 .table-bajadas-container {
   flex: 1;
   min-height: 0;
@@ -185,7 +207,6 @@ body {
   align-content: flex-start;
 }
 
-/* Petición activa — va dentro del table-bajadas-container */
 #peticion-wrap {
   display: flex; justify-content: center;
   margin-bottom: 8px;
@@ -301,7 +322,6 @@ body {
 }
 .row-desc { font-size: 0.5rem; color: var(--text-dim); text-transform: none; }
 
-/* MANO (sobrantes) */
 .hand-zone {
   display: flex;
   gap: 3px;
@@ -326,7 +346,6 @@ body {
 }
 .hand-zone.drag-over { outline: 2px dashed var(--fish-bd); background: rgba(0,200,224,.06); }
 
-/* SLOTS (construcción) */
 .building-row {
   display: flex;
   gap: 6px;
@@ -448,7 +467,6 @@ body {
   50%      { box-shadow: 0 0 0 6px rgba(0,200,224,0); }
 }
 
-/* penalización */
 .pen-banner {
   display: none;
   background: rgba(180,50,30,.9); border: 2px solid #ff7050;
@@ -641,10 +659,94 @@ body {
 }
 #chat-send:hover { background: rgba(0,200,224,.22); }
 
-/* ── Globito de diálogo ── */
+/* ================================================================
+   BURBUJAS DE DIÁLOGO
+   ================================================================ */
+
+/*
+  RIVAL: la burbuja aparece ENCIMA de su tarjeta.
+  - .rival-card tiene margin-top: 36px → espacio libre arriba
+  - .bubble-anchor se posiciona en top: 0 de la tarjeta (borde superior)
+  - la burbuja crece hacia ARRIBA desde el anchor (bottom: 4px)
+  - la flechita apunta hacia ABAJO (hacia la tarjeta)
+*/
+.rival-card .bubble-anchor {
+  position: absolute;
+  top: 0;               /* pegado al borde superior de la tarjeta */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0; height: 0;
+  pointer-events: none;
+  z-index: 80;
+}
+
+.rival-card .bubble-anchor .speech-bubble {
+  position: absolute;
+  bottom: 4px;          /* crece hacia arriba desde el anchor */
+  top: auto;
+  left: 50%;
+  transform: translateX(-50%) scale(.85);
+  background: rgba(4,21,32,.96);
+  border: 1.5px solid var(--fish-bd);
+  border-radius: 10px;
+  padding: 6px 11px;
+  font-size: .72rem; color: #e8e8e0;
+  white-space: nowrap; text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0,0,0,.65);
+  opacity: 0;
+  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.35;
+  z-index: 80;
+}
+/* flechita apunta ABAJO → hacia la tarjeta del rival */
+.rival-card .bubble-anchor .speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--fish-bd);
+}
+.rival-card .bubble-anchor .speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px); left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(4,21,32,.96);
+  z-index: 1;
+}
+.rival-card .bubble-anchor .speech-bubble.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.rival-card .bubble-anchor .speech-bubble.paga {
+  border-color: rgba(220,60,60,.7);
+  background: rgba(60,8,8,.97);
+  color: #ff9090; font-weight: 800;
+}
+.rival-card .bubble-anchor .speech-bubble.paga::before { border-top-color: rgba(220,60,60,.7); }
+.rival-card .bubble-anchor .speech-bubble.paga::after  { border-top-color: rgba(60,8,8,.97); }
+
+/*
+  JUGADOR PROPIO: la burbuja aparece ENCIMA de su sección (sobre la mano).
+  - #my-bubble-anchor está en el flujo del DOM, justo antes de la mano
+  - la burbuja crece hacia ARRIBA (bottom: 8px)
+  - la flechita apunta ABAJO (hacia la mano del jugador)
+*/
+#my-bubble-anchor {
+  position: relative;
+  width: 100%;
+  height: 0;
+  pointer-events: none;
+  z-index: 200;
+}
+
 #my-bubble-anchor .speech-bubble {
   position: absolute;
-  bottom: 12px; top: auto;
+  bottom: 8px;          /* crece hacia arriba */
+  top: auto;
   left: 50%;
   transform: translateX(-50%) scale(.85);
   background: rgba(4,21,32,.96);
@@ -659,30 +761,35 @@ body {
   transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
   line-height: 1.35; z-index: 200;
 }
-.bubble-anchor .speech-bubble::before {
-  content:''; position:absolute;
-  bottom:100%; left:50%; transform:translateX(-50%);
-  border:7px solid transparent; border-bottom-color: var(--fish-bd);
-}
-.bubble-anchor .speech-bubble::after {
-  content:''; position:absolute;
-  bottom:calc(100% - 1px); left:50%; transform:translateX(-50%);
-  border:6px solid transparent; border-bottom-color: rgba(4,21,32,.96); z-index:1;
-}
+/* flechita apunta ABAJO → hacia la mano del jugador */
 #my-bubble-anchor .speech-bubble::before {
-  content:''; position:absolute;
-  top:100%; left:50%; transform:translateX(-50%);
-  border:7px solid transparent; border-top-color: var(--fish-bd);
+  content: '';
+  position: absolute;
+  top: 100%; left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--fish-bd);
 }
 #my-bubble-anchor .speech-bubble::after {
-  content:''; position:absolute;
-  top:calc(100% - 1px); left:50%; transform:translateX(-50%);
-  border:6px solid transparent; border-top-color: rgba(4,21,32,.96); z-index:1;
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px); left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(4,21,32,.96);
+  z-index: 1;
 }
-.bubble-anchor .speech-bubble.visible,
 #my-bubble-anchor .speech-bubble.visible {
-  opacity:1; transform:translateX(-50%) scale(1);
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
 }
+#my-bubble-anchor .speech-bubble.paga {
+  border-color: rgba(220,60,60,.7);
+  background: rgba(60,8,8,.97);
+  color: #ff9090; font-weight: 800;
+}
+#my-bubble-anchor .speech-bubble.paga::before { border-top-color: rgba(220,60,60,.7); }
+#my-bubble-anchor .speech-bubble.paga::after  { border-top-color: rgba(60,8,8,.97); }
 
 /* Emoji flotante */
 .reaction-float {
@@ -699,14 +806,29 @@ body {
   100% { opacity:0; transform:scale(.8) translateY(-55px); }
 }
 
+/* Temblor mesa */
+@keyframes tableBang {
+  0%   { transform:translate(0,0) rotate(0deg); }
+  10%  { transform:translate(-3px,-3px) rotate(-.5deg); }
+  20%  { transform:translate(4px,2px) rotate(.5deg); }
+  30%  { transform:translate(-4px,1px) rotate(-.4deg); }
+  40%  { transform:translate(4px,-2px) rotate(.4deg); }
+  50%  { transform:translate(-3px,3px) rotate(-.3deg); }
+  60%  { transform:translate(3px,-2px) rotate(.3deg); }
+  70%  { transform:translate(-2px,1px) rotate(-.15deg); }
+  85%  { transform:translate(2px,-1px) rotate(.1deg); }
+  100% { transform:translate(0,0) rotate(0deg); }
+}
+.table-bang { animation: tableBang 0.55s ease-in-out !important; }
+
 /* ================================================================
    RESPONSIVE
    ================================================================ */
 @media (max-width:767px) {
   .topbar { height: auto; min-height: 40px; padding: 4px 10px; flex-wrap: wrap; }
   .tb-title { font-size: .92rem; }
-  .opp { min-width: 62px; padding: 4px 7px; }
-  .opp-name { font-size: .6rem; }
+  .rival-card { min-width: 62px; padding: 4px 7px; }
+  .r-name { font-size: .6rem; }
   .cback-xs { width: 10px; height: 14px; }
   .deck-area-container { width: 70px; flex-direction: row; justify-content: center; gap: 10px; }
   .center-zone { gap: 10px; }
@@ -736,176 +858,6 @@ body {
   .hand-zone    { max-width: 1200px; }
   .building-slot { max-width: calc(var(--cw)*10 + 50px); }
 }
-
-/* Animación de temblor para el efecto PAGA */
-@keyframes tableBang {
-  0%   { transform:translate(0,0) rotate(0deg); }
-  10%  { transform:translate(-3px,-3px) rotate(-.5deg); }
-  20%  { transform:translate(4px,2px) rotate(.5deg); }
-  30%  { transform:translate(-4px,1px) rotate(-.4deg); }
-  40%  { transform:translate(4px,-2px) rotate(.4deg); }
-  50%  { transform:translate(-3px,3px) rotate(-.3deg); }
-  60%  { transform:translate(3px,-2px) rotate(.3deg); }
-  70%  { transform:translate(-2px,1px) rotate(-.15deg); }
-  85%  { transform:translate(2px,-1px) rotate(.1deg); }
-  100% { transform:translate(0,0) rotate(0deg); }
-}
-.table-bang { animation: tableBang 0.55s ease-in-out !important; }
-
-/* ===== BURBUJAS PARA RIVALES ===== */
-.rival-card {
-  position: relative !important;
-  margin-bottom: 40px !important; /* Espacio para la burbuja debajo */
-  overflow: visible !important;
-}
-
-/* Anchor dentro de la tarjeta rival */
-.rival-card .bubble-anchor {
-  position: absolute;
-  bottom: -30px;  /* Posicionado debajo de la tarjeta */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  z-index: 100;
-}
-
-/* Estilo para la burbuja (posicionada ARRIBA del anchor, o sea debajo de la tarjeta) */
-.rival-card .speech-bubble {
-  position: absolute;
-  bottom: 100%;  /* La burbuja aparece ARRIBA del anchor (que está debajo de la tarjeta) */
-  left: 50%;
-  transform: translateX(-50%) scale(0.85);
-  background: rgba(4,21,32,.96);
-  border: 1.5px solid var(--fish-bd);
-  border-radius: 10px;
-  padding: 6px 11px;
-  font-size: .72rem;
-  color: #e8e8e0;
-  white-space: nowrap;
-  text-align: center;
-  pointer-events: none;
-  box-shadow: 0 4px 18px rgba(0,0,0,.65);
-  opacity: 0;
-  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
-  line-height: 1.35;
-  z-index: 100;
-}
-
-/* Flecha de la burbuja (apunta hacia ABAJO, hacia el anchor) */
-.rival-card .speech-bubble::before {
-  content: '';
-  position: absolute;
-  top: 100%;  /* Flecha en la parte inferior de la burbuja */
-  left: 50%;
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: var(--fish-bd);  /* Flecha hacia abajo */
-}
-
-.rival-card .speech-bubble::after {
-  content: '';
-  position: absolute;
-  top: calc(100% - 1px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(4,21,32,.96);
-  z-index: 1;
-}
-
-/* Burbuja visible */
-.rival-card .speech-bubble.visible {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-
-/* Burbuja especial para 🔥 (efecto PAGA) */
-.rival-card .speech-bubble.paga {
-  border-color: rgba(220,60,60,.7);
-  background: rgba(60,8,8,.97);
-  color: #ff9090;
-  font-weight: 800;
-}
-.rival-card .speech-bubble.paga::before {
-  border-top-color: rgba(220,60,60,.7);
-}
-.rival-card .speech-bubble.paga::after {
-  border-top-color: rgba(60,8,8,.97);
-}
-
-/* ===== BURBUJA PARA JUGADOR ACTUAL ===== */
-#my-bubble-anchor {
-  position: fixed;
-  bottom: 160px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  pointer-events: none;
-  z-index: 200;
-}
-
-/* Burbuja del jugador actual (apunta hacia arriba) */
-#my-bubble-anchor .speech-bubble {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%) scale(.85);
-  background: rgba(4,21,32,.96);
-  border: 1.5px solid var(--fish-bd);
-  border-radius: 10px;
-  padding: 6px 11px;
-  font-size: .72rem;
-  color: #e8e8e0;
-  white-space: nowrap;
-  text-align: center;
-  pointer-events: none;
-  box-shadow: 0 4px 18px rgba(0,0,0,.65);
-  opacity: 0;
-  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
-  line-height: 1.35;
-  z-index: 200;
-}
-
-#my-bubble-anchor .speech-bubble::before {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 7px solid transparent;
-  border-top-color: var(--fish-bd);
-}
-
-#my-bubble-anchor .speech-bubble::after {
-  content: '';
-  position: absolute;
-  top: calc(100% - 1px);
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: rgba(4,21,32,.96);
-  z-index: 1;
-}
-
-#my-bubble-anchor .speech-bubble.visible {
-  opacity: 1;
-  transform: translateX(-50%) scale(1);
-}
-
-#my-bubble-anchor .speech-bubble.paga {
-  border-color: rgba(220,60,60,.7);
-  background: rgba(60,8,8,.97);
-  color: #ff9090;
-}
-#my-bubble-anchor .speech-bubble.paga::before {
-  border-top-color: rgba(220,60,60,.7);
-}
-#my-bubble-anchor .speech-bubble.paga::after {
-  border-top-color: rgba(60,8,8,.97);
-}
   </style>
 </head>
 
@@ -929,7 +881,6 @@ body {
     <div class="center-zone">
 
       <div class="table-bajadas-container">
-        <!-- Petición activa -->
         <div id="peticion-wrap">
           <div id="peticion-box">
             <div id="pet-texto"></div>
@@ -939,11 +890,9 @@ body {
             </div>
           </div>
         </div>
-        <!-- Mesa de bajadas -->
         <div class="table-bajadas" id="table-bajadas"></div>
       </div>
 
-      <!-- Mazo -->
       <div class="deck-area-container">
         <div class="deck-area">
           <div class="deck-label">Mazo</div>
@@ -970,22 +919,20 @@ body {
         <span id="hand-count" style="font-size:.68rem;color:var(--text-dim)"></span>
       </div>
       <div id="my-jugadas" style="display:flex;flex-wrap:wrap;gap:5px;padding:0 10px 2px;min-height:0;"></div>
+
+      <!-- Anchor de burbuja propia — en el flujo, justo antes de la mano -->
       <div id="my-bubble-anchor"></div>
 
-      <!-- Penalización -->
       <div class="pen-banner" id="penalizacion-banner"></div>
 
-      <!-- Dame hint -->
       <div id="dame-hint" style="display:none;background:rgba(255,220,0,.1);border:1px solid rgba(255,220,0,.35);border-radius:8px;padding:5px 14px;font-size:.78rem;color:#ffe066;text-align:center;margin:0 10px 4px;"></div>
 
-      <!-- Fila 1: Mano -->
       <div class="row-label">
         <span>🃏 TU MANO</span>
         <span class="row-desc">Arrastra cartas a los slots</span>
       </div>
       <div class="hand-zone" id="my-hand"></div>
 
-      <!-- Fila 2: Slots construcción -->
       <div class="row-label">
         <span>🏗️ CONSTRUCCIÓN</span>
         <span class="row-desc">Agrupa 4 del mismo valor para bajar</span>
@@ -1019,7 +966,6 @@ body {
 
     </div><!-- /player-section -->
 
-    <!-- Action bar -->
     <div class="action-bar">
       <div class="instr" id="hint-line">—</div>
       <div class="action-btns" id="action-btns"></div>
@@ -1028,13 +974,12 @@ body {
 
   </div><!-- /table -->
 
-  <!-- CHAT toggle flotante -->
+  <!-- CHAT -->
   <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes">
     💬
     <span id="chat-badge"></span>
   </button>
 
-  <!-- CHAT panel -->
   <div id="chat-panel">
     <div class="chat-header">
       💬 Reacciones
@@ -1087,7 +1032,7 @@ body {
 <script src="js/pesca.js"></script>
 
 <!-- ═══════════════════════════════════
-     CHAT + REACCIONES + SONIDOS (CORREGIDO - BURBUJAS EN RIVALES)
+     CHAT + REACCIONES + SONIDOS
 ════════════════════════════════════ -->
 <script>
 (function () {
@@ -1120,200 +1065,104 @@ body {
     }
   });
 
-  function _getNombre() {
+  /* Nombre propio: usar G.jugadores[myIdx] que es la fuente de verdad de pesca.js */
+  function _getMiNombre() {
+    if (typeof G !== 'undefined' && G && typeof myIdx !== 'undefined' && myIdx !== -1) {
+      return G.jugadores[myIdx]?.nombre || '';
+    }
+    // Fallback: cookie
     const m = document.cookie.match(/(?:^|; )continental_nombre=([^;]*)/);
     return m ? decodeURIComponent(m[1]) : 'Jugador';
   }
 
-  // ========== SISTEMA DE SONIDOS ==========
+  /* ========== SISTEMA DE SONIDOS ========== */
   const AudioSystem = {
     sonidos: {},
     inicializado: false,
-    
     init: function() {
       if (this.inicializado) return;
-      
-      const sonidosACargar = [
-        { nombre: 'golpe', archivo: 'sounds/golpe.mp3', volumen: 0.6 },
-        { nombre: 'jaja', archivo: 'sounds/jaja.mp3', volumen: 0.5 },
-        { nombre: 'cara_enojada', archivo: 'sounds/cara_enojada.mp3', volumen: 0.55 },
-        { nombre: 'dame_carta', archivo: 'sounds/dame_carta.mp3', volumen: 0.6 },
-        { nombre: 'castigate', archivo: 'sounds/castigate.mp3', volumen: 0.6 },
-        { nombre: 'gane', archivo: 'sounds/gane.mp3', volumen: 0.55 },
-      ];
-      
-      sonidosACargar.forEach(s => {
+      [
+        { nombre: 'golpe',       archivo: 'sounds/golpe.mp3',       volumen: 0.6  },
+        { nombre: 'jaja',        archivo: 'sounds/jaja.mp3',        volumen: 0.5  },
+        { nombre: 'cara_enojada',archivo: 'sounds/cara_enojada.mp3',volumen: 0.55 },
+        { nombre: 'dame_carta',  archivo: 'sounds/dame_carta.mp3',  volumen: 0.6  },
+        { nombre: 'castigate',   archivo: 'sounds/castigate.mp3',   volumen: 0.6  },
+        { nombre: 'gane',        archivo: 'sounds/gane.mp3',        volumen: 0.55 },
+      ].forEach(s => {
         try {
-          const audio = new Audio();
-          audio.src = s.archivo;
-          audio.volume = s.volumen;
-          audio.load();
-          this.sonidos[s.nombre] = audio;
-          console.log(`✅ Sonido cargado: ${s.nombre}`);
-        } catch (e) {
-          console.warn(`❌ Error cargando sonido ${s.nombre}:`, e);
-          this.sonidos[s.nombre] = null;
-        }
+          const a = new Audio(); a.src = s.archivo; a.volume = s.volumen; a.load();
+          this.sonidos[s.nombre] = a;
+        } catch(e) { this.sonidos[s.nombre] = null; }
       });
-      
       this.inicializado = true;
     },
-    
-    play: function(nombre, volumen = 0.6) {
+    play: function(nombre, vol = 0.6) {
       if (!this.inicializado) this.init();
-      
-      const audio = this.sonidos[nombre];
-      if (!audio) return;
-      
-      try {
-        const clone = audio.cloneNode();
-        clone.volume = volumen;
-        clone.play().catch(e => console.log(`Error reproduciendo ${nombre}:`, e));
-      } catch (e) {
-        console.warn(`Error con sonido ${nombre}:`, e);
-      }
+      const a = this.sonidos[nombre]; if (!a) return;
+      try { const c = a.cloneNode(); c.volume = vol; c.play().catch(()=>{}); } catch(e){}
     },
-    
-    // Métodos específicos
-    golpe: function() { this.play('golpe', 0.65); },
-    jaja: function() { this.play('jaja', 0.5); },
-    caraEnojada: function() { this.play('cara_enojada', 0.55); },
-    dameCarta: function() { this.play('dame_carta', 0.6); },
-    castigate: function() { this.play('castigate', 0.6); },
-    gane: function() { this.play('gane', 0.55); }
+    golpe:      function() { this.play('golpe', 0.65); },
+    jaja:       function() { this.play('jaja', 0.5); },
+    caraEnojada:function() { this.play('cara_enojada', 0.55); },
+    dameCarta:  function() { this.play('dame_carta', 0.6); },
+    castigate:  function() { this.play('castigate', 0.6); },
+    gane:       function() { this.play('gane', 0.55); }
   };
-
   window.AudioSystem = AudioSystem;
 
-  // ========== FUNCIÓN PARA HACER TEMBLAR LA MESA (efecto PAGA) ==========
   function triggerGolpe() {
-    const table = document.getElementById('main-table');
-    if (table) {
-      table.classList.remove('table-bang');
-      void table.offsetWidth;
-      table.classList.add('table-bang');
-      setTimeout(() => table.classList.remove('table-bang'), 580);
-    }
+    const t = document.getElementById('main-table');
+    if (!t) return;
+    t.classList.remove('table-bang'); void t.offsetWidth;
+    t.classList.add('table-bang');
+    setTimeout(() => t.classList.remove('table-bang'), 580);
   }
 
-  // ========== REPRODUCIR SONIDO SEGÚN TEXTO ==========
   function reproducirSonidoPorTexto(texto) {
-    const textoLower = texto.toLowerCase();
-    
-    // Emojis
-    if (texto === '😂') {
-      AudioSystem.jaja();
-      return true;
-    }
-    if (texto === '🤬') {
-      AudioSystem.caraEnojada();
-      return true;
-    }
-    if (texto === '🔥') {
-      AudioSystem.golpe();
-      triggerGolpe();
-      return true;
-    }
-    
-    // Mensajes rápidos específicos
-    if (texto === '¡Ya dame mi carta! 😩') {
-      AudioSystem.dameCarta();
-      return true;
-    }
-    if (texto === '¡Ya gané, jaja! 🏆') {
-      AudioSystem.gane();
-      return true;
-    }
-    if (texto === '¡Castígate! 😈') {
-      AudioSystem.castigate();
-      return true;
-    }
-    if (texto === '¡No mames! 😤') {
-      AudioSystem.caraEnojada();
-      return true;
-    }
-    
-    // Palabras clave en mensajes libres
-    if (textoLower.includes('paga') || textoLower.includes('golpe')) {
-      AudioSystem.golpe();
-      triggerGolpe();
-      return true;
-    }
-    if (textoLower.includes('jaja') || textoLower.includes('😂')) {
-      AudioSystem.jaja();
-      return true;
-    }
-    if (textoLower.includes('gane') || textoLower.includes('gané')) {
-      AudioSystem.gane();
-      return true;
-    }
-    if (textoLower.includes('dame')) {
-      AudioSystem.dameCarta();
-      return true;
-    }
-    if (textoLower.includes('castigate') || textoLower.includes('castígate')) {
-      AudioSystem.castigate();
-      return true;
-    }
-    if (textoLower.includes('no mames')) {
-      AudioSystem.caraEnojada();
-      return true;
-    }
-    
-    return false;
+    const tl = texto.toLowerCase();
+    if (texto === '😂')                        { AudioSystem.jaja(); return; }
+    if (texto === '🤬')                        { AudioSystem.caraEnojada(); return; }
+    if (texto === '🔥')                        { AudioSystem.golpe(); triggerGolpe(); return; }
+    if (texto === '¡Ya dame mi carta! 😩')     { AudioSystem.dameCarta(); return; }
+    if (texto === '¡Ya gané, jaja! 🏆')        { AudioSystem.gane(); return; }
+    if (texto === '¡Castígate! 😈')            { AudioSystem.castigate(); return; }
+    if (texto === '¡No mames! 😤')             { AudioSystem.caraEnojada(); return; }
+    if (tl.includes('paga')||tl.includes('golpe'))         { AudioSystem.golpe(); triggerGolpe(); return; }
+    if (tl.includes('jaja')||tl.includes('😂'))            { AudioSystem.jaja(); return; }
+    if (tl.includes('gane')||tl.includes('gané'))          { AudioSystem.gane(); return; }
+    if (tl.includes('dame'))                               { AudioSystem.dameCarta(); return; }
+    if (tl.includes('castigate')||tl.includes('castígate')){ AudioSystem.castigate(); return; }
+    if (tl.includes('no mames'))                           { AudioSystem.caraEnojada(); return; }
   }
 
-  // ========== ENVIAR MENSAJE DE CHAT ==========
+  /* ========== ENVÍO ========== */
   window.sendChatInput = function () {
     const input = document.getElementById('chat-input');
     const txt   = (input.value || '').trim();
     if (!txt) return;
-    
-    const nombre = _getNombre();
-    
-    // 1. Reproducir sonido localmente (para quien escribe)
+    const nombre = _getMiNombre();
     reproducirSonidoPorTexto(txt);
-    
-    // 2. Enviar al servidor
     WS.send({ type: 'reaction', tipo: 'msg', texto: txt, nombre });
-    
-    // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
     mostrarReaccion({ tipo: 'msg', texto: txt, nombre }, false);
-    
-    // 4. Limpiar input
     input.value = '';
-    
-    // 5. Cerrar chat
     chatOpen = false;
     document.getElementById('chat-panel').classList.remove('open');
   };
 
-  // ========== ENVIAR REACCIÓN (emojis y mensajes rápidos) ==========
   window.sendReaction = function (tipo, texto) {
     if (typeof WS === 'undefined') return;
-    const nombre = _getNombre();
-    
-    // 1. Reproducir sonido localmente (para quien hace clic)
+    const nombre = _getMiNombre();
     reproducirSonidoPorTexto(texto);
-    
-    // 2. Enviar al servidor
     WS.send({ type: 'reaction', tipo, texto, nombre });
-    
-    // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
     mostrarReaccion({ tipo, texto, nombre }, false);
-    
-    // 4. Cerrar chat
     chatOpen = false;
     document.getElementById('chat-panel').classList.remove('open');
   };
 
-  // ========== RECIBIR REACCIONES DE OTROS ==========
+  /* ========== RECEPCIÓN ========== */
   function _registerWS() {
     if (typeof WS !== 'undefined') {
       WS.on('reaction', function(data) {
-        console.log('🎤 Reacción recibida:', data);
-        
-        // Mostrar reacción de OTROS CON sonido
         mostrarReaccion(data, true);
       });
     } else {
@@ -1322,30 +1171,15 @@ body {
   }
   _registerWS();
 
-  // ========== MOSTRAR REACCIÓN (visual + sonido opcional) ==========
-  function mostrarReaccion(data, reproducirSonido = true) {
+  /* ========== MOSTRAR REACCIÓN ========== */
+  function mostrarReaccion(data, reproducirSonido) {
     const { tipo, texto, nombre } = data;
-    
-    console.log(`📢 Mostrando reacción de ${nombre}: ${texto}`);
-    
-    // Siempre agregar al chat
     _appendChatMessage(nombre, texto);
-    
-    // Reproducir sonido si se solicita
-    if (reproducirSonido) {
-      reproducirSonidoPorTexto(texto);
-    }
-    
-    // Mostrar emoji flotante SOLO si es emoji
-    if (tipo === 'emoji') {
-      _showFloatingEmoji(texto);
-    }
-    
-    // Mostrar burbuja de diálogo (para TODOS los mensajes)
+    if (reproducirSonido) reproducirSonidoPorTexto(texto);
+    if (tipo === 'emoji') _showFloatingEmoji(texto);
     _showSpeechBubble(nombre, texto);
   }
 
-  // ========== EMOJI FLOTANTE ==========
   function _showFloatingEmoji(emoji) {
     const el = document.createElement('div');
     el.className = 'reaction-float';
@@ -1356,14 +1190,10 @@ body {
     setTimeout(() => el.remove(), 2300);
   }
 
-  // ========== BURBUJA DE DIÁLOGO ==========
+  /* ========== BURBUJA DE DIÁLOGO ========== */
   function _showSpeechBubble(nombre, texto) {
-    // IMPORTANTE: Obtener el anchor específico para este jugador
-    const anchor = getBubbleAnchorForPlayer(nombre);
-    if (!anchor) {
-      console.warn(`⚠️ No se encontró anchor para ${nombre}`);
-      return;
-    }
+    const anchor = _getBubbleAnchor(nombre);
+    if (!anchor) return;
 
     let bubble = anchor.querySelector('.speech-bubble');
     if (!bubble) {
@@ -1372,78 +1202,53 @@ body {
       anchor.appendChild(bubble);
     }
 
-    // Determinar si es un mensaje de "PAGA" (🔥)
     const esPaga = texto.includes('PAGA') || texto === '🔥';
-    if (esPaga) {
-      bubble.classList.add('paga');
-    } else {
-      bubble.classList.remove('paga');
-    }
-
+    bubble.classList.toggle('paga', esPaga);
     bubble.textContent = texto;
     bubble.classList.remove('visible');
-    
-    // Forzar reflow
     void bubble.offsetWidth;
-    
     bubble.classList.add('visible');
-    
     clearTimeout(bubble._hideT);
-    bubble._hideT = setTimeout(() => {
-      bubble.classList.remove('visible');
-    }, BUBBLE_DURATION);
+    bubble._hideT = setTimeout(() => bubble.classList.remove('visible'), BUBBLE_DURATION);
   }
 
-  function getBubbleAnchorForPlayer(nombre) {
-  // Detectar el nombre propio: primero variable global de pesca.js,
-  // luego cookie, luego el label del DOM
-  const miNombre = (typeof myName !== 'undefined' && myName)
-    || (typeof G !== 'undefined' && G && G.jugadores && G.jugadores[myIdx]?.nombre)
-    || _getNombre()
-    || document.getElementById('my-name-lbl')?.textContent?.trim();
+  /*
+    Regla clara:
+    - Si el nombre coincide con el jugador propio → #my-bubble-anchor
+    - Si no → buscar .rival-card cuyo .r-name contenga ese nombre,
+               y usar (o crear) un .bubble-anchor dentro de ella
+  */
+  function _getBubbleAnchor(nombre) {
+    // ── Jugador propio ──
+    const miNombre = _getMiNombre();
+    if (nombre === miNombre) {
+      return document.getElementById('my-bubble-anchor');
+    }
 
-  // Si es el jugador actual, usar su anchor fijo
-  if (nombre === miNombre) {
-    return document.getElementById('my-bubble-anchor');
-  }
-
-  // Buscar el elemento del rival
-  let rivalElement = null;
-
-  // 1) Por data-nombre (si pesca.js lo pone al renderizar)
-  rivalElement = document.querySelector(`[data-nombre="${CSS.escape(nombre)}"]`);
-
-  // 2) Por texto en cualquier clase de nombre que use pesca.js
-  if (!rivalElement) {
-    document.querySelectorAll('.rival-card, .opp').forEach(card => {
-      const nameEl = card.querySelector('.r-name, .opp-name, .opp-label');
-      if (nameEl && nameEl.textContent.trim() === nombre) {
-        rivalElement = card;
+    // ── Rival: buscar por .r-name que contenga el nombre ──
+    // pesca.js renderiza: <span class="r-dot..."></span> + texto del nombre
+    // así que el textContent del .r-name es "· nombre" o similar → usamos includes()
+    let rivalEl = null;
+    document.querySelectorAll('.rival-card').forEach(card => {
+      const nameEl = card.querySelector('.r-name');
+      if (nameEl && nameEl.textContent.includes(nombre)) {
+        rivalEl = card;
       }
     });
+
+    if (!rivalEl) return null;
+
+    // Buscar o crear el anchor dentro del rival
+    let anchor = rivalEl.querySelector('.bubble-anchor');
+    if (!anchor) {
+      anchor = document.createElement('div');
+      anchor.className = 'bubble-anchor';
+      rivalEl.appendChild(anchor);
+    }
+    return anchor;
   }
 
-  if (!rivalElement) {
-    console.warn(`⚠️ No se encontró elemento rival para "${nombre}"`);
-    return null;
-  }
-
-  // Buscar o crear anchor dentro del elemento rival
-  let anchor = rivalElement.querySelector('.bubble-anchor');
-  if (!anchor) {
-    anchor = document.createElement('div');
-    anchor.className = 'bubble-anchor';
-    anchor.style.cssText = 'position:absolute;bottom:-30px;left:50%;transform:translateX(-50%);width:0;height:0;z-index:100;';
-    rivalElement.style.position = 'relative';
-    rivalElement.style.overflow = 'visible';
-    rivalElement.style.marginBottom = '40px';
-    rivalElement.appendChild(anchor);
-  }
-
-  return anchor;
-}
-
-  // ========== AGREGAR MENSAJE AL PANEL DE CHAT ==========
+  /* ========== CHAT PANEL ========== */
   function _appendChatMessage(nombre, texto) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -1452,7 +1257,6 @@ body {
     div.innerHTML = `<span class="msg-author">${_esc(nombre)}:</span><span class="msg-text"> ${_esc(texto)}</span>`;
     container.appendChild(div);
     while (container.children.length > 30) container.removeChild(container.firstChild);
-    
     if (chatOpen) {
       container.scrollTop = container.scrollHeight;
     } else {
@@ -1463,19 +1267,16 @@ body {
     }
   }
 
-  // ========== ESCAPAR HTML ==========
   function _esc(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ========== PRECARGAR SONIDOS AL PRIMER CLIC ==========
+  /* ========== ACTIVAR SONIDOS AL PRIMER CLIC ========== */
   function primerClick() {
     AudioSystem.init();
     document.removeEventListener('click', primerClick);
     document.removeEventListener('touchstart', primerClick);
-    console.log('🎵 Sistema de sonidos activado');
   }
-  
   document.addEventListener('click', primerClick);
   document.addEventListener('touchstart', primerClick);
 
@@ -1526,20 +1327,15 @@ body {
     function _onMove(e) {
       const dx = e.clientX - _startX, dy = e.clientY - _startY;
       if (!_moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-      _moved = true;
-      _startGhost();
-      _posGhost(e.clientX, e.clientY);
-      _hl(e.clientX, e.clientY);
+      _moved = true; _startGhost();
+      _posGhost(e.clientX, e.clientY); _hl(e.clientX, e.clientY);
     }
     function _onTMove(e) {
       const t = e.touches[0];
       const dx = t.clientX - _startX, dy = t.clientY - _startY;
       if (!_moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-      e.preventDefault();
-      _moved = true;
-      _startGhost();
-      _posGhost(t.clientX, t.clientY);
-      _hl(t.clientX, t.clientY);
+      e.preventDefault(); _moved = true; _startGhost();
+      _posGhost(t.clientX, t.clientY); _hl(t.clientX, t.clientY);
     }
     function _onUp(e)   { _drop(e.clientX, e.clientY); _cleanup(); }
     function _onTEnd(e) { const t = e.changedTouches[0]; _drop(t.clientX, t.clientY); _cleanup(); }
@@ -1609,9 +1405,6 @@ body {
       }
     }
   }
-
-  // Los aliases clickCardDropOnSlot / pescaMoveSlotToSlot / pescaReturnToHand
-  // los define pesca.js — no los redefinimos aquí para no sobreescribirlos.
 })();
 </script>
 

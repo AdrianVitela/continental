@@ -642,39 +642,6 @@ body {
 #chat-send:hover { background: rgba(0,200,224,.22); }
 
 /* ── Globito de diálogo ── */
-.bubble-anchor {
-  position: absolute;
-  bottom: -6px; left: 50%;
-  transform: translateX(-50%);
-  width: 0; height: 0;
-  pointer-events: none;
-  z-index: 80;
-}
-#my-bubble-anchor {
-  position: fixed;
-  bottom: 160px; left: 50%;
-  transform: translateX(-50%);
-  width: 0; height: 0;
-  pointer-events: none;
-  z-index: 200;
-}
-.bubble-anchor .speech-bubble {
-  position: absolute;
-  top: 8px; bottom: auto;
-  left: 50%;
-  transform: translateX(-50%) scale(.85);
-  background: rgba(4,21,32,.96);
-  border: 1.5px solid var(--fish-bd);
-  border-radius: 10px;
-  padding: 6px 11px;
-  font-size: .72rem; color: #e8e8e0;
-  white-space: nowrap; text-align: center;
-  pointer-events: none;
-  box-shadow: 0 4px 18px rgba(0,0,0,.65);
-  opacity: 0;
-  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
-  line-height: 1.35; z-index: 80;
-}
 #my-bubble-anchor .speech-bubble {
   position: absolute;
   bottom: 12px; top: auto;
@@ -785,30 +752,29 @@ body {
 }
 .table-bang { animation: tableBang 0.55s ease-in-out !important; }
 
-/* Asegurar que las tarjetas rival tengan espacio para las burbujas */
+/* ===== BURBUJAS PARA RIVALES ===== */
 .rival-card {
   position: relative !important;
-  margin-bottom: 30px !important; /* Espacio para la burbuja */
+  margin-bottom: 40px !important; /* Espacio para la burbuja debajo */
   overflow: visible !important;
 }
 
-/* Estilo específico para el anchor dentro de rival-card */
+/* Anchor dentro de la tarjeta rival */
 .rival-card .bubble-anchor {
   position: absolute;
-  bottom: -25px;
+  bottom: -30px;  /* Posicionado debajo de la tarjeta */
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
   pointer-events: none;
-  z-index: 80;
+  z-index: 100;
 }
 
-/* Estilo para la burbuja */
+/* Estilo para la burbuja (posicionada ARRIBA del anchor, o sea debajo de la tarjeta) */
 .rival-card .speech-bubble {
   position: absolute;
-  top: auto;
-  bottom: 100%;
+  bottom: 100%;  /* La burbuja aparece ARRIBA del anchor (que está debajo de la tarjeta) */
   left: 50%;
   transform: translateX(-50%) scale(0.85);
   background: rgba(4,21,32,.96);
@@ -824,18 +790,18 @@ body {
   opacity: 0;
   transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
   line-height: 1.35;
-  z-index: 80;
+  z-index: 100;
 }
 
-/* Flecha de la burbuja (apunta hacia arriba) */
+/* Flecha de la burbuja (apunta hacia ABAJO, hacia el anchor) */
 .rival-card .speech-bubble::before {
   content: '';
   position: absolute;
-  top: 100%;
+  top: 100%;  /* Flecha en la parte inferior de la burbuja */
   left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: var(--fish-bd);
+  border-top-color: var(--fish-bd);  /* Flecha hacia abajo */
 }
 
 .rival-card .speech-bubble::after {
@@ -869,7 +835,7 @@ body {
   border-top-color: rgba(60,8,8,.97);
 }
 
-/* Anchor para el jugador actual (ya existente, solo asegurar) */
+/* ===== BURBUJA PARA JUGADOR ACTUAL ===== */
 #my-bubble-anchor {
   position: fixed;
   bottom: 160px;
@@ -879,6 +845,66 @@ body {
   height: 0;
   pointer-events: none;
   z-index: 200;
+}
+
+/* Burbuja del jugador actual (apunta hacia arriba) */
+#my-bubble-anchor .speech-bubble {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%) scale(.85);
+  background: rgba(4,21,32,.96);
+  border: 1.5px solid var(--fish-bd);
+  border-radius: 10px;
+  padding: 6px 11px;
+  font-size: .72rem;
+  color: #e8e8e0;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0,0,0,.65);
+  opacity: 0;
+  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.35;
+  z-index: 200;
+}
+
+#my-bubble-anchor .speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--fish-bd);
+}
+
+#my-bubble-anchor .speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(4,21,32,.96);
+  z-index: 1;
+}
+
+#my-bubble-anchor .speech-bubble.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+#my-bubble-anchor .speech-bubble.paga {
+  border-color: rgba(220,60,60,.7);
+  background: rgba(60,8,8,.97);
+  color: #ff9090;
+}
+#my-bubble-anchor .speech-bubble.paga::before {
+  border-top-color: rgba(220,60,60,.7);
+}
+#my-bubble-anchor .speech-bubble.paga::after {
+  border-top-color: rgba(60,8,8,.97);
 }
   </style>
 </head>

@@ -784,6 +784,102 @@ body {
   100% { transform:translate(0,0) rotate(0deg); }
 }
 .table-bang { animation: tableBang 0.55s ease-in-out !important; }
+
+/* Asegurar que las tarjetas rival tengan espacio para las burbujas */
+.rival-card {
+  position: relative !important;
+  margin-bottom: 30px !important; /* Espacio para la burbuja */
+  overflow: visible !important;
+}
+
+/* Estilo específico para el anchor dentro de rival-card */
+.rival-card .bubble-anchor {
+  position: absolute;
+  bottom: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 80;
+}
+
+/* Estilo para la burbuja */
+.rival-card .speech-bubble {
+  position: absolute;
+  top: auto;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.85);
+  background: rgba(4,21,32,.96);
+  border: 1.5px solid var(--fish-bd);
+  border-radius: 10px;
+  padding: 6px 11px;
+  font-size: .72rem;
+  color: #e8e8e0;
+  white-space: nowrap;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 18px rgba(0,0,0,.65);
+  opacity: 0;
+  transition: opacity .18s ease, transform .22s cubic-bezier(.34,1.56,.64,1);
+  line-height: 1.35;
+  z-index: 80;
+}
+
+/* Flecha de la burbuja (apunta hacia arriba) */
+.rival-card .speech-bubble::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: var(--fish-bd);
+}
+
+.rival-card .speech-bubble::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(4,21,32,.96);
+  z-index: 1;
+}
+
+/* Burbuja visible */
+.rival-card .speech-bubble.visible {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Burbuja especial para 🔥 (efecto PAGA) */
+.rival-card .speech-bubble.paga {
+  border-color: rgba(220,60,60,.7);
+  background: rgba(60,8,8,.97);
+  color: #ff9090;
+  font-weight: 800;
+}
+.rival-card .speech-bubble.paga::before {
+  border-top-color: rgba(220,60,60,.7);
+}
+.rival-card .speech-bubble.paga::after {
+  border-top-color: rgba(60,8,8,.97);
+}
+
+/* Anchor para el jugador actual (ya existente, solo asegurar) */
+#my-bubble-anchor {
+  position: fixed;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 200;
+}
   </style>
 </head>
 
@@ -1264,51 +1360,62 @@ body {
     }, BUBBLE_DURATION);
   }
 
-  // ========== BUSCAR/CREAR ANCLA PARA BURBUJA ==========
-  function _getOrCreateBubbleAnchor(nombre) {
-    // Si es el jugador actual, usar su anchor fijo
-    if (nombre === _getNombre()) {
-      return document.getElementById('my-bubble-anchor');
+ // ========== BUSCAR/CREAR ANCLA PARA BURBUJA ==========
+function _getOrCreateBubbleAnchor(nombre) {
+  // Si es el jugador actual, usar su anchor fijo
+  if (nombre === _getNombre()) {
+    return document.getElementById('my-bubble-anchor');
+  }
+  
+  // Buscar en rival-card (Pesca)
+  let rivalCard = null;
+  
+  // Buscar por el nombre exacto
+  document.querySelectorAll('.rival-card').forEach(card => {
+    const nameEl = card.querySelector('.r-name');
+    if (nameEl && nameEl.textContent.trim() === nombre) {
+      rivalCard = card;
     }
-    
-    // Buscar en rival-card (Pesca)
-    // La función renderRivals() en pesca.js crea divs con clase 'rival-card'
-    let rivalCard = null;
-    
-    // Buscar por el nombre exacto
+  });
+  
+  // Si no encuentra, buscar por coincidencia parcial
+  if (!rivalCard) {
     document.querySelectorAll('.rival-card').forEach(card => {
       const nameEl = card.querySelector('.r-name');
-      if (nameEl && nameEl.textContent.trim() === nombre) {
+      if (nameEl && nameEl.textContent.trim().includes(nombre)) {
         rivalCard = card;
       }
     });
-    
-    // Si no encuentra, buscar por coincidencia parcial (por si acaso)
-    if (!rivalCard) {
-      document.querySelectorAll('.rival-card').forEach(card => {
-        const nameEl = card.querySelector('.r-name');
-        if (nameEl && nameEl.textContent.trim().includes(nombre)) {
-          rivalCard = card;
-        }
-      });
-    }
-    
-    if (!rivalCard) {
-      return null;
-    }
-    
-    // Crear anchor si no existe
-    let anchor = rivalCard.querySelector('.bubble-anchor');
-    if (!anchor) {
-      anchor = document.createElement('div');
-      anchor.className = 'bubble-anchor';
-      
-      // Posicionar el anchor en la parte inferior de la tarjeta rival
-      rivalCard.style.position = 'relative';
-      rivalCard.appendChild(anchor);
-    }
-    return anchor;
   }
+  
+  if (!rivalCard) {
+    console.warn(`⚠️ No se encontró rival-card para ${nombre}`);
+    return null;
+  }
+  
+  // Asegurar que la tarjeta rival tenga position relative
+  rivalCard.style.position = 'relative';
+  
+  // Buscar anchor existente o crear uno nuevo
+  let anchor = rivalCard.querySelector('.bubble-anchor');
+  if (!anchor) {
+    anchor = document.createElement('div');
+    anchor.className = 'bubble-anchor';
+    
+    // Estilos específicos para que aparezca debajo de la tarjeta del rival
+    anchor.style.position = 'absolute';
+    anchor.style.bottom = '-25px';  // Posicionar debajo de la tarjeta
+    anchor.style.left = '50%';
+    anchor.style.transform = 'translateX(-50%)';
+    anchor.style.width = '0';
+    anchor.style.height = '0';
+    anchor.style.zIndex = '80';
+    
+    rivalCard.appendChild(anchor);
+  }
+  
+  return anchor;
+}
 
   // ========== AGREGAR MENSAJE AL PANEL DE CHAT ==========
   function _appendChatMessage(nombre, texto) {

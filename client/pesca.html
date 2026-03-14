@@ -1077,64 +1077,68 @@ body {
   // ========== REPRODUCIR SONIDO SEGÚN TEXTO ==========
   function reproducirSonidoPorTexto(texto) {
     const textoLower = texto.toLowerCase();
-    let sonidoReproducido = false;
     
     // Emojis
     if (texto === '😂') {
       AudioSystem.jaja();
-      sonidoReproducido = true;
-    } else if (texto === '🤬') {
+      return true;
+    }
+    if (texto === '🤬') {
       AudioSystem.caraEnojada();
-      sonidoReproducido = true;
-    } else if (texto === '🔥') {
+      return true;
+    }
+    if (texto === '🔥') {
       AudioSystem.golpe();
-      triggerGolpe(); // Hacer temblar la mesa
-      sonidoReproducido = true;
-    } else if (texto === '😱' || texto === '😢' || texto === '🥳' || texto === '👏') {
-      // Emojis sin sonido asignado
-      sonidoReproducido = false;
+      triggerGolpe();
+      return true;
     }
     
     // Mensajes rápidos específicos
-    else if (texto === '¡Ya dame mi carta! 😩') {
+    if (texto === '¡Ya dame mi carta! 😩') {
       AudioSystem.dameCarta();
-      sonidoReproducido = true;
-    } else if (texto === '¡Ya gané, jaja! 🏆') {
+      return true;
+    }
+    if (texto === '¡Ya gané, jaja! 🏆') {
       AudioSystem.gane();
-      sonidoReproducido = true;
-    } else if (texto === '¡Castígate! 😈') {
+      return true;
+    }
+    if (texto === '¡Castígate! 😈') {
       AudioSystem.castigate();
-      sonidoReproducido = true;
-    } else if (texto === '¡No mames! 😤') {
+      return true;
+    }
+    if (texto === '¡No mames! 😤') {
       AudioSystem.caraEnojada();
-      sonidoReproducido = true;
+      return true;
     }
     
     // Palabras clave en mensajes libres
-    else {
-      if (textoLower.includes('paga') || textoLower.includes('golpe')) {
-        AudioSystem.golpe();
-        triggerGolpe();
-        sonidoReproducido = true;
-      } else if (textoLower.includes('jaja') || textoLower.includes('😂')) {
-        AudioSystem.jaja();
-        sonidoReproducido = true;
-      } else if (textoLower.includes('gane') || textoLower.includes('gané')) {
-        AudioSystem.gane();
-        sonidoReproducido = true;
-      } else if (textoLower.includes('dame')) {
-        AudioSystem.dameCarta();
-        sonidoReproducido = true;
-      } else if (textoLower.includes('castigate') || textoLower.includes('castígate')) {
-        AudioSystem.castigate();
-        sonidoReproducido = true;
-      } else if (textoLower.includes('no mames')) {
-        AudioSystem.caraEnojada();
-        sonidoReproducido = true;
-      }
+    if (textoLower.includes('paga') || textoLower.includes('golpe')) {
+      AudioSystem.golpe();
+      triggerGolpe();
+      return true;
+    }
+    if (textoLower.includes('jaja') || textoLower.includes('😂')) {
+      AudioSystem.jaja();
+      return true;
+    }
+    if (textoLower.includes('gane') || textoLower.includes('gané')) {
+      AudioSystem.gane();
+      return true;
+    }
+    if (textoLower.includes('dame')) {
+      AudioSystem.dameCarta();
+      return true;
+    }
+    if (textoLower.includes('castigate') || textoLower.includes('castígate')) {
+      AudioSystem.castigate();
+      return true;
+    }
+    if (textoLower.includes('no mames')) {
+      AudioSystem.caraEnojada();
+      return true;
     }
     
-    return sonidoReproducido;
+    return false;
   }
 
   // ========== ENVIAR MENSAJE DE CHAT ==========
@@ -1185,7 +1189,9 @@ body {
   function _registerWS() {
     if (typeof WS !== 'undefined') {
       WS.on('reaction', function(data) {
-        if (data.nombre === _getNombre()) return; // Ignorar mensajes propios
+        // IMPORTANTE: No ignorar si es el mismo nombre, porque puede haber dos jugadores con mismo nombre
+        // Mejor verificar por ID, pero como no tenemos, mostramos todos y dejamos que el servidor decida
+        console.log('🎤 Reacción recibida:', data);
         
         // Mostrar reacción de OTROS CON sonido
         mostrarReaccion(data, true);
@@ -1200,6 +1206,8 @@ body {
   function mostrarReaccion(data, reproducirSonido = true) {
     const { tipo, texto, nombre } = data;
     
+    console.log(`📢 Mostrando reacción de ${nombre}: ${texto}`);
+    
     // Siempre agregar al chat
     _appendChatMessage(nombre, texto);
     
@@ -1213,7 +1221,7 @@ body {
       _showFloatingEmoji(texto);
     }
     
-    // Mostrar burbuja de diálogo
+    // Mostrar burbuja de diálogo (para TODOS los mensajes)
     _showSpeechBubble(nombre, texto);
   }
 
@@ -1231,7 +1239,10 @@ body {
   // ========== BURBUJA DE DIÁLOGO ==========
   function _showSpeechBubble(nombre, texto) {
     const anchor = _getOrCreateBubbleAnchor(nombre);
-    if (!anchor) return;
+    if (!anchor) {
+      console.warn(`⚠️ No se encontró anchor para ${nombre}`);
+      return;
+    }
 
     let bubble = anchor.querySelector('.speech-bubble');
     if (!bubble) {
@@ -1244,37 +1255,56 @@ body {
     bubble.textContent = texto;
     clearTimeout(bubble._hideT);
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        bubble.classList.add('visible');
-        bubble._hideT = setTimeout(() => {
-          bubble.classList.remove('visible');
-        }, BUBBLE_DURATION);
-      });
-    });
+    // Forzar reflow
+    void bubble.offsetWidth;
+
+    bubble.classList.add('visible');
+    bubble._hideT = setTimeout(() => {
+      bubble.classList.remove('visible');
+    }, BUBBLE_DURATION);
   }
 
   // ========== BUSCAR/CREAR ANCLA PARA BURBUJA ==========
   function _getOrCreateBubbleAnchor(nombre) {
+    // Si es el jugador actual, usar su anchor fijo
     if (nombre === _getNombre()) {
       return document.getElementById('my-bubble-anchor');
     }
     
-    // Buscar en rival-card (Pesca) y opp (Continental, por compatibilidad)
+    // Buscar en rival-card (Pesca)
+    // La función renderRivals() en pesca.js crea divs con clase 'rival-card'
     let rivalCard = null;
-    document.querySelectorAll('.rival-card, .opp').forEach(card => {
-      const nameEl = card.querySelector('.r-name, .opp-name');
-      if (nameEl && nameEl.textContent.trim().includes(nombre)) {
+    
+    // Buscar por el nombre exacto
+    document.querySelectorAll('.rival-card').forEach(card => {
+      const nameEl = card.querySelector('.r-name');
+      if (nameEl && nameEl.textContent.trim() === nombre) {
         rivalCard = card;
       }
     });
     
-    if (!rivalCard) return null;
+    // Si no encuentra, buscar por coincidencia parcial (por si acaso)
+    if (!rivalCard) {
+      document.querySelectorAll('.rival-card').forEach(card => {
+        const nameEl = card.querySelector('.r-name');
+        if (nameEl && nameEl.textContent.trim().includes(nombre)) {
+          rivalCard = card;
+        }
+      });
+    }
     
+    if (!rivalCard) {
+      return null;
+    }
+    
+    // Crear anchor si no existe
     let anchor = rivalCard.querySelector('.bubble-anchor');
     if (!anchor) {
       anchor = document.createElement('div');
       anchor.className = 'bubble-anchor';
+      
+      // Posicionar el anchor en la parte inferior de la tarjeta rival
+      rivalCard.style.position = 'relative';
       rivalCard.appendChild(anchor);
     }
     return anchor;

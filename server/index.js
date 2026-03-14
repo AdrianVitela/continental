@@ -15,16 +15,19 @@ const wss  = new WebSocketServer({ server: srv });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Rutas auth y feedback
+// Rutas auth, feedback y admin
 const authRouter     = require('./auth');
 const feedbackRouter = require('./feedback');
+const adminRouter    = require('./admin');
 app.use('/api', authRouter);
 app.use('/api', feedbackRouter);
+app.use('/api', adminRouter);
 
 app.get('/',         (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
 app.get('/login',    (_, res) => res.sendFile(path.join(__dirname, '../client/login.html')));
 app.get('/register', (_, res) => res.sendFile(path.join(__dirname, '../client/register.html')));
 app.get('/game',     (_, res) => res.sendFile(path.join(__dirname, '../client/game.html')));
+app.get('/admin',    (_, res) => res.sendFile(path.join(__dirname, '../client/admin.html')));
 
 const rooms   = new Map();
 const clients = new Map();

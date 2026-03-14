@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental – Admin</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
+      padding: 24px 16px;
+    }
+
+    .admin-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      animation: fadeDown .6s var(--eout) both;
+    }
+
+    .admin-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .admin-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      color: var(--gold);
+      margin: 0;
+      letter-spacing: 2px;
+    }
+    .admin-subtitle {
+      font-size: .75rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .btn-back {
+      background: none;
+      border: 1px solid rgba(255,255,255,.15);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: .8rem;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .btn-back:hover { border-color: rgba(200,160,69,.4); color: var(--gold); }
+
+    /* Stats */
+    .stats-row {
+      display: flex; gap: 12px; flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1; min-width: 120px;
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(200,160,69,.15);
+      border-radius: 12px;
+      padding: 14px 18px;
+      text-align: center;
+    }
+    .stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: .68rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* Tabla */
+    .table-card {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(200,160,69,.15);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .table-header h3 {
+      font-family: 'Cormorant Garamond', serif;
+      color: var(--gold);
+      margin: 0;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+    }
+    .search-input {
+      background: rgba(0,0,0,.3);
+      border: 1px solid rgba(200,160,69,.2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .82rem;
+      padding: 7px 12px;
+      outline: none;
+      font-family: inherit;
+      width: min(200px, 100%);
+      transition: border-color .2s;
+    }
+    .search-input:focus { border-color: rgba(200,160,69,.5); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    thead th {
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      padding: 10px 20px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      font-weight: 500;
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,.04);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    tbody tr:last-child { border-bottom: none; }
+    td {
+      padding: 12px 20px;
+      font-size: .85rem;
+      vertical-align: middle;
+    }
+    .td-nombre {
+      font-weight: 600;
+      color: var(--text);
+    }
+    .td-email { color: var(--text-dim); font-size: .78rem; }
+    .td-fecha { color: var(--text-dim); font-size: .75rem; }
+
+    .badge-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .78rem;
+      background: rgba(200,160,69,.1);
+      border: 1px solid rgba(200,160,69,.25);
+      border-radius: 20px;
+      padding: 3px 10px;
+      color: var(--gold);
+    }
+    .badge-none {
+      font-size: .75rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .rol-pill {
+      display: inline-block;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-weight: 600;
+    }
+    .rol-owner   { background: rgba(200,160,69,.2); color: var(--gold); border: 1px solid rgba(200,160,69,.3); }
+    .rol-jugador { background: rgba(255,255,255,.06); color: var(--text-dim); border: 1px solid rgba(255,255,255,.1); }
+
+    /* Badge selector */
+    .badge-select {
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(200,160,69,.2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .8rem;
+      padding: 5px 8px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color .2s;
+    }
+    .badge-select:focus { border-color: rgba(200,160,69,.5); }
+
+    .btn-save {
+      background: linear-gradient(135deg, var(--gold), #b8920a);
+      color: #0b1e12;
+      border: none;
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s;
+      font-family: inherit;
+    }
+    .btn-save:hover { opacity: .85; }
+    .btn-save:disabled { opacity: .4; cursor: not-allowed; }
+
+    .save-ok { color: #2ecc71; font-size: .75rem; margin-left: 4px; }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-dim);
+      font-size: .9rem;
+    }
+
+    @media (max-width: 600px) {
+      thead th:nth-child(3),
+      td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-wrap">
+
+    <div class="admin-header">
+      <div>
+        <h1 class="admin-title">👑 Panel Admin</h1>
+        <div class="admin-subtitle">Continental — Gestión de usuarios</div>
+      </div>
+      <button class="btn-back" onclick="window.location.href='/'">← Volver al lobby</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Usuarios</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-badges">—</div><div class="stat-label">Con badge</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-hoy">—</div><div class="stat-label">Hoy</div></div>
+    </div>
+
+    <!-- Tabla usuarios -->
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Usuarios registrados</h3>
+        <input class="search-input" type="text" placeholder="🔍 Buscar..." oninput="filtrar(this.value)">
+      </div>
+      <div id="tabla-wrap">
+        <div class="loading">Cargando usuarios...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const token   = localStorage.getItem('token');
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+
+    // Verificar que sea owner
+    if (!token || !usuario || usuario.rol !== 'owner') {
+      window.location.href = '/';
+    }
+
+    let todosUsuarios = [];
+    let badges = {};
+
+    async function cargarDatos() {
+      try {
+        const [uRes, bRes] = await Promise.all([
+          fetch('/api/admin/usuarios', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/admin/badges',   { headers: { Authorization: `Bearer ${token}` } }),
+        ]);
+        const uData = await uRes.json();
+        const bData = await bRes.json();
+
+        if (!uRes.ok) { window.location.href = '/'; return; }
+
+        todosUsuarios = uData.usuarios;
+        badges        = bData.badges;
+
+        // Stats
+        const hoy = new Date().toDateString();
+        document.getElementById('stat-total').textContent  = todosUsuarios.length;
+        document.getElementById('stat-badges').textContent = todosUsuarios.filter(u => u.badge).length;
+        document.getElementById('stat-hoy').textContent    = todosUsuarios.filter(u =>
+          new Date(u.created_at).toDateString() === hoy).length;
+
+        renderTabla(todosUsuarios);
+      } catch (err) {
+        document.getElementById('tabla-wrap').innerHTML =
+          '<div class="loading">Error al cargar datos.</div>';
+      }
+    }
+
+    function renderTabla(usuarios) {
+      if (!usuarios.length) {
+        document.getElementById('tabla-wrap').innerHTML =
+          '<div class="loading">No se encontraron usuarios.</div>';
+        return;
+      }
+
+      const badgeOptions = Object.entries(badges).map(([k, v]) =>
+        `<option value="${k}">${v.emoji} ${v.label}</option>`
+      ).join('');
+
+      const rows = usuarios.map(u => {
+        const fecha  = new Date(u.created_at).toLocaleDateString('es-MX');
+        const rolPill = u.rol === 'owner'
+          ? `<span class="rol-pill rol-owner">👑 Owner</span>`
+          : `<span class="rol-pill rol-jugador">Jugador</span>`;
+        const badgeDisplay = u.badge && badges[u.badge]
+          ? `<span class="badge-display">${badges[u.badge].emoji} ${badges[u.badge].label}</span>`
+          : `<span class="badge-none">Sin badge</span>`;
+
+        return `
+          <tr id="row-${u.id}">
+            <td><div class="td-nombre">${u.nombre}</div><div class="td-email">${u.email}</div></td>
+            <td>${rolPill}</td>
+            <td class="td-fecha">${fecha}</td>
+            <td>${badgeDisplay}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:6px">
+                <select class="badge-select" id="sel-${u.id}">
+                  <option value="">Sin badge</option>
+                  ${badgeOptions}
+                </select>
+                <button class="btn-save" onclick="asignarBadge(${u.id})" id="btn-${u.id}">Guardar</button>
+                <span class="save-ok" id="ok-${u.id}" style="display:none">✓</span>
+              </div>
+            </td>
+          </tr>`;
+      }).join('');
+
+      document.getElementById('tabla-wrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Registro</th>
+              <th>Badge actual</th>
+              <th>Asignar badge</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+
+      // Pre-seleccionar badge actual
+      usuarios.forEach(u => {
+        const sel = document.getElementById(`sel-${u.id}`);
+        if (sel && u.badge) sel.value = u.badge;
+      });
+    }
+
+    async function asignarBadge(usuarioId) {
+      const sel = document.getElementById(`sel-${usuarioId}`);
+      const btn = document.getElementById(`btn-${usuarioId}`);
+      const ok  = document.getElementById(`ok-${usuarioId}`);
+      const badge = sel.value || null;
+
+      btn.disabled = true;
+      btn.textContent = '...';
+
+      try {
+        const res = await fetch('/api/admin/badge', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body:    JSON.stringify({ usuarioId, badge }),
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.error); return; }
+
+        // Actualizar badge display en la fila
+        const row = document.getElementById(`row-${usuarioId}`);
+        const badgeTd = row.querySelectorAll('td')[3];
+        badgeTd.innerHTML = badge && badges[badge]
+          ? `<span class="badge-display">${badges[badge].emoji} ${badges[badge].label}</span>`
+          : `<span class="badge-none">Sin badge</span>`;
+
+        // Actualizar stat
+        const conBadge = todosUsuarios.filter(u => {
+          if (u.id === usuarioId) return badge !== null;
+          return u.badge !== null;
+        }).length;
+        document.getElementById('stat-badges').textContent = conBadge;
+
+        ok.style.display = 'inline';
+        setTimeout(() => ok.style.display = 'none', 2000);
+      } catch {
+        alert('Error de conexión.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar';
+      }
+    }
+
+    function filtrar(query) {
+      const q = query.toLowerCase();
+      const filtrados = todosUsuarios.filter(u =>
+        u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      );
+      renderTabla(filtrados);
+      // Re-seleccionar badges después de re-render
+      filtrados.forEach(u => {
+        const sel = document.getElementById(`sel-${u.id}`);
+        if (sel && u.badge) sel.value = u.badge;
+      });
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>

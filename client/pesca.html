@@ -769,6 +769,21 @@ body {
   .hand-zone    { max-width: 1200px; }
   .building-slot { max-width: calc(var(--cw)*10 + 50px); }
 }
+
+/* Animación de temblor para el efecto PAGA */
+@keyframes tableBang {
+  0%   { transform:translate(0,0) rotate(0deg); }
+  10%  { transform:translate(-3px,-3px) rotate(-.5deg); }
+  20%  { transform:translate(4px,2px) rotate(.5deg); }
+  30%  { transform:translate(-4px,1px) rotate(-.4deg); }
+  40%  { transform:translate(4px,-2px) rotate(.4deg); }
+  50%  { transform:translate(-3px,3px) rotate(-.3deg); }
+  60%  { transform:translate(3px,-2px) rotate(.3deg); }
+  70%  { transform:translate(-2px,1px) rotate(-.15deg); }
+  85%  { transform:translate(2px,-1px) rotate(.1deg); }
+  100% { transform:translate(0,0) rotate(0deg); }
+}
+.table-bang { animation: tableBang 0.55s ease-in-out !important; }
   </style>
 </head>
 
@@ -950,7 +965,7 @@ body {
 <script src="js/pesca.js"></script>
 
 <!-- ═══════════════════════════════════
-     CHAT + REACCIONES + SONIDOS
+     CHAT + REACCIONES + SONIDOS (CORREGIDO)
 ════════════════════════════════════ -->
 <script>
 (function () {
@@ -1048,61 +1063,78 @@ body {
 
   window.AudioSystem = AudioSystem;
 
+  // ========== FUNCIÓN PARA HACER TEMBLAR LA MESA (efecto PAGA) ==========
+  function triggerGolpe() {
+    const table = document.getElementById('main-table');
+    if (table) {
+      table.classList.remove('table-bang');
+      void table.offsetWidth;
+      table.classList.add('table-bang');
+      setTimeout(() => table.classList.remove('table-bang'), 580);
+    }
+  }
+
   // ========== REPRODUCIR SONIDO SEGÚN TEXTO ==========
   function reproducirSonidoPorTexto(texto) {
     const textoLower = texto.toLowerCase();
+    let sonidoReproducido = false;
     
     // Emojis
     if (texto === '😂') {
       AudioSystem.jaja();
-      return true;
-    }
-    if (texto === '🤬') {
+      sonidoReproducido = true;
+    } else if (texto === '🤬') {
       AudioSystem.caraEnojada();
-      return true;
-    }
-    if (texto === '🔥') {
+      sonidoReproducido = true;
+    } else if (texto === '🔥') {
       AudioSystem.golpe();
-      return true;
+      triggerGolpe(); // Hacer temblar la mesa
+      sonidoReproducido = true;
+    } else if (texto === '😱' || texto === '😢' || texto === '🥳' || texto === '👏') {
+      // Emojis sin sonido asignado
+      sonidoReproducido = false;
     }
     
     // Mensajes rápidos específicos
-    if (texto === '¡Ya dame mi carta! 😩') {
+    else if (texto === '¡Ya dame mi carta! 😩') {
       AudioSystem.dameCarta();
-      return true;
-    }
-    if (texto === '¡Ya gané, jaja! 🏆') {
+      sonidoReproducido = true;
+    } else if (texto === '¡Ya gané, jaja! 🏆') {
       AudioSystem.gane();
-      return true;
-    }
-    if (texto === '¡Castígate! 😈' || textoLower.includes('castigate')) {
+      sonidoReproducido = true;
+    } else if (texto === '¡Castígate! 😈') {
       AudioSystem.castigate();
-      return true;
-    }
-    if (texto === '¡No mames! 😤' || textoLower.includes('no mames')) {
+      sonidoReproducido = true;
+    } else if (texto === '¡No mames! 😤') {
       AudioSystem.caraEnojada();
-      return true;
+      sonidoReproducido = true;
     }
     
     // Palabras clave en mensajes libres
-    if (textoLower.includes('paga') || textoLower.includes('golpe')) {
-      AudioSystem.golpe();
-      return true;
-    }
-    if (textoLower.includes('jaja') || textoLower.includes('😂')) {
-      AudioSystem.jaja();
-      return true;
-    }
-    if (textoLower.includes('gane') || textoLower.includes('gané')) {
-      AudioSystem.gane();
-      return true;
-    }
-    if (textoLower.includes('dame')) {
-      AudioSystem.dameCarta();
-      return true;
+    else {
+      if (textoLower.includes('paga') || textoLower.includes('golpe')) {
+        AudioSystem.golpe();
+        triggerGolpe();
+        sonidoReproducido = true;
+      } else if (textoLower.includes('jaja') || textoLower.includes('😂')) {
+        AudioSystem.jaja();
+        sonidoReproducido = true;
+      } else if (textoLower.includes('gane') || textoLower.includes('gané')) {
+        AudioSystem.gane();
+        sonidoReproducido = true;
+      } else if (textoLower.includes('dame')) {
+        AudioSystem.dameCarta();
+        sonidoReproducido = true;
+      } else if (textoLower.includes('castigate') || textoLower.includes('castígate')) {
+        AudioSystem.castigate();
+        sonidoReproducido = true;
+      } else if (textoLower.includes('no mames')) {
+        AudioSystem.caraEnojada();
+        sonidoReproducido = true;
+      }
     }
     
-    return false;
+    return sonidoReproducido;
   }
 
   // ========== ENVIAR MENSAJE DE CHAT ==========
@@ -1120,7 +1152,7 @@ body {
     WS.send({ type: 'reaction', tipo: 'msg', texto: txt, nombre });
     
     // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
-    _showReaction({ tipo: 'msg', texto: txt, nombre }, false);
+    mostrarReaccion({ tipo: 'msg', texto: txt, nombre }, false);
     
     // 4. Limpiar input
     input.value = '';
@@ -1142,7 +1174,7 @@ body {
     WS.send({ type: 'reaction', tipo, texto, nombre });
     
     // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
-    _showReaction({ tipo, texto, nombre }, false);
+    mostrarReaccion({ tipo, texto, nombre }, false);
     
     // 4. Cerrar chat
     chatOpen = false;
@@ -1156,7 +1188,7 @@ body {
         if (data.nombre === _getNombre()) return; // Ignorar mensajes propios
         
         // Mostrar reacción de OTROS CON sonido
-        _showReaction(data, true);
+        mostrarReaccion(data, true);
       });
     } else {
       setTimeout(_registerWS, 100);
@@ -1165,7 +1197,7 @@ body {
   _registerWS();
 
   // ========== MOSTRAR REACCIÓN (visual + sonido opcional) ==========
-  function _showReaction(data, reproducirSonido = true) {
+  function mostrarReaccion(data, reproducirSonido = true) {
     const { tipo, texto, nombre } = data;
     
     // Siempre agregar al chat
@@ -1178,17 +1210,22 @@ body {
     
     // Mostrar emoji flotante SOLO si es emoji
     if (tipo === 'emoji') {
-      const el = document.createElement('div');
-      el.className = 'reaction-float';
-      el.textContent = texto;
-      el.style.left   = (15 + Math.random() * 65) + 'vw';
-      el.style.bottom = '140px';
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 2300);
+      _showFloatingEmoji(texto);
     }
     
     // Mostrar burbuja de diálogo
     _showSpeechBubble(nombre, texto);
+  }
+
+  // ========== EMOJI FLOTANTE ==========
+  function _showFloatingEmoji(emoji) {
+    const el = document.createElement('div');
+    el.className = 'reaction-float';
+    el.textContent = emoji;
+    el.style.left   = (15 + Math.random() * 65) + 'vw';
+    el.style.bottom = '140px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2300);
   }
 
   // ========== BURBUJA DE DIÁLOGO ==========
@@ -1222,12 +1259,18 @@ body {
     if (nombre === _getNombre()) {
       return document.getElementById('my-bubble-anchor');
     }
+    
+    // Buscar en rival-card (Pesca) y opp (Continental, por compatibilidad)
     let rivalCard = null;
     document.querySelectorAll('.rival-card, .opp').forEach(card => {
       const nameEl = card.querySelector('.r-name, .opp-name');
-      if (nameEl && nameEl.textContent.trim().includes(nombre)) rivalCard = card;
+      if (nameEl && nameEl.textContent.trim().includes(nombre)) {
+        rivalCard = card;
+      }
     });
+    
     if (!rivalCard) return null;
+    
     let anchor = rivalCard.querySelector('.bubble-anchor');
     if (!anchor) {
       anchor = document.createElement('div');

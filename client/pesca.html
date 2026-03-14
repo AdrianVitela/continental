@@ -1061,7 +1061,7 @@ body {
 <script src="js/pesca.js"></script>
 
 <!-- ═══════════════════════════════════
-     CHAT + REACCIONES + SONIDOS (CORREGIDO)
+     CHAT + REACCIONES + SONIDOS (CORREGIDO - BURBUJAS EN RIVALES)
 ════════════════════════════════════ -->
 <script>
 (function () {
@@ -1285,8 +1285,6 @@ body {
   function _registerWS() {
     if (typeof WS !== 'undefined') {
       WS.on('reaction', function(data) {
-        // IMPORTANTE: No ignorar si es el mismo nombre, porque puede haber dos jugadores con mismo nombre
-        // Mejor verificar por ID, pero como no tenemos, mostramos todos y dejamos que el servidor decida
         console.log('🎤 Reacción recibida:', data);
         
         // Mostrar reacción de OTROS CON sonido
@@ -1334,7 +1332,8 @@ body {
 
   // ========== BURBUJA DE DIÁLOGO ==========
   function _showSpeechBubble(nombre, texto) {
-    const anchor = _getOrCreateBubbleAnchor(nombre);
+    // IMPORTANTE: Obtener el anchor específico para este jugador
+    const anchor = getBubbleAnchorForPlayer(nombre);
     if (!anchor) {
       console.warn(`⚠️ No se encontró anchor para ${nombre}`);
       return;
@@ -1347,75 +1346,74 @@ body {
       anchor.appendChild(bubble);
     }
 
-    bubble.classList.remove('visible');
-    bubble.textContent = texto;
-    clearTimeout(bubble._hideT);
+    // Determinar si es un mensaje de "PAGA" (🔥)
+    const esPaga = texto.includes('PAGA') || texto === '🔥';
+    if (esPaga) {
+      bubble.classList.add('paga');
+    } else {
+      bubble.classList.remove('paga');
+    }
 
+    bubble.textContent = texto;
+    bubble.classList.remove('visible');
+    
     // Forzar reflow
     void bubble.offsetWidth;
-
+    
     bubble.classList.add('visible');
+    
+    clearTimeout(bubble._hideT);
     bubble._hideT = setTimeout(() => {
       bubble.classList.remove('visible');
     }, BUBBLE_DURATION);
   }
 
- // ========== BUSCAR/CREAR ANCLA PARA BURBUJA ==========
-function _getOrCreateBubbleAnchor(nombre) {
-  // Si es el jugador actual, usar su anchor fijo
-  if (nombre === _getNombre()) {
-    return document.getElementById('my-bubble-anchor');
-  }
-  
-  // Buscar en rival-card (Pesca)
-  let rivalCard = null;
-  
-  // Buscar por el nombre exacto
-  document.querySelectorAll('.rival-card').forEach(card => {
-    const nameEl = card.querySelector('.r-name');
-    if (nameEl && nameEl.textContent.trim() === nombre) {
-      rivalCard = card;
+  // ========== OBTENER ANCLA PARA LA BURBUJA DE UN JUGADOR ==========
+  function getBubbleAnchorForPlayer(nombre) {
+    // Si es el jugador actual, usar su anchor fijo
+    if (nombre === _getNombre()) {
+      return document.getElementById('my-bubble-anchor');
     }
-  });
-  
-  // Si no encuentra, buscar por coincidencia parcial
-  if (!rivalCard) {
+    
+    // Buscar el elemento del rival
+    let rivalElement = null;
+    
+    // Buscar por nombre exacto en rival-card
     document.querySelectorAll('.rival-card').forEach(card => {
       const nameEl = card.querySelector('.r-name');
-      if (nameEl && nameEl.textContent.trim().includes(nombre)) {
-        rivalCard = card;
+      if (nameEl && nameEl.textContent.trim() === nombre) {
+        rivalElement = card;
       }
     });
-  }
-  
-  if (!rivalCard) {
-    console.warn(`⚠️ No se encontró rival-card para ${nombre}`);
-    return null;
-  }
-  
-  // Asegurar que la tarjeta rival tenga position relative
-  rivalCard.style.position = 'relative';
-  
-  // Buscar anchor existente o crear uno nuevo
-  let anchor = rivalCard.querySelector('.bubble-anchor');
-  if (!anchor) {
-    anchor = document.createElement('div');
-    anchor.className = 'bubble-anchor';
     
-    // Estilos específicos para que aparezca debajo de la tarjeta del rival
-    anchor.style.position = 'absolute';
-    anchor.style.bottom = '-25px';  // Posicionar debajo de la tarjeta
-    anchor.style.left = '50%';
-    anchor.style.transform = 'translateX(-50%)';
-    anchor.style.width = '0';
-    anchor.style.height = '0';
-    anchor.style.zIndex = '80';
+    if (!rivalElement) {
+      return null;
+    }
     
-    rivalCard.appendChild(anchor);
+    // Buscar o crear anchor dentro del elemento rival
+    let anchor = rivalElement.querySelector('.bubble-anchor');
+    if (!anchor) {
+      anchor = document.createElement('div');
+      anchor.className = 'bubble-anchor';
+      
+      // Estilos para que aparezca debajo de la tarjeta del rival
+      anchor.style.position = 'absolute';
+      anchor.style.bottom = '-30px';
+      anchor.style.left = '50%';
+      anchor.style.transform = 'translateX(-50%)';
+      anchor.style.width = '0';
+      anchor.style.height = '0';
+      anchor.style.zIndex = '100';
+      
+      rivalElement.style.position = 'relative';
+      rivalElement.style.overflow = 'visible';
+      rivalElement.style.marginBottom = '40px';
+      
+      rivalElement.appendChild(anchor);
+    }
+    
+    return anchor;
   }
-  
-  return anchor;
-}
 
   // ========== AGREGAR MENSAJE AL PANEL DE CHAT ==========
   function _appendChatMessage(nombre, texto) {

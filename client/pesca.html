@@ -950,7 +950,7 @@ body {
 <script src="js/pesca.js"></script>
 
 <!-- ═══════════════════════════════════
-     CHAT + REACCIONES
+     CHAT + REACCIONES + SONIDOS
 ════════════════════════════════════ -->
 <script>
 (function () {
@@ -988,28 +988,175 @@ body {
     return m ? decodeURIComponent(m[1]) : 'Jugador';
   }
 
+  // ========== SISTEMA DE SONIDOS ==========
+  const AudioSystem = {
+    sonidos: {},
+    inicializado: false,
+    
+    init: function() {
+      if (this.inicializado) return;
+      
+      const sonidosACargar = [
+        { nombre: 'golpe', archivo: 'sounds/golpe.mp3', volumen: 0.6 },
+        { nombre: 'jaja', archivo: 'sounds/jaja.mp3', volumen: 0.5 },
+        { nombre: 'cara_enojada', archivo: 'sounds/cara_enojada.mp3', volumen: 0.55 },
+        { nombre: 'dame_carta', archivo: 'sounds/dame_carta.mp3', volumen: 0.6 },
+        { nombre: 'castigate', archivo: 'sounds/castigate.mp3', volumen: 0.6 },
+        { nombre: 'gane', archivo: 'sounds/gane.mp3', volumen: 0.55 },
+      ];
+      
+      sonidosACargar.forEach(s => {
+        try {
+          const audio = new Audio();
+          audio.src = s.archivo;
+          audio.volume = s.volumen;
+          audio.load();
+          this.sonidos[s.nombre] = audio;
+          console.log(`✅ Sonido cargado: ${s.nombre}`);
+        } catch (e) {
+          console.warn(`❌ Error cargando sonido ${s.nombre}:`, e);
+          this.sonidos[s.nombre] = null;
+        }
+      });
+      
+      this.inicializado = true;
+    },
+    
+    play: function(nombre, volumen = 0.6) {
+      if (!this.inicializado) this.init();
+      
+      const audio = this.sonidos[nombre];
+      if (!audio) return;
+      
+      try {
+        const clone = audio.cloneNode();
+        clone.volume = volumen;
+        clone.play().catch(e => console.log(`Error reproduciendo ${nombre}:`, e));
+      } catch (e) {
+        console.warn(`Error con sonido ${nombre}:`, e);
+      }
+    },
+    
+    // Métodos específicos
+    golpe: function() { this.play('golpe', 0.65); },
+    jaja: function() { this.play('jaja', 0.5); },
+    caraEnojada: function() { this.play('cara_enojada', 0.55); },
+    dameCarta: function() { this.play('dame_carta', 0.6); },
+    castigate: function() { this.play('castigate', 0.6); },
+    gane: function() { this.play('gane', 0.55); }
+  };
+
+  window.AudioSystem = AudioSystem;
+
+  // ========== REPRODUCIR SONIDO SEGÚN TEXTO ==========
+  function reproducirSonidoPorTexto(texto) {
+    const textoLower = texto.toLowerCase();
+    
+    // Emojis
+    if (texto === '😂') {
+      AudioSystem.jaja();
+      return true;
+    }
+    if (texto === '🤬') {
+      AudioSystem.caraEnojada();
+      return true;
+    }
+    if (texto === '🔥') {
+      AudioSystem.golpe();
+      return true;
+    }
+    
+    // Mensajes rápidos específicos
+    if (texto === '¡Ya dame mi carta! 😩') {
+      AudioSystem.dameCarta();
+      return true;
+    }
+    if (texto === '¡Ya gané, jaja! 🏆') {
+      AudioSystem.gane();
+      return true;
+    }
+    if (texto === '¡Castígate! 😈' || textoLower.includes('castigate')) {
+      AudioSystem.castigate();
+      return true;
+    }
+    if (texto === '¡No mames! 😤' || textoLower.includes('no mames')) {
+      AudioSystem.caraEnojada();
+      return true;
+    }
+    
+    // Palabras clave en mensajes libres
+    if (textoLower.includes('paga') || textoLower.includes('golpe')) {
+      AudioSystem.golpe();
+      return true;
+    }
+    if (textoLower.includes('jaja') || textoLower.includes('😂')) {
+      AudioSystem.jaja();
+      return true;
+    }
+    if (textoLower.includes('gane') || textoLower.includes('gané')) {
+      AudioSystem.gane();
+      return true;
+    }
+    if (textoLower.includes('dame')) {
+      AudioSystem.dameCarta();
+      return true;
+    }
+    
+    return false;
+  }
+
+  // ========== ENVIAR MENSAJE DE CHAT ==========
   window.sendChatInput = function () {
     const input = document.getElementById('chat-input');
     const txt   = (input.value || '').trim();
     if (!txt) return;
-    window.sendReaction('msg', txt);
-    input.value = '';
-  };
-
-  window.sendReaction = function (tipo, texto) {
-    if (typeof WS === 'undefined') return;
+    
     const nombre = _getNombre();
-    WS.send({ type: 'reaction', tipo, texto, nombre });
-    _showReaction({ tipo, texto, nombre });
+    
+    // 1. Reproducir sonido localmente (para quien escribe)
+    reproducirSonidoPorTexto(txt);
+    
+    // 2. Enviar al servidor
+    WS.send({ type: 'reaction', tipo: 'msg', texto: txt, nombre });
+    
+    // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
+    _showReaction({ tipo: 'msg', texto: txt, nombre }, false);
+    
+    // 4. Limpiar input
+    input.value = '';
+    
+    // 5. Cerrar chat
     chatOpen = false;
     document.getElementById('chat-panel').classList.remove('open');
   };
 
+  // ========== ENVIAR REACCIÓN (emojis y mensajes rápidos) ==========
+  window.sendReaction = function (tipo, texto) {
+    if (typeof WS === 'undefined') return;
+    const nombre = _getNombre();
+    
+    // 1. Reproducir sonido localmente (para quien hace clic)
+    reproducirSonidoPorTexto(texto);
+    
+    // 2. Enviar al servidor
+    WS.send({ type: 'reaction', tipo, texto, nombre });
+    
+    // 3. Mostrar localmente (sin sonido, ya lo reproducimos)
+    _showReaction({ tipo, texto, nombre }, false);
+    
+    // 4. Cerrar chat
+    chatOpen = false;
+    document.getElementById('chat-panel').classList.remove('open');
+  };
+
+  // ========== RECIBIR REACCIONES DE OTROS ==========
   function _registerWS() {
     if (typeof WS !== 'undefined') {
       WS.on('reaction', function(data) {
-        if (data.nombre === _getNombre()) return;
-        _showReaction(data);
+        if (data.nombre === _getNombre()) return; // Ignorar mensajes propios
+        
+        // Mostrar reacción de OTROS CON sonido
+        _showReaction(data, true);
       });
     } else {
       setTimeout(_registerWS, 100);
@@ -1017,9 +1164,19 @@ body {
   }
   _registerWS();
 
-  function _showReaction(data) {
+  // ========== MOSTRAR REACCIÓN (visual + sonido opcional) ==========
+  function _showReaction(data, reproducirSonido = true) {
     const { tipo, texto, nombre } = data;
+    
+    // Siempre agregar al chat
     _appendChatMessage(nombre, texto);
+    
+    // Reproducir sonido si se solicita
+    if (reproducirSonido) {
+      reproducirSonidoPorTexto(texto);
+    }
+    
+    // Mostrar emoji flotante SOLO si es emoji
     if (tipo === 'emoji') {
       const el = document.createElement('div');
       el.className = 'reaction-float';
@@ -1029,9 +1186,12 @@ body {
       document.body.appendChild(el);
       setTimeout(() => el.remove(), 2300);
     }
+    
+    // Mostrar burbuja de diálogo
     _showSpeechBubble(nombre, texto);
   }
 
+  // ========== BURBUJA DE DIÁLOGO ==========
   function _showSpeechBubble(nombre, texto) {
     const anchor = _getOrCreateBubbleAnchor(nombre);
     if (!anchor) return;
@@ -1043,7 +1203,6 @@ body {
       anchor.appendChild(bubble);
     }
 
-    // FIX retraso: quitar visible, esperar 2 frames, luego poner visible
     bubble.classList.remove('visible');
     bubble.textContent = texto;
     clearTimeout(bubble._hideT);
@@ -1058,12 +1217,12 @@ body {
     });
   }
 
+  // ========== BUSCAR/CREAR ANCLA PARA BURBUJA ==========
   function _getOrCreateBubbleAnchor(nombre) {
     if (nombre === _getNombre()) {
       return document.getElementById('my-bubble-anchor');
     }
     let rivalCard = null;
-    // pesca.js genera divs con clase 'rival-card' y '.r-name' dentro
     document.querySelectorAll('.rival-card, .opp').forEach(card => {
       const nameEl = card.querySelector('.r-name, .opp-name');
       if (nameEl && nameEl.textContent.trim().includes(nombre)) rivalCard = card;
@@ -1078,6 +1237,7 @@ body {
     return anchor;
   }
 
+  // ========== AGREGAR MENSAJE AL PANEL DE CHAT ==========
   function _appendChatMessage(nombre, texto) {
     const container = document.getElementById('chat-messages');
     if (!container) return;
@@ -1086,8 +1246,10 @@ body {
     div.innerHTML = `<span class="msg-author">${_esc(nombre)}:</span><span class="msg-text"> ${_esc(texto)}</span>`;
     container.appendChild(div);
     while (container.children.length > 30) container.removeChild(container.firstChild);
-    if (chatOpen) container.scrollTop = container.scrollHeight;
-    if (!chatOpen) {
+    
+    if (chatOpen) {
+      container.scrollTop = container.scrollHeight;
+    } else {
       unreadCount++;
       const badge = document.getElementById('chat-badge');
       badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
@@ -1095,9 +1257,21 @@ body {
     }
   }
 
+  // ========== ESCAPAR HTML ==========
   function _esc(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
+
+  // ========== PRECARGAR SONIDOS AL PRIMER CLIC ==========
+  function primerClick() {
+    AudioSystem.init();
+    document.removeEventListener('click', primerClick);
+    document.removeEventListener('touchstart', primerClick);
+    console.log('🎵 Sistema de sonidos activado');
+  }
+  
+  document.addEventListener('click', primerClick);
+  document.addEventListener('touchstart', primerClick);
 
 })();
 </script>

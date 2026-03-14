@@ -386,6 +386,7 @@
                 <span id="user-badge" style="font-size:.72rem;color:var(--text-dim)"></span>
             </div>
             <div style="display:flex;gap:6px">
+              <button id="btn-admin" onclick="window.location.href='/admin'" style="display:none;background:rgba(200,160,69,.15);border:1px solid rgba(200,160,69,.35);color:var(--gold);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s;font-weight:600">👑 Admin</button>
               <button onclick="openFeedback()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">💬 Feedback</button>
               <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
             </div>
@@ -607,6 +608,10 @@
                 document.getElementById('user-display').textContent = u.nombre;
                 const badgeEl = document.getElementById('user-badge');
                 if (u.badge) badgeEl.textContent = u.badge;
+                // Mostrar botón admin solo para owner
+                if (u.rol === 'owner') {
+                    document.getElementById('btn-admin').style.display = 'inline-block';
+                }
             }
         });
 

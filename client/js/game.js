@@ -882,6 +882,7 @@ function acBajar() {
 function acPagar(cartaId) {
     const id = cartaId || selId;
     if (!id) { toast('Selecciona una carta para pagar.'); return; }
+    animarDropEnFondo();
     buildingCards.forEach((cards, slotIndex) => {
         const index = cards.findIndex(c => c.id === id);
         if (index > -1) {
@@ -893,6 +894,24 @@ function acPagar(cartaId) {
     WS.send({ type: 'pagar', cartaId: id });
     selId = null;
     cancelIntercambio();
+}
+function animarDropEnFondo() {
+    const fondo = document.getElementById('fondo-wrap');
+    if (!fondo) return;
+
+    // 💥 rebote
+    fondo.style.transition = 'transform 120ms cubic-bezier(.34,1.56,.64,1), box-shadow 120ms ease';
+    fondo.style.transform = 'scale(1.1)';
+    fondo.style.boxShadow = '0 0 25px rgba(200,160,69,.8)';
+
+    setTimeout(() => {
+        fondo.style.transform = 'scale(1)';
+        fondo.style.boxShadow = '0 0 10px rgba(200,160,69,.3)';
+    }, 120);
+
+    setTimeout(() => {
+        fondo.style.boxShadow = '';
+    }, 260);
 }
 
 function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {

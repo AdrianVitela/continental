@@ -432,6 +432,7 @@ async function applyEvent(event, data, prev) {
         case 'bajar':
             await handleBajar(data); break;
         case 'castigo_acepta':
+            console.log('[castigo] data:', JSON.stringify(data));
             await handleCastigo(data); break;
         case 'intercambiar_comodin':
             await handleIntercambiarComodin(data); break;

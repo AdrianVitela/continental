@@ -431,6 +431,8 @@ async function applyEvent(event, data, prev) {
             await handlePagar(data); break;
         case 'bajar':
             await handleBajar(data); break;
+        case 'castigo':
+            await handleCastigo(data); break;
         case 'intercambiar_comodin':
             await handleIntercambiarComodin(data); break;
         case 'fin_ronda':
@@ -660,7 +662,108 @@ async function handlePagar(data) {
         if (oppEl && fondoW) await Anim.rivalPaysToFondo(oppEl, fondoW, null);
     }
 }
+async function handleCastigo(data) {
+    // Si eres tú
+    if (data.jugadorIdx === myIdx && data.acepta) {
+        const fondoEl  = document.getElementById('fondo-wrap');
+        const mazoEl   = document.getElementById('mazo-wrap');
+        const handZone = document.getElementById('discard-zone');
 
+        if (!fondoEl || !mazoEl || !handZone) return;
+
+        const fondoCard = fondoEl.querySelector('.card');
+        const srcFondo  = (fondoCard || fondoEl).getBoundingClientRect();
+        const srcMazo   = mazoEl.getBoundingClientRect();
+
+        //  efecto dramático en fondo
+        fondoEl.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
+        fondoEl.style.transform  = 'scale(1.15)';
+        fondoEl.style.boxShadow  = '0 0 40px rgba(200,160,69,.9)';
+
+        setTimeout(() => {
+            fondoEl.style.transform = 'scale(1)';
+            fondoEl.style.boxShadow = '';
+        }, 150);
+
+        // Render con cartas ya en mano (ocultas)
+        render();
+
+        const newCards = [...handZone.querySelectorAll('.card')]
+            .slice(-2); // últimas 2 cartas
+
+        newCards.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transition = 'none';
+        });
+
+        await new Promise(r => requestAnimationFrame(r));
+
+        // Ghost 1 (fondo)
+        const ghost1 = document.createElement('div');
+        ghost1.innerHTML = fondoCard ? fondoCard.outerHTML : '<div class="cback"></div>';
+        const g1 = ghost1.firstElementChild;
+
+        g1.style.cssText = `
+            position:fixed; z-index:9999; pointer-events:none;
+            width:${srcFondo.width}px; height:${srcFondo.height}px;
+            left:${srcFondo.left}px; top:${srcFondo.top}px;
+            border-radius:var(--r);
+            box-shadow:0 10px 30px rgba(0,0,0,.6);
+        `;
+        document.body.appendChild(g1);
+
+        // Ghost 2 (mazo)
+        const g2 = document.createElement('div');
+        g2.className = 'cback';
+        g2.style.cssText = `
+            position:fixed; z-index:9999; pointer-events:none;
+            width:${srcMazo.width}px; height:${srcMazo.height}px;
+            left:${srcMazo.left}px; top:${srcMazo.top}px;
+            border-radius:var(--r);
+            box-shadow:0 10px 30px rgba(0,0,0,.6);
+        `;
+        document.body.appendChild(g2);
+
+        const dst1 = newCards[0]?.getBoundingClientRect();
+        const dst2 = newCards[1]?.getBoundingClientRect();
+
+        await new Promise(r => setTimeout(r, 20));
+
+        // vuelo fondo
+        g1.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
+        g1.style.left = `${dst1.left}px`;
+        g1.style.top  = `${dst1.top}px`;
+
+        // vuelo mazo (delay pequeño)
+        setTimeout(() => {
+            g2.style.transition = 'all 260ms cubic-bezier(.22,1,.36,1)';
+            g2.style.left = `${dst2.left}px`;
+            g2.style.top  = `${dst2.top}px`;
+        }, 120);
+
+        // reveal
+        setTimeout(() => {
+            newCards.forEach(el => {
+                el.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
+                el.style.opacity = '1';
+                el.style.transform = 'scale(1.15)';
+                setTimeout(() => el.style.transform = 'scale(1)', 80);
+            });
+
+            g1.remove();
+            g2.remove();
+        }, 350);
+
+    } else if (data.acepta) {
+        //  otro jugador se castigó
+        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
+        if (oppEl) {
+            oppEl.style.transition = 'box-shadow .2s ease';
+            oppEl.style.boxShadow = '0 0 25px rgba(200,160,69,.9)';
+            setTimeout(() => oppEl.style.boxShadow = '', 500);
+        }
+    }
+}
 
 
 // Flash + texto "¡SE BAJÓ!" sobre la tarjeta del oponente

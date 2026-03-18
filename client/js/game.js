@@ -432,7 +432,6 @@ async function applyEvent(event, data, prev) {
         case 'bajar':
             await handleBajar(data); break;
         case 'castigo_acepta':
-            console.log('[castigo] data:', JSON.stringify(data));
             await handleCastigo(data); break;
         case 'intercambiar_comodin':
             await handleIntercambiarComodin(data); break;
@@ -624,7 +623,7 @@ async function handleTomarFondo(data) {
 }
 
 async function handleCastigo(data) {
-    if (data.jugadorIdx === myIdx && data.acepta) {
+    if (data.jugadorIdx === myIdx) {
         const fondoEl  = document.getElementById('fondo-wrap');
         const mazoEl   = document.getElementById('mazo-wrap');
         const handZone = document.getElementById('discard-zone');
@@ -706,7 +705,7 @@ async function handleCastigo(data) {
             g1.remove(); g2.remove();
         }, 350);
 
-    } else if (data.acepta) {
+    } else {
         // Otro jugador se castigó
         const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
         if (oppEl) {

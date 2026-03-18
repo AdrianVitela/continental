@@ -878,7 +878,7 @@ function render() {
 function renderScoreboard() {
     document.getElementById('scoreboard').innerHTML = G.jugadores.map((j, i) => `
         <div class="sitem ${i === myIdx ? 'me' : ''}">
-            <div class="sname">${j.nombre}${badgeHtml(j.badge)}</div>
+            <div class="sname">${badgeHtml(j.badge)}${j.nombre}</div>
             <div class="spts">${j.pts_t}</div>
         </div>
     `).join('');
@@ -893,7 +893,7 @@ function renderOpponents() {
         d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
         d.dataset.idx = i;
         d.innerHTML = `
-            <div class="opp-name">${j.nombre}${badgeHtml(j.badge)}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
+            <div class="opp-name">${badgeHtml(j.badge)}${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
             <div class="opp-backs">${(j.mano || []).map(() => '<div class="cback-xs"></div>').join('')}</div>
             ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
         `;
@@ -1001,7 +1001,7 @@ function renderFondo(me) {
 }
 
 function renderPlayerInfo(me) {
-    document.getElementById('my-name').textContent = me?.nombre || '—';
+    document.getElementById('my-name').innerHTML = (me?.badge ? badgeHtml(me.badge) : '') + (me?.nombre || '—');
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
     const dot = document.getElementById('pulse-dot');
     if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';

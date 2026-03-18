@@ -1288,9 +1288,25 @@ const BADGES = {
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
 };
+function skinClass(skin) {
+    if (!skin || skin === 'clasico') return '';
+    return `skin-${skin}`;
+}
+
 function badgeHtml(badge) {
     if (!badge || !BADGES[badge]) return '';
     return ` <span title="${BADGES[badge].label}" style="cursor:default;font-size:.85rem">${BADGES[badge].emoji}</span>`;
+}
+
+function applyMySkin() {
+    if (!G || myIdx < 0) return;
+    const me = G.jugadores[myIdx];
+    const skin = me?.skin || 'clasico';
+    // Apply to all my cback elements
+    document.querySelectorAll('#discard-zone .cback, #mazo-wrap .cback, .hand-zone .cback').forEach(el => {
+        el.className = el.className.replace(/\bskin-\w+\b/g, '').trim();
+        if (skin !== 'clasico') el.classList.add(`skin-${skin}`);
+    });
 }
 
 function applyTableTheme(color) {
@@ -1333,6 +1349,7 @@ function render() {
     renderHand();
     renderActions();
     restoreAnimatedBajadas();
+    applyMySkin();
 }
 
 
@@ -1356,7 +1373,7 @@ function renderOpponents() {
         d.dataset.idx = i;
         d.innerHTML = `
             <div class="opp-name">${badgeHtml(j.badge)}${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
-            <div class="opp-backs">${(j.mano || []).map(() => '<div class="cback-xs"></div>').join('')}</div>
+            <div class="opp-backs">${(j.mano || []).map(() => `<div class="cback-xs ${skinClass(j.skin)}"></div>`).join('')}</div>
             ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
         `;
         opEl.appendChild(d);

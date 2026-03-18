@@ -93,20 +93,20 @@ wss.on('connection', (ws) => {
           ctx.roomCode = code;
           ctx.nombre   = safeNombre;
 
-          let hostBadge = null;
+          let hostBadge = null, hostSkin = 'clasico';
           try {
             const query = msg.userId
-              ? 'SELECT badge FROM usuarios WHERE id = $1'
-              : 'SELECT badge FROM usuarios WHERE nombre = $1';
+              ? 'SELECT badge, skin FROM usuarios WHERE id = $1'
+              : 'SELECT badge, skin FROM usuarios WHERE nombre = $1';
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             hostBadge = r.rows[0]?.badge || null;
-            console.log('[badge] create_room userId:', msg.userId, 'nombre:', safeNombre, 'badge:', hostBadge);
+            hostSkin  = r.rows[0]?.skin  || 'clasico';
           } catch (e) { console.error('[badge] create_room error:', e.message); }
 
           const room = new GameRoom({
             code,
-            host: { id: playerId, nombre: safeNombre, badge: hostBadge, ws },
+            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
           });
@@ -133,18 +133,18 @@ wss.on('connection', (ws) => {
           ctx.roomCode = safeCode;
           ctx.nombre   = safeNombre;
 
-          let joinBadge = null;
+          let joinBadge = null, joinSkin = 'clasico';
           try {
             const query = msg.userId
-              ? 'SELECT badge FROM usuarios WHERE id = $1'
-              : 'SELECT badge FROM usuarios WHERE nombre = $1';
+              ? 'SELECT badge, skin FROM usuarios WHERE id = $1'
+              : 'SELECT badge, skin FROM usuarios WHERE nombre = $1';
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             joinBadge = r.rows[0]?.badge || null;
-            console.log('[badge] join_room userId:', msg.userId, 'nombre:', safeNombre, 'badge:', joinBadge);
+            joinSkin  = r.rows[0]?.skin  || 'clasico';
           } catch (e) { console.error('[badge] join_room error:', e.message); }
 
-          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge);
+          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           send(ws, { type: 'room_joined', code: safeCode, playerId, lobbyState: room.lobbyState() });

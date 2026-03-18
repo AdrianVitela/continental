@@ -135,12 +135,26 @@ body::before {
   color: #c084fc;
 }
 
+/* ── Skins reverso de cartas ── */
+:root {
+  --skin-bg: linear-gradient(135deg, #1a3a80, #0d2050);
+  --skin-border: rgba(255,255,255,.18);
+  --skin-inner: rgba(255,255,255,.12);
+  --skin-glow: none;
+}
+.skin-rojo      { --skin-bg: linear-gradient(135deg, #7a1a1a, #3d0a0a); --skin-border: rgba(255,100,100,.25); --skin-inner: rgba(255,100,100,.15); }
+.skin-obsidiana { --skin-bg: linear-gradient(135deg, #1a1a1a, #0a0a0a); --skin-border: rgba(200,160,69,.3);  --skin-inner: rgba(200,160,69,.15); }
+.skin-esmeralda { --skin-bg: linear-gradient(135deg, #0d3320, #061a10); --skin-border: rgba(46,204,113,.25); --skin-inner: rgba(46,204,113,.12); }
+.skin-dorado    { --skin-bg: linear-gradient(135deg, #7a5c00, #3d2e00, #c8a045, #3d2e00); --skin-border: rgba(200,160,69,.6); --skin-inner: rgba(255,220,100,.3); --skin-glow: 0 0 12px rgba(200,160,69,.5); }
+.skin-neon      { --skin-bg: linear-gradient(135deg, #001a33, #003366); --skin-border: rgba(0,200,255,.5);  --skin-inner: rgba(0,200,255,.25); --skin-glow: 0 0 14px rgba(0,200,255,.6), 0 0 4px rgba(0,200,255,.9); }
+
 .cback {
   width: var(--cw);
   height: var(--ch);
   border-radius: var(--r);
-  background: linear-gradient(135deg, #1a3a80, #0d2050);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--skin-bg, linear-gradient(135deg, #1a3a80, #0d2050));
+  border: 1px solid var(--skin-border, rgba(255,255,255,.18));
+  box-shadow: var(--sh-card), var(--skin-glow, none);
   box-shadow: var(--sh-card);
   display: flex;
   align-items: center;
@@ -153,7 +167,7 @@ body::before {
   content: '';
   width: 80%;
   height: 80%;
-  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  border: 1.5px solid var(--skin-inner, rgba(255,255,255,.12));
   border-radius: 4px;
 }
 

@@ -23,10 +23,10 @@ class GameRoom {
     this.host       = host;
     this._turnTimer = null;
 
-    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null);
+    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico');
   }
 
-  addPlayer(id, nombre, ws, badge = null) {
+  addPlayer(id, nombre, ws, badge = null, skin = 'clasico') {
     if (this.players.find(p => p.id === id)) {
       const p = this.players.find(p => p.id === id);
       p.ws = ws;
@@ -37,7 +37,7 @@ class GameRoom {
     }
     if (this.players.length >= this.maxPlayers) return null;
     if (this.status !== 'lobby') return null;
-    const player = { id, nombre, badge, ws, conectado: true };
+    const player = { id, nombre, badge, skin, ws, conectado: true };
     this.players.push(player);
     this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);
     return player;
@@ -58,7 +58,7 @@ class GameRoom {
   startGame() {
     if (this.status !== 'lobby') return { ok: false, error: 'Partida ya iniciada.' };
     if (this.players.length < 2) return { ok: false, error: 'Se necesitan al menos 2 jugadores.' };
-    this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null })));
+    this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico' })));
     this.engine.repartir();
     this.status = 'playing';
     this._startTurnTimer();
@@ -217,7 +217,7 @@ class GameRoom {
       code: this.code,
       mode: this.mode,
       status: this.status,
-      players: this.players.map(({ id, nombre, badge }) => ({ id, nombre, badge: badge || null })),
+      players: this.players.map(({ id, nombre, badge, skin }) => ({ id, nombre, badge: badge || null, skin: skin || 'clasico' })),
       engineState: this.engine ? JSON.stringify(this.engine) : null,
       savedAt: Date.now(),
     };
@@ -240,7 +240,7 @@ class GameRoom {
       code: this.code,
       mode: this.mode,
       status: this.status,
-      players: this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, conectado: p.conectado })),
+      players: this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico', conectado: p.conectado })),
       maxPlayers: this.maxPlayers,
       tableColor: this.tableColor || 'green',
     };

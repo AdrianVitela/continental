@@ -387,6 +387,7 @@
             </div>
             <div style="display:flex;gap:6px">
               <button id="btn-admin" onclick="window.location.href='/admin'" style="display:none;background:rgba(200,160,69,.15);border:1px solid rgba(200,160,69,.35);color:var(--gold);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s;font-weight:600">👑 Admin</button>
+              <button onclick="openCustomize()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">🎨 Perfil</button>
               <button onclick="openFeedback()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">💬 Feedback</button>
               <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
             </div>
@@ -508,6 +509,23 @@
 
     <div id="toast"></div>
 
+    <!-- ===== MODAL PERSONALIZACIÓN ===== -->
+    <div id="customize-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
+      <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(420px,92%);display:flex;flex-direction:column;gap:18px;animation:fadeUp .25s ease both">
+        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px">🎨 Personalización</h3>
+
+        <div>
+          <div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Skin de cartas</div>
+          <div id="skin-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
+        </div>
+
+        <div id="customize-error" style="display:none;background:rgba(220,50,50,.12);border:1px solid rgba(220,50,50,.3);border-radius:8px;color:#ff7070;font-size:.78rem;padding:8px 12px;text-align:center"></div>
+        <div id="customize-ok" style="display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;color:#2ecc71;font-size:.78rem;padding:8px 12px;text-align:center"></div>
+
+        <button onclick="closeCustomize()" style="padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-dim);font-size:.82rem;cursor:pointer;font-family:inherit">Cerrar</button>
+      </div>
+    </div>
+
     <!-- ===== MODAL FEEDBACK ===== -->
     <div id="feedback-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
       <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(380px,92%);display:flex;flex-direction:column;gap:16px;animation:fadeUp .25s ease both">
@@ -601,6 +619,98 @@
 
     <script src="js/socket.js"></script>
     <script>
+        // ── Skins config ──────────────────────────────────────────
+        const SKINS = [
+            { id: 'clasico',    label: 'Clásico',    bg: 'linear-gradient(135deg,#1a3a80,#0d2050)', border: 'rgba(255,255,255,.25)', free: true },
+            { id: 'rojo',       label: 'Rojo',       bg: 'linear-gradient(135deg,#7a1a1a,#3d0a0a)', border: 'rgba(255,100,100,.4)',  free: true },
+            { id: 'obsidiana',  label: 'Obsidiana',  bg: 'linear-gradient(135deg,#1a1a1a,#0a0a0a)', border: 'rgba(200,160,69,.4)',   free: true },
+            { id: 'esmeralda',  label: 'Esmeralda',  bg: 'linear-gradient(135deg,#0d3320,#061a10)', border: 'rgba(46,204,113,.4)',   free: true },
+            { id: 'dorado',     label: '👑 Dorado',   bg: 'linear-gradient(135deg,#7a5c00,#3d2e00,#c8a045,#3d2e00)', border: 'rgba(200,160,69,.7)', free: false, roles: ['owner'] },
+            { id: 'neon',       label: '⚡ Neon',     bg: 'linear-gradient(135deg,#001a33,#003366)', border: 'rgba(0,200,255,.6)',    free: false, roles: ['owner','vip','beta_tester'] },
+        ];
+
+        let currentSkin = 'clasico';
+
+        function hasAccessToSkin(skin) {
+            if (skin.free) return true;
+            const u = window.AUTH?.usuario;
+            return skin.roles?.includes(u?.rol) || skin.roles?.includes(u?.badge);
+        }
+
+        function openCustomize() {
+            const u = window.AUTH?.usuario;
+            currentSkin = u?.skin || localStorage.getItem('mySkin') || 'clasico';
+            document.getElementById('customize-error').style.display = 'none';
+            document.getElementById('customize-ok').style.display = 'none';
+            renderSkinGrid();
+            document.getElementById('customize-overlay').style.display = 'flex';
+        }
+
+        function closeCustomize() {
+            document.getElementById('customize-overlay').style.display = 'none';
+        }
+
+        function renderSkinGrid() {
+            const grid = document.getElementById('skin-grid');
+            grid.innerHTML = SKINS.map(s => {
+                const accessible = hasAccessToSkin(s);
+                const selected   = currentSkin === s.id;
+                return `<div onclick="${accessible ? `selectSkin('${s.id}')` : ''}"
+                    style="
+                        border-radius:10px;
+                        border:2px solid ${selected ? 'var(--gold)' : 'rgba(255,255,255,.1)'};
+                        overflow:hidden;
+                        cursor:${accessible ? 'pointer' : 'not-allowed'};
+                        opacity:${accessible ? '1' : '.4'};
+                        transition:all .2s;
+                        box-shadow:${selected ? '0 0 12px rgba(200,160,69,.5)' : 'none'};
+                    ">
+                    <div style="height:52px;background:${s.bg};border-bottom:1px solid ${s.border};position:relative">
+                        <div style="position:absolute;inset:6px;border:1.5px solid ${s.border};border-radius:4px;opacity:.6"></div>
+                        ${!accessible ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:rgba(255,255,255,.5)">🔒</div>' : ''}
+                    </div>
+                    <div style="padding:5px 6px;font-size:.68rem;color:${selected ? 'var(--gold)' : 'var(--text-dim)'};text-align:center;background:rgba(0,0,0,.3)">${s.label}</div>
+                </div>`;
+            }).join('');
+        }
+
+        async function selectSkin(skinId) {
+            const token = localStorage.getItem('token');
+            currentSkin = skinId;
+            renderSkinGrid();
+
+            try {
+                const res  = await fetch('/api/me/skin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ skin: skinId }),
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    document.getElementById('customize-error').textContent = data.error;
+                    document.getElementById('customize-error').style.display = 'block';
+                    return;
+                }
+                // Update localStorage
+                const u = JSON.parse(localStorage.getItem('usuario') || '{}');
+                u.skin = skinId;
+                localStorage.setItem('usuario', JSON.stringify(u));
+                localStorage.setItem('mySkin', skinId);
+
+                document.getElementById('customize-ok').textContent = '✓ Skin guardado';
+                document.getElementById('customize-ok').style.display = 'block';
+                setTimeout(() => { document.getElementById('customize-ok').style.display = 'none'; }, 1500);
+            } catch {
+                document.getElementById('customize-error').textContent = 'Error de conexión.';
+                document.getElementById('customize-error').style.display = 'block';
+            }
+        }
+
+        // Cerrar al click fuera
+        document.getElementById('customize-overlay')?.addEventListener('click', function(e) {
+            if (e.target === this) closeCustomize();
+        });
+
         // Mostrar info de usuario
         document.addEventListener('DOMContentLoaded', () => {
             const u = window.AUTH?.usuario;

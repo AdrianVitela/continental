@@ -43,7 +43,7 @@ router.post('/register', async (req, res) => {
 
     // Insertar usuario
     const result = await pool.query(
-      'INSERT INTO usuarios (nombre, email, password) VALUES ($1, $2, $3) RETURNING id, nombre, badge, rol',
+      'INSERT INTO usuarios (nombre, email, password) VALUES ($1, $2, $3) RETURNING id, nombre, badge, rol, skin',
       [safeNombre, safeEmail, hash]
     );
     const usuario = result.rows[0];
@@ -55,7 +55,7 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol } });
+    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico' } });
 
   } catch (err) {
     console.error('[register]', err.message);
@@ -75,7 +75,7 @@ router.post('/login', async (req, res) => {
 
     // Buscar usuario
     const result = await pool.query(
-      'SELECT id, nombre, password, badge, rol FROM usuarios WHERE email = $1',
+      'SELECT id, nombre, password, badge, rol, skin FROM usuarios WHERE email = $1',
       [safeEmail]
     );
     if (result.rows.length === 0)
@@ -95,7 +95,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol } });
+    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico' } });
 
   } catch (err) {
     console.error('[login]', err.message);
@@ -114,7 +114,7 @@ router.get('/me', async (req, res) => {
     const payload = jwt.verify(token, JWT_SECRET);
 
     const result = await pool.query(
-      'SELECT id, nombre, badge, rol, created_at FROM usuarios WHERE id = $1',
+      'SELECT id, nombre, badge, rol, skin, created_at FROM usuarios WHERE id = $1',
       [payload.id]
     );
     if (result.rows.length === 0)
@@ -124,6 +124,44 @@ router.get('/me', async (req, res) => {
 
   } catch (err) {
     res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+});
+
+// ── POST /api/me/skin ────────────────────────────────────────────
+const SKINS_LIBRES     = ['clasico', 'rojo', 'obsidiana', 'esmeralda'];
+const SKINS_EXCLUSIVOS = {
+  'dorado': ['owner'],
+  'neon':   ['owner', 'vip', 'beta_tester'],
+};
+
+router.post('/me/skin', async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer '))
+      return res.status(401).json({ error: 'No autorizado.' });
+
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    const { skin } = req.body;
+
+    const todosLosSkins = [...SKINS_LIBRES, ...Object.keys(SKINS_EXCLUSIVOS)];
+    if (!todosLosSkins.includes(skin))
+      return res.status(400).json({ error: 'Skin inválido.' });
+
+    // Verificar acceso a skins exclusivos
+    if (SKINS_EXCLUSIVOS[skin]) {
+      const r = await pool.query('SELECT rol, badge FROM usuarios WHERE id = $1', [payload.id]);
+      const u = r.rows[0];
+      const permitidos = SKINS_EXCLUSIVOS[skin];
+      if (!permitidos.includes(u?.rol) && !permitidos.includes(u?.badge))
+        return res.status(403).json({ error: 'No tienes acceso a este skin.' });
+    }
+
+    await pool.query('UPDATE usuarios SET skin = $1 WHERE id = $2', [skin, payload.id]);
+    res.json({ ok: true, skin });
+
+  } catch (err) {
+    console.error('[skin]', err.message);
+    res.status(500).json({ error: 'Error interno.' });
   }
 });
 

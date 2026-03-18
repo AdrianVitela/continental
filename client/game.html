@@ -705,6 +705,25 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   100% { opacity:0; transform:scale(.8) translateY(-55px); }
 }
 
+/* Emoji gigante sobre jugador */
+@keyframes emojiBounce {
+  0%   { opacity:0; transform:translate(-50%,-50%) scale(0); }
+  40%  { opacity:1; transform:translate(-50%,-50%) scale(1.3); }
+  60%  { transform:translate(-50%,-50%) scale(0.9); }
+  80%  { transform:translate(-50%,-50%) scale(1.05); }
+  100% { transform:translate(-50%,-50%) scale(1); opacity:1; }
+}
+@keyframes emojiFade {
+  0%   { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(0.8) translateY(-20px); }
+}
+
+/* Confetti piece */
+@keyframes confettiFall {
+  0%   { transform: translateY(0) rotate(0deg); opacity:1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity:0; }
+}
+
 /* ── Globito de diálogo ── */
 .bubble-anchor {
   position: absolute;
@@ -1185,12 +1204,86 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     showReaction(msg);
   });
 
+  // Emojis que disparan emoji gigante
+  const BIG_EMOJIS = ['😂','😤','😢','😱','🥳','🤬'];
+  const GANE_TEXTO = '¡Ya gané, jaja! 🏆';
+
   function showReaction ({ tipo, texto, nombre }) {
     appendChatMessage(nombre, texto);
     if (tipo === 'golpe') {
       triggerPaga(nombre);
     } else {
       showSpeechBubble(nombre, texto);
+      // Emoji gigante si es un emoji puro
+      if (tipo === 'emoji' && BIG_EMOJIS.some(e => texto.includes(e))) {
+        showBigEmoji(texto, nombre);
+      }
+      // Confetti si es el mensaje de victoria
+      if (texto.includes('gané') || texto.includes('gane')) {
+        showConfetti();
+      }
+    }
+  }
+
+  function showBigEmoji(emoji, nombre) {
+    if (typeof G === 'undefined' || !G) return;
+    const idx = G.jugadores.findIndex(j => j.nombre === nombre);
+    let anchorEl;
+    if (idx === myIdx) {
+      anchorEl = document.getElementById('my-bubble-anchor');
+    } else {
+      anchorEl = document.querySelector(`.opp[data-idx="${idx}"]`);
+    }
+    if (!anchorEl) return;
+
+    const rect = anchorEl.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.textContent = emoji;
+    el.style.cssText = `
+      position:fixed;
+      left:${rect.left + rect.width / 2}px;
+      top:${rect.top + rect.height / 2}px;
+      font-size:4rem;
+      line-height:1;
+      pointer-events:none;
+      z-index:9995;
+      filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));
+      animation:emojiBounce 400ms cubic-bezier(.34,1.56,.64,1) forwards;
+    `;
+    document.body.appendChild(el);
+
+    // Fade out después de 1.5s
+    setTimeout(() => {
+      el.style.animation = 'emojiFade 300ms ease forwards';
+      setTimeout(() => el.remove(), 300);
+    }, 1500);
+  }
+
+  function showConfetti() {
+    const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#fff'];
+    const count = 80;
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        const el = document.createElement('div');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size  = 6 + Math.random() * 8;
+        const left  = Math.random() * 100;
+        const dur   = 2000 + Math.random() * 1500;
+        el.style.cssText = `
+          position:fixed;
+          left:${left}vw;
+          top:-10px;
+          width:${size}px;
+          height:${size}px;
+          background:${color};
+          border-radius:${Math.random() > .5 ? '50%' : '2px'};
+          pointer-events:none;
+          z-index:9994;
+          animation:confettiFall ${dur}ms ease-in forwards;
+        `;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), dur + 100);
+      }, Math.random() * 600);
     }
   }
 

@@ -717,7 +717,26 @@ async function handleCastigo(data) {
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
-        const newCards = [...handZone.querySelectorAll('.card')].slice(-2);
+        let newCards = [];
+
+        // 🔍 intentar por ID (si el server los manda algún día)
+        if (data.cartaFondo?.id && data.cartaMazo?.id) {
+            const el1 = handZone.querySelector(`.card[data-id="${data.cartaFondo.id}"]`);
+            const el2 = handZone.querySelector(`.card[data-id="${data.cartaMazo.id}"]`);
+            newCards = [el1, el2].filter(Boolean);
+        }
+
+        // 🧠 fallback: últimas 2 cartas en mano
+        if (newCards.length < 2) {
+            const all = [...handZone.querySelectorAll('.card')];
+            newCards = all.slice(-2);
+        }
+        if (newCards.length < 2) {
+            console.warn("No se detectaron 2 cartas nuevas en castigo");
+            g1.remove();
+            g2.remove();
+            return;
+        }
 
         newCards.forEach(el => {
             el.style.opacity = '0';

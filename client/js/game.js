@@ -505,12 +505,66 @@ async function handleNewRound() {
 
 async function handleTomarMazo(data) {
     if (data.jugadorIdx === myIdx) {
-        const mazoEl = document.getElementById('mazo-wrap');
-        const discardZone = document.getElementById('discard-zone');
-        await new Promise(r => setTimeout(r, 20));
-        const newCardEl = discardZone?.querySelector(`.card[data-id="${data.carta?.id}"]`);
-        if (mazoEl && discardZone && newCardEl) {
-            await Anim.flyToHand(mazoEl, discardZone, discardZone.querySelectorAll('.card').length - 1, newCardEl);
+        const mazoEl    = document.getElementById('mazo-wrap');
+        const handZone  = document.getElementById('discard-zone');
+        if (!mazoEl || !handZone) return;
+
+        const src = mazoEl.getBoundingClientRect();
+
+        // Render con la carta nueva ya en mano pero oculta
+        render();
+        const newCardEl = handZone.querySelector(`.card[data-id="${data.carta?.id}"]`);
+        if (newCardEl) {
+            newCardEl.style.opacity    = '0';
+            newCardEl.style.transition = 'none';
+        }
+
+        await new Promise(r => requestAnimationFrame(r));
+
+        const dst = newCardEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
+
+        // Ghost volando desde el mazo
+        const ghost = document.createElement('div');
+        ghost.className = 'cback';
+        ghost.style.cssText = `
+            position:fixed; z-index:9999; pointer-events:none;
+            width:${src.width}px; height:${src.height}px;
+            left:${src.left}px; top:${src.top}px;
+            border-radius:var(--r);
+            box-shadow:0 8px 28px rgba(0,0,0,.6);
+            transform:scale(1.1);
+            transition:none;
+        `;
+        document.body.appendChild(ghost);
+
+        await new Promise(r => setTimeout(r, 16));
+
+        ghost.style.transition = 'all 300ms cubic-bezier(.22,1,.36,1)';
+        ghost.style.left       = `${dst.left}px`;
+        ghost.style.top        = `${dst.top}px`;
+        ghost.style.width      = `${dst.width}px`;
+        ghost.style.height     = `${dst.height}px`;
+        ghost.style.transform  = 'scale(1)';
+        ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.5)';
+
+        await new Promise(r => setTimeout(r, 280));
+
+        // Mostrar carta real con bounce
+        if (newCardEl) {
+            newCardEl.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
+            newCardEl.style.transform  = 'scale(1.15)';
+            newCardEl.style.opacity    = '1';
+            setTimeout(() => { newCardEl.style.transform = 'scale(1)'; }, 80);
+        }
+        ghost.remove();
+
+    } else {
+        // Otro jugador robó — pequeño destello en su tarjeta
+        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
+        if (oppEl) {
+            oppEl.style.transition  = 'box-shadow .15s ease';
+            oppEl.style.boxShadow   = '0 0 16px rgba(255,255,255,.25)';
+            setTimeout(() => { oppEl.style.boxShadow = ''; }, 400);
         }
     }
 }

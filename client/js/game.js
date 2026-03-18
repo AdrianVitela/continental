@@ -474,7 +474,7 @@ async function handleNewRound() {
         await new Promise(r => setTimeout(r, i * 100));
 
         const ghost = document.createElement('div');
-        ghost.className = 'cback';
+        ghost.className = `cback ${getMySkinClass()}`;
         ghost.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
             width:${src.width}px; height:${src.height}px;
@@ -531,7 +531,7 @@ async function handleTomarMazo(data) {
 
         // Ghost volando desde el mazo
         const ghost = document.createElement('div');
-        ghost.className = 'cback';
+        ghost.className = `cback ${getMySkinClass()}`;
         ghost.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
             width:${src.width}px; height:${src.height}px;
@@ -652,7 +652,7 @@ async function handleCastigo(data) {
         document.body.appendChild(g1);
 
         const g2 = document.createElement('div');
-        g2.className = 'cback';
+        g2.className = `cback ${getMySkinClass()}`;
         g2.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
             width:${srcMazo.width}px; height:${srcMazo.height}px;
@@ -1288,6 +1288,13 @@ const BADGES = {
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
 };
+// Devuelve la clase del skin del jugador actual para los ghosts
+function getMySkinClass() {
+    if (!G || myIdx < 0) return '';
+    const skin = G.jugadores[myIdx]?.skin || 'clasico';
+    return skin !== 'clasico' ? `skin-${skin}` : '';
+}
+
 function skinClass(skin) {
     if (!skin || skin === 'clasico') return '';
     return `skin-${skin}`;

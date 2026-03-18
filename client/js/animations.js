@@ -3,6 +3,15 @@
 'use strict';
 
 const Anim = (() => {
+  // Obtener clase de skin del jugador local
+  function getMySkin() {
+    try {
+      const u = JSON.parse(localStorage.getItem('usuario') || '{}');
+      const skin = u.skin || 'clasico';
+      return skin !== 'clasico' ? `skin-${skin}` : '';
+    } catch { return ''; }
+  }
+
   // Guarda las posiciones de elementos antes de un cambio en el DOM
   function capturePositions(selector) {
     const map = new Map();
@@ -144,7 +153,7 @@ const Anim = (() => {
     const dst = fondoEl.getBoundingClientRect();
 
     const ghost = document.createElement('div');
-    ghost.className = 'cback';
+    ghost.className = `cback ${getMySkin()}`;
     ghost.style.cssText = `
       position: fixed; 
       z-index: 9999; 
@@ -223,7 +232,7 @@ const Anim = (() => {
 
         // Ghost card volando desde el mazo
         const ghost = document.createElement('div');
-        ghost.className = 'cback';
+        ghost.className = `cback ${getMySkin()}`;
         ghost.style.cssText = `
           position: fixed;
           z-index: 9999;

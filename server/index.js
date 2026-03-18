@@ -101,7 +101,8 @@ wss.on('connection', (ws) => {
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             hostBadge = r.rows[0]?.badge || null;
-          } catch (_) {}
+            console.log('[badge] create_room userId:', msg.userId, 'nombre:', safeNombre, 'badge:', hostBadge);
+          } catch (e) { console.error('[badge] create_room error:', e.message); }
 
           const room = new GameRoom({
             code,
@@ -140,7 +141,8 @@ wss.on('connection', (ws) => {
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             joinBadge = r.rows[0]?.badge || null;
-          } catch (_) {}
+            console.log('[badge] join_room userId:', msg.userId, 'nombre:', safeNombre, 'badge:', joinBadge);
+          } catch (e) { console.error('[badge] join_room error:', e.message); }
 
           const player = room.addPlayer(playerId, safeNombre, ws, joinBadge);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });

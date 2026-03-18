@@ -427,13 +427,64 @@ async function handleNewRound() {
     intercambioMode = false;
     selectedComodinInfo = null;
     buildingCards.clear();
-    const mazoEl = document.getElementById('mazo-wrap');
-    await Anim.shuffleAnim(mazoEl);
-    // Renderizar mano primero (invisible) para que dealAnim tenga posiciones destino
-    render();
+
+    const mazoEl  = document.getElementById('mazo-wrap');
     const handZone = document.getElementById('discard-zone');
-    if (mazoEl && handZone && G.jugadores[myIdx]) {
-        await Anim.dealAnim(mazoEl, handZone, G.jugadores[myIdx].mano || [], 0);
+    const mano     = G.jugadores[myIdx]?.mano || [];
+
+    // 1. Shuffle del mazo
+    await Anim.shuffleAnim(mazoEl);
+
+    // 2. Renderizar mano oculta para tener posiciones destino
+    render();
+    const cardEls = handZone?.querySelectorAll('.card');
+    cardEls?.forEach(el => { el.style.opacity = '0'; el.style.transition = 'none'; });
+
+    // Esperar un frame para que el DOM esté listo
+    await new Promise(r => requestAnimationFrame(r));
+    await new Promise(r => requestAnimationFrame(r));
+
+    if (!mazoEl || !handZone || !mano.length) return;
+
+    const src = mazoEl.getBoundingClientRect();
+
+    // 3. Animar cada carta una por una
+    for (let i = 0; i < mano.length; i++) {
+        await new Promise(r => setTimeout(r, i * 100));
+
+        const ghost = document.createElement('div');
+        ghost.className = 'cback';
+        ghost.style.cssText = `
+            position:fixed; z-index:9999; pointer-events:none;
+            width:${src.width}px; height:${src.height}px;
+            left:${src.left}px; top:${src.top}px;
+            border-radius:var(--r);
+            box-shadow:0 8px 28px rgba(0,0,0,.6);
+            transform:scale(1.1);
+            transition:none;
+        `;
+        document.body.appendChild(ghost);
+
+        const targetEl = handZone.querySelectorAll('.card')[i];
+        const dst = targetEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
+
+        await new Promise(r => setTimeout(r, 16));
+
+        ghost.style.transition = 'all 280ms cubic-bezier(.22,1,.36,1)';
+        ghost.style.left      = `${dst.left}px`;
+        ghost.style.top       = `${dst.top}px`;
+        ghost.style.width     = `${dst.width}px`;
+        ghost.style.height    = `${dst.height}px`;
+        ghost.style.transform = `scale(1) rotate(${(Math.random()-.5)*5}deg)`;
+
+        // Mostrar carta real cuando llega el ghost
+        setTimeout(() => {
+            if (targetEl) {
+                targetEl.style.transition = 'opacity 100ms ease';
+                targetEl.style.opacity = '1';
+            }
+            ghost.remove();
+        }, 260);
     }
 }
 

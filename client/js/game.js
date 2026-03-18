@@ -343,6 +343,8 @@ function slotsListosParaBajar() {
 // INICIALIZACIÓN Y SOCKET
 // ═══════════════════════════════════════════════════
 
+let _firstLoad = true;
+
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
     localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
@@ -365,11 +367,18 @@ function setupSocketEvents() {
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
         if (tableColor) applyTableTheme(tableColor);
-        // Para game_started/nueva_ronda, NO llamar render() antes — handleNewRound lo maneja
+
         const isNewRound = event === 'game_started' || event === 'nueva_ronda';
-        if (!isNewRound) render();
-        await applyEvent(event, data, prev);
-        if (isNewRound) render();
+        const isFirstLoad = _firstLoad;
+        _firstLoad = false;
+
+        // En primera carga o nueva ronda: animar reparto
+        if (isNewRound || isFirstLoad) {
+            await handleNewRound();
+        } else {
+            render();
+            await applyEvent(event, data, prev);
+        }
     });
     WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
     WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));

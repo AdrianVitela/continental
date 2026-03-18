@@ -425,6 +425,8 @@ async function applyEvent(event, data, prev) {
             await handleNewRound(); break;
         case 'tomar_mazo':
             await handleTomarMazo(data); break;
+        case 'tomar_fondo':
+            await handleTomarFondo(data); break;
         case 'pagar':
             await handlePagar(data); break;
         case 'bajar':
@@ -570,7 +572,87 @@ async function handleTomarMazo(data) {
         }
     }
 }
+async function handleTomarFondo(data) {
+    // TU jugador toma del fondo
+    if (data.jugadorIdx === myIdx) {
+        const fondoEl  = document.getElementById('fondo-wrap');
+        const handZone = document.getElementById('discard-zone');
+        if (!fondoEl || !handZone) return;
 
+        // Carta visible del fondo
+        const srcCard = fondoEl.querySelector('.card');
+        const src = (srcCard || fondoEl).getBoundingClientRect();
+
+        // Render con la carta ya en mano (oculta)
+        render();
+
+        const newCardEl = handZone.querySelector(`.card[data-id="${data.carta?.id}"]`);
+        if (newCardEl) {
+            newCardEl.style.opacity = '0';
+            newCardEl.style.transition = 'none';
+        }
+
+        await new Promise(r => requestAnimationFrame(r));
+
+        const dst = newCardEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
+
+        // Ghost (usa la carta REAL del fondo)
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = srcCard ? srcCard.outerHTML : '<div class="cback"></div>';
+        const ghost = wrapper.firstElementChild;
+
+        ghost.style.cssText = `
+            position:fixed;
+            z-index:9999;
+            pointer-events:none;
+            width:${src.width}px;
+            height:${src.height}px;
+            left:${src.left}px;
+            top:${src.top}px;
+            border-radius:var(--r);
+            box-shadow:0 10px 30px rgba(0,0,0,.6);
+            transform:scale(1.05);
+            transition:none;
+        `;
+
+        document.body.appendChild(ghost);
+
+        await new Promise(r => setTimeout(r, 16));
+
+        // Animación de vuelo
+        ghost.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
+        ghost.style.left       = `${dst.left}px`;
+        ghost.style.top        = `${dst.top}px`;
+        ghost.style.width      = `${dst.width}px`;
+        ghost.style.height     = `${dst.height}px`;
+        ghost.style.transform  = `scale(1) rotate(${(Math.random() - 0.5) * 6}deg)`;
+        ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.6)';
+
+        await new Promise(r => setTimeout(r, 300));
+
+        // Reveal con bounce
+        if (newCardEl) {
+            newCardEl.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
+            newCardEl.style.opacity = '1';
+            newCardEl.style.transform = 'scale(1.15)';
+
+            setTimeout(() => {
+                newCardEl.style.transform = 'scale(1)';
+            }, 80);
+        }
+
+        ghost.remove();
+
+    } else {
+        // Otro jugador toma del fondo (feedback visual ligero)
+        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
+        if (oppEl) {
+            oppEl.style.transition = 'box-shadow .15s ease';
+            oppEl.style.boxShadow  = '0 0 16px rgba(255,255,255,.25)';
+            setTimeout(() => { oppEl.style.boxShadow = ''; }, 400);
+        }
+    }
+}
 async function handlePagar(data) {
     if (data.jugadorIdx !== myIdx) {
         const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);

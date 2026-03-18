@@ -460,8 +460,8 @@ function validarJugadasConstruidas(jugadas) {
 
 class GameEngine {
     constructor(jugadores) {
-        this.jugadores = jugadores.map(({ id, nombre }) => ({
-            id, nombre,
+        this.jugadores = jugadores.map(({ id, nombre, badge }) => ({
+            id, nombre, badge: badge || null,
             mano: [],
             bajado: false,
             pts_r: 0,

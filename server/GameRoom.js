@@ -58,7 +58,7 @@ class GameRoom {
   startGame() {
     if (this.status !== 'lobby') return { ok: false, error: 'Partida ya iniciada.' };
     if (this.players.length < 2) return { ok: false, error: 'Se necesitan al menos 2 jugadores.' };
-    this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre })));
+    this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null })));
     this.engine.repartir();
     this.status = 'playing';
     this._startTurnTimer();

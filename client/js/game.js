@@ -359,15 +359,17 @@ function setupSocketEvents() {
         document.getElementById('modal-disconnected').classList.add('show');
         document.getElementById('mode-pill').textContent = '🔴 Desconectado';
     });
-    WS.on('state_update', ({ event, data, state, tableColor }) => {
+    WS.on('state_update', async ({ event, data, state, tableColor }) => {
         if (!state) return;
         const prev = G;
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
-        // Aplicar tema de mesa si llegó del servidor
         if (tableColor) applyTableTheme(tableColor);
-        applyEvent(event, data, prev);
-        render();
+        // Para game_started/nueva_ronda, NO llamar render() antes — handleNewRound lo maneja
+        const isNewRound = event === 'game_started' || event === 'nueva_ronda';
+        if (!isNewRound) render();
+        await applyEvent(event, data, prev);
+        if (isNewRound) render();
     });
     WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
     WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));

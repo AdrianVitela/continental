@@ -95,7 +95,11 @@ wss.on('connection', (ws) => {
 
           let hostBadge = null;
           try {
-            const r = await pool.query('SELECT badge FROM usuarios WHERE nombre = $1', [safeNombre]);
+            const query = msg.userId
+              ? 'SELECT badge FROM usuarios WHERE id = $1'
+              : 'SELECT badge FROM usuarios WHERE nombre = $1';
+            const param = msg.userId || safeNombre;
+            const r = await pool.query(query, [param]);
             hostBadge = r.rows[0]?.badge || null;
           } catch (_) {}
 
@@ -130,7 +134,11 @@ wss.on('connection', (ws) => {
 
           let joinBadge = null;
           try {
-            const r = await pool.query('SELECT badge FROM usuarios WHERE nombre = $1', [safeNombre]);
+            const query = msg.userId
+              ? 'SELECT badge FROM usuarios WHERE id = $1'
+              : 'SELECT badge FROM usuarios WHERE nombre = $1';
+            const param = msg.userId || safeNombre;
+            const r = await pool.query(query, [param]);
             joinBadge = r.rows[0]?.badge || null;
           } catch (_) {}
 

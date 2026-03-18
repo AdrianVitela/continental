@@ -400,18 +400,22 @@ function toast (msg, type = 'red') {
 }
 
 function crearSala () {
-  const nombre = (window.getAuthNombre ? window.getAuthNombre() : '');
+  const nombre   = (window.getAuthNombre ? window.getAuthNombre() : '');
+  const usuario  = JSON.parse(localStorage.getItem('usuario') || 'null');
+  const userId   = usuario?.id || null;
   if (!nombre) { window.location.href = '/login'; return; }
-  WS.send({ type: 'create_room', nombre, mode: gameMode, maxPlayers });
+  WS.send({ type: 'create_room', nombre, userId, mode: gameMode, maxPlayers });
 }
 
 function unirse () {
-  const nombre = (window.getAuthNombre ? window.getAuthNombre() : '');
-  const cInput = document.getElementById('unirse-code');
-  const code   = cInput.value.trim().toUpperCase();
+  const nombre   = (window.getAuthNombre ? window.getAuthNombre() : '');
+  const usuario  = JSON.parse(localStorage.getItem('usuario') || 'null');
+  const userId   = usuario?.id || null;
+  const cInput   = document.getElementById('unirse-code');
+  const code     = cInput.value.trim().toUpperCase();
   if (!nombre) { window.location.href = '/login'; return; }
   if (!validateCode(code)) return;
-  WS.send({ type: 'join_room', nombre, code });
+  WS.send({ type: 'join_room', nombre, userId, code });
 }
 
 function iniciarJuego () {

@@ -344,6 +344,7 @@ function slotsListosParaBajar() {
 // ═══════════════════════════════════════════════════
 
 let _firstLoad = true;
+const _animatedBajadas = new Set(); // IDs de cartas ya animadas en mesa
 
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
@@ -442,6 +443,7 @@ async function handleNewRound() {
     intercambioMode = false;
     selectedComodinInfo = null;
     buildingCards.clear();
+    _animatedBajadas.clear();
 
     const mazoEl  = document.getElementById('mazo-wrap');
     const handZone = document.getElementById('discard-zone');
@@ -577,28 +579,36 @@ async function handlePagar(data) {
     }
 }
 
-// Oculta SOLO las cartas nuevas (sin data-animated) para animarlas después
+// Oculta SOLO las cartas nuevas (no en _animatedBajadas)
 function hideBajadasCards() {
     const bajEl = document.getElementById('table-bajadas');
     if (!bajEl) return;
-    bajEl.querySelectorAll('.card-sm:not([data-animated]), .joker-sm:not([data-animated])').forEach(el => {
-        el.style.opacity   = '0';
-        el.style.transform = 'scale(.6) translateY(-18px)';
-        el.style.transition = 'none';
+    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
+        if (!_animatedBajadas.has(id)) {
+            el.style.opacity    = '0';
+            el.style.transform  = 'scale(.6) translateY(-18px)';
+            el.style.transition = 'none';
+        }
     });
 }
 
-// Anima SOLO las cartas nuevas (sin data-animated)
+// Anima SOLO las cartas nuevas (no en _animatedBajadas)
 function animateBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     if (!bajEl) return;
-    const cards = [...bajEl.querySelectorAll('.card-sm:not([data-animated]), .joker-sm:not([data-animated])')];
-    cards.forEach((el, i) => {
+    const cards = [...bajEl.querySelectorAll('.card-sm, .joker-sm')];
+    const nuevas = cards.filter(el => {
+        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
+        return !_animatedBajadas.has(id);
+    });
+    nuevas.forEach((el, i) => {
+        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
         setTimeout(() => {
             el.style.transition = 'opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1)';
             el.style.opacity    = '1';
             el.style.transform  = 'scale(1) translateY(0)';
-            el.dataset.animated = '1';
+            _animatedBajadas.add(id);
         }, i * 45);
     });
 }

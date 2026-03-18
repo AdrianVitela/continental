@@ -372,8 +372,12 @@ function setupSocketEvents() {
         const isFirstLoad = _firstLoad;
         _firstLoad = false;
 
-        // En primera carga o nueva ronda: animar reparto
-        if (isNewRound || isFirstLoad) {
+        // Animar reparto solo si es ronda nueva (no recarga)
+        const roundKey = `dealt_${ROOM}_r${G.ronda}`;
+        const yaAnimado = sessionStorage.getItem(roundKey);
+
+        if ((isNewRound || isFirstLoad) && !yaAnimado) {
+            sessionStorage.setItem(roundKey, '1');
             await handleNewRound();
         } else {
             render();

@@ -663,8 +663,8 @@ async function handlePagar(data) {
     }
 }
 async function handleCastigo(data) {
-    // Si eres tú
     if (data.jugadorIdx === myIdx && data.acepta) {
+
         const fondoEl  = document.getElementById('fondo-wrap');
         const mazoEl   = document.getElementById('mazo-wrap');
         const handZone = document.getElementById('discard-zone');
@@ -675,7 +675,7 @@ async function handleCastigo(data) {
         const srcFondo  = (fondoCard || fondoEl).getBoundingClientRect();
         const srcMazo   = mazoEl.getBoundingClientRect();
 
-        //  efecto dramático en fondo
+        //  efecto dramático
         fondoEl.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
         fondoEl.style.transform  = 'scale(1.15)';
         fondoEl.style.boxShadow  = '0 0 40px rgba(200,160,69,.9)';
@@ -685,23 +685,10 @@ async function handleCastigo(data) {
             fondoEl.style.boxShadow = '';
         }, 150);
 
-        // Render con cartas ya en mano (ocultas)
-        render();
-
-        const newCards = [...handZone.querySelectorAll('.card')]
-            .slice(-2); // últimas 2 cartas
-
-        newCards.forEach(el => {
-            el.style.opacity = '0';
-            el.style.transition = 'none';
-        });
-
-        await new Promise(r => requestAnimationFrame(r));
-
-        // Ghost 1 (fondo)
-        const ghost1 = document.createElement('div');
-        ghost1.innerHTML = fondoCard ? fondoCard.outerHTML : '<div class="cback"></div>';
-        const g1 = ghost1.firstElementChild;
+        // CREAR GHOSTS ANTES del render
+        const ghost1Wrap = document.createElement('div');
+        ghost1Wrap.innerHTML = fondoCard ? fondoCard.outerHTML : '<div class="cback"></div>';
+        const g1 = ghost1Wrap.firstElementChild;
 
         g1.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
@@ -712,7 +699,6 @@ async function handleCastigo(data) {
         `;
         document.body.appendChild(g1);
 
-        // Ghost 2 (mazo)
         const g2 = document.createElement('div');
         g2.className = 'cback';
         g2.style.cssText = `
@@ -724,24 +710,44 @@ async function handleCastigo(data) {
         `;
         document.body.appendChild(g2);
 
+        // AHORA sí render
+        render();
+
+        //  buscar cartas nuevas después del render
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r));
+
+        const newCards = [...handZone.querySelectorAll('.card')].slice(-2);
+
+        newCards.forEach(el => {
+            el.style.opacity = '0';
+            el.style.transition = 'none';
+        });
+
         const dst1 = newCards[0]?.getBoundingClientRect();
         const dst2 = newCards[1]?.getBoundingClientRect();
 
+        if (!dst1 || !dst2) {
+            g1.remove();
+            g2.remove();
+            return;
+        }
+
         await new Promise(r => setTimeout(r, 20));
 
-        // vuelo fondo
+        //  vuelo fondo
         g1.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
         g1.style.left = `${dst1.left}px`;
         g1.style.top  = `${dst1.top}px`;
 
-        // vuelo mazo (delay pequeño)
+        //  vuelo mazo
         setTimeout(() => {
             g2.style.transition = 'all 260ms cubic-bezier(.22,1,.36,1)';
             g2.style.left = `${dst2.left}px`;
             g2.style.top  = `${dst2.top}px`;
         }, 120);
 
-        // reveal
+        //  reveal
         setTimeout(() => {
             newCards.forEach(el => {
                 el.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
@@ -755,7 +761,6 @@ async function handleCastigo(data) {
         }, 350);
 
     } else if (data.acepta) {
-        //  otro jugador se castigó
         const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
         if (oppEl) {
             oppEl.style.transition = 'box-shadow .2s ease';

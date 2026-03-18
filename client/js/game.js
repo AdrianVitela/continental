@@ -579,39 +579,7 @@ async function handlePagar(data) {
     }
 }
 
-// Oculta SOLO las cartas nuevas (no en _animatedBajadas)
-function hideBajadasCards() {
-    const bajEl = document.getElementById('table-bajadas');
-    if (!bajEl) return;
-    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
-        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
-        if (!_animatedBajadas.has(id)) {
-            el.style.opacity    = '0';
-            el.style.transform  = 'scale(.6) translateY(-18px)';
-            el.style.transition = 'none';
-        }
-    });
-}
 
-// Anima SOLO las cartas nuevas (no en _animatedBajadas)
-function animateBajadas() {
-    const bajEl = document.getElementById('table-bajadas');
-    if (!bajEl) return;
-    const cards = [...bajEl.querySelectorAll('.card-sm, .joker-sm')];
-    const nuevas = cards.filter(el => {
-        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
-        return !_animatedBajadas.has(id);
-    });
-    nuevas.forEach((el, i) => {
-        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
-        setTimeout(() => {
-            el.style.transition = 'opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1)';
-            el.style.opacity    = '1';
-            el.style.transform  = 'scale(1) translateY(0)';
-            _animatedBajadas.add(id);
-        }, i * 45);
-    });
-}
 
 // Flash + texto "¡SE BAJÓ!" sobre la tarjeta del oponente
 function animateOponenteBajo(jugadorIdx) {
@@ -657,6 +625,8 @@ async function handleBajar(data) {
     // Si otro jugador se bajó — mostrar animación de atención
     if (data.jugadorIdx !== myIdx) {
         animateOponenteBajo(data.jugadorIdx);
+        render();
+        restoreAnimatedBajadas();
         return;
     }
     if (data.jugadorIdx === myIdx) {
@@ -688,7 +658,6 @@ async function handleBajar(data) {
         // 2. Actualizar estado y renderizar mesa con bajadas (ocultas)
         buildingCards.clear();
         render();
-        hideBajadasCards(); // ocultar inmediatamente antes de que el browser pinte
 
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
@@ -755,8 +724,7 @@ async function handleBajar(data) {
         // Esperar a que terminen todas las animaciones
         await new Promise(r => setTimeout(r, ghosts.length * 60 + 700));
 
-        // Animar aparición de cartas en la mesa
-        animateBajadas();
+
     }
 }
 
@@ -1155,6 +1123,22 @@ function applyTableTheme(color) {
     sessionStorage.setItem('tableColor', color);
 }
 
+function restoreAnimatedBajadas() {
+    if (!_animatedBajadas.size) return;
+    const bajEl = document.getElementById('table-bajadas');
+    if (!bajEl) return;
+    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+        const id = el.dataset.id || el.dataset.comodinId;
+        if (!id) return;
+        if (_animatedBajadas.has(id)) {
+            el.style.animation  = 'none';
+            el.style.opacity    = '1';
+            el.style.transform  = 'none';
+            el.style.transition = 'none';
+        }
+    });
+}
+
 function render() {
     if (!G || myIdx < 0) return;
     const me = G.jugadores[myIdx];
@@ -1168,22 +1152,10 @@ function render() {
     renderPlayerInfo(me);
     renderHand();
     renderActions();
+    restoreAnimatedBajadas();
 }
 
-// Muestra inmediatamente las cartas ya animadas (evita flash en re-renders)
-function restoreAnimatedBajadas() {
-    if (!_animatedBajadas.size) return;
-    const bajEl = document.getElementById('table-bajadas');
-    if (!bajEl) return;
-    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
-        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
-        if (_animatedBajadas.has(id)) {
-            el.style.opacity    = '1';
-            el.style.transform  = 'none';
-            el.style.transition = 'none';
-        }
-    });
-}
+
 
 function renderScoreboard() {
     document.getElementById('scoreboard').innerHTML = G.jugadores.map((j, i) => `
@@ -1238,7 +1210,9 @@ function renderTableBajadas() {
             const puedeIntercambiar = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
             const intercambiosPosibles = puedeIntercambiar ? detectarIntercambiosPosibles() : [];
 
-            const cardsHtml = jug.cartas.map(c => {
+            // Marcar cartas nuevas para animar con CSS
+        const cartasIds = jug.cartas.map(c => c.id || c.comodinId || '').filter(Boolean);
+        const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
                     const vr = c.valorReemplazado || '?';
                     const vrPalo = c.paloReemplazado ? c.paloReemplazado : '';
@@ -1254,6 +1228,7 @@ function renderTableBajadas() {
                         return `<div class="card-sm joker-sm comodin-intercambiable joker-highlight"
                                      title="${tipTxt}"
                                      data-ic-key="${icKey}"
+                                     data-comodin-id="${c.id}"
                                      onclick="event.stopPropagation(); window.ejecutarIntercambioDesdeKey('${icKey}')">
                                      🃏<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
                                      <small style="font-size:7px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
@@ -1265,7 +1240,7 @@ function renderTableBajadas() {
                                      onclick="event.stopPropagation(); window.activarModoIntercambio(${ji}, ${jugi}, '${c.id}')">
                                      🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                     }
-                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}">🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}" data-comodin-id="${c.id}">🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                 }
                 return cSm(c);
             }).join('');
@@ -1282,17 +1257,18 @@ function renderTableBajadas() {
         });
         bajEl.appendChild(wrap);
     });
-    // Restaurar cartas ya animadas SIN transición para evitar flash en re-renders
-    if (_animatedBajadas.size) {
-        bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
-            const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
-            if (_animatedBajadas.has(id)) {
-                el.style.opacity    = '1';
-                el.style.transform  = 'none';
-                el.style.transition = 'none';
-            }
-        });
-    }
+
+    // Animar solo cartas nuevas (con ID real, no textContent)
+    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach((el, i) => {
+        const id = el.dataset.id || el.dataset.comodinId;
+        if (!id) return;
+        if (!_animatedBajadas.has(id)) {
+            _animatedBajadas.add(id);
+            el.style.animation = 'none';
+            el.offsetHeight;
+            el.style.animation = `cardLand 320ms cubic-bezier(.22,1,.36,1) ${i * 40}ms both`;
+        }
+    });
 }
 
 function renderMazo() {
@@ -1757,9 +1733,9 @@ function cFull(c, withId = true) {
 
 function cSm(c) {
     if (!c) return '';
-    if (c.comodin) return `<div class="card-sm joker-sm">🃏</div>`;
+    if (c.comodin) return `<div class="card-sm joker-sm" data-comodin-id="${c.id || ''}">🃏</div>`;
     const sc = SUIT_CLS[c.palo] || '';
-    return `<div class="card-sm natural ${sc}">${c.valor}<br>${c.palo}</div>`;
+    return `<div class="card-sm natural ${sc}" data-id="${c.id || ''}">${c.valor}<br>${c.palo}</div>`;
 }
 
 // ═══════════════════════════════════════════════════

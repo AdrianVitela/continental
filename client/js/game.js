@@ -839,6 +839,17 @@ function ackRonda() {
 // RENDERIZADO
 // ═══════════════════════════════════════════════════
 
+const BADGES = {
+    'owner':         { emoji: '👑', label: 'Owner' },
+    'beta_tester':   { emoji: '🧪', label: 'Beta Tester' },
+    'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
+    'vip':           { emoji: '⭐', label: 'VIP' },
+};
+function badgeHtml(badge) {
+    if (!badge || !BADGES[badge]) return '';
+    return ` <span title="${BADGES[badge].label}" style="cursor:default;font-size:.85rem">${BADGES[badge].emoji}</span>`;
+}
+
 function applyTableTheme(color) {
     const valid = ['green', 'navy', 'wine', 'black'];
     if (!valid.includes(color)) return;
@@ -867,7 +878,7 @@ function render() {
 function renderScoreboard() {
     document.getElementById('scoreboard').innerHTML = G.jugadores.map((j, i) => `
         <div class="sitem ${i === myIdx ? 'me' : ''}">
-            <div class="sname">${j.nombre}</div>
+            <div class="sname">${j.nombre}${badgeHtml(j.badge)}</div>
             <div class="spts">${j.pts_t}</div>
         </div>
     `).join('');
@@ -882,7 +893,7 @@ function renderOpponents() {
         d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
         d.dataset.idx = i;
         d.innerHTML = `
-            <div class="opp-name">${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
+            <div class="opp-name">${j.nombre}${badgeHtml(j.badge)}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
             <div class="opp-backs">${(j.mano || []).map(() => '<div class="cback-xs"></div>').join('')}</div>
             ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
         `;

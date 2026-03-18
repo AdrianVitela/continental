@@ -6,6 +6,7 @@ const { WebSocketServer } = require('ws');
 const path     = require('path');
 const { randomUUID } = require('crypto');
 const { GameRoom } = require('./GameRoom');
+const pool         = require('./db');
 
 const PORT = process.env.PORT || 3000;
 const app  = express();
@@ -70,7 +71,7 @@ setInterval(() => {
 wss.on('connection', (ws) => {
   clients.set(ws, { playerId: null, roomCode: null, nombre: null });
 
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     const ctx = clients.get(ws);
@@ -92,9 +93,15 @@ wss.on('connection', (ws) => {
           ctx.roomCode = code;
           ctx.nombre   = safeNombre;
 
+          let hostBadge = null;
+          try {
+            const r = await pool.query('SELECT badge FROM usuarios WHERE nombre = $1', [safeNombre]);
+            hostBadge = r.rows[0]?.badge || null;
+          } catch (_) {}
+
           const room = new GameRoom({
             code,
-            host: { id: playerId, nombre: safeNombre, ws },
+            host: { id: playerId, nombre: safeNombre, badge: hostBadge, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
           });
@@ -121,7 +128,13 @@ wss.on('connection', (ws) => {
           ctx.roomCode = safeCode;
           ctx.nombre   = safeNombre;
 
-          const player = room.addPlayer(playerId, safeNombre, ws);
+          let joinBadge = null;
+          try {
+            const r = await pool.query('SELECT badge FROM usuarios WHERE nombre = $1', [safeNombre]);
+            joinBadge = r.rows[0]?.badge || null;
+          } catch (_) {}
+
+          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           send(ws, { type: 'room_joined', code: safeCode, playerId, lobbyState: room.lobbyState() });

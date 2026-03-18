@@ -440,13 +440,24 @@ function updateLobbyState (lobbyState) {
   playersList = lobbyState.players;
 
   const list = document.getElementById('player-list');
-  list.innerHTML = playersList.map((p, i) => `
+  const BADGES_LOBBY = {
+    'owner':         { emoji: '👑', label: 'Owner' },
+    'beta_tester':   { emoji: '🧪', label: 'Beta Tester' },
+    'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
+    'vip':           { emoji: '⭐', label: 'VIP' },
+  };
+  list.innerHTML = playersList.map((p, i) => {
+    const badge = p.badge && BADGES_LOBBY[p.badge]
+      ? `<span title="${BADGES_LOBBY[p.badge].label}" style="cursor:default;font-size:.95rem">${BADGES_LOBBY[p.badge].emoji}</span>`
+      : '';
+    return `
     <div class="player-item">
       <div class="player-dot ${p.conectado ? '' : 'away'}"></div>
       <span>${escHtml(p.nombre)}</span>
+      ${badge}
       ${i === 0 ? '<span class="player-badge">HOST</span>' : ''}
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
   const canStart = playersList.length >= 2 && lobbyState.status === 'lobby';
   const btn      = document.getElementById('btn-start');

@@ -210,37 +210,64 @@ const Anim = (() => {
   async function dealAnim(mazoEl, handZoneEl, cards, startDelay = 0) {
     const src = mazoEl?.getBoundingClientRect();
     if (!src || !handZoneEl) return;
-    
-    for (let i = 0; i < cards.length; i++) {
-      await new Promise(r => setTimeout(r, startDelay + i * 60));
-      
-      const ghost = document.createElement('div');
-      ghost.className = 'cback';
-      ghost.style.cssText = `
-        position: fixed; 
-        z-index: 9999; 
-        pointer-events: none;
-        width: ${src.width}px; 
-        height: ${src.height}px;
-        left: ${src.left}px; 
-        top: ${src.top}px;
-        transition: none;
-        border-radius: var(--r);
-        box-shadow: 0 8px 24px rgba(0,0,0,.5);
-      `;
-      document.body.appendChild(ghost);
 
-      const dst = handZoneEl.getBoundingClientRect();
-      await new Promise(r => setTimeout(r, 10));
-      
-      ghost.style.transition = 'all 300ms cubic-bezier(.22,1,.36,1)';
-      ghost.style.left = `${dst.left + dst.width/2 - src.width/2}px`;
-      ghost.style.top = `${dst.top + 5}px`;
-      ghost.style.transform = `scale(.9) rotate(${(Math.random()-.5)*8}deg)`;
-      ghost.style.opacity = '.5';
-      
-      setTimeout(() => ghost.remove(), 310);
+    // Ocultar las cartas reales mientras animamos
+    const cardEls = handZoneEl.querySelectorAll('.card');
+    cardEls.forEach(el => { el.style.opacity = '0'; });
+
+    const promises = [];
+
+    for (let i = 0; i < cards.length; i++) {
+      const p = new Promise(async resolve => {
+        await new Promise(r => setTimeout(r, startDelay + i * 90));
+
+        // Ghost card volando desde el mazo
+        const ghost = document.createElement('div');
+        ghost.className = 'cback';
+        ghost.style.cssText = `
+          position: fixed;
+          z-index: 9999;
+          pointer-events: none;
+          width: ${src.width}px;
+          height: ${src.height}px;
+          left: ${src.left}px;
+          top: ${src.top}px;
+          transition: none;
+          border-radius: var(--r);
+          box-shadow: 0 8px 28px rgba(0,0,0,.6);
+          transform: scale(1.05);
+        `;
+        document.body.appendChild(ghost);
+
+        // Destino: posición de la carta i en la mano
+        const targetCard = handZoneEl.querySelectorAll('.card')[i];
+        const dst = targetCard
+          ? targetCard.getBoundingClientRect()
+          : handZoneEl.getBoundingClientRect();
+
+        await new Promise(r => setTimeout(r, 16));
+
+        ghost.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
+        ghost.style.left  = `${dst.left}px`;
+        ghost.style.top   = `${dst.top}px`;
+        ghost.style.width = `${dst.width}px`;
+        ghost.style.height= `${dst.height}px`;
+        ghost.style.transform = `scale(1) rotate(${(Math.random()-.5)*6}deg)`;
+
+        await new Promise(r => setTimeout(r, 300));
+
+        // Mostrar carta real y quitar ghost
+        if (targetCard) {
+          targetCard.style.transition = 'opacity 80ms ease';
+          targetCard.style.opacity = '1';
+        }
+        ghost.remove();
+        resolve();
+      });
+      promises.push(p);
     }
+
+    await Promise.all(promises);
   }
 
   // Muestra números flotantes de puntuación (+15, -0, etc.) al finalizar ronda

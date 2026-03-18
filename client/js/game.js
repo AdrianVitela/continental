@@ -429,9 +429,11 @@ async function handleNewRound() {
     buildingCards.clear();
     const mazoEl = document.getElementById('mazo-wrap');
     await Anim.shuffleAnim(mazoEl);
-    const discardZone = document.getElementById('discard-zone');
-    if (discardZone && G.jugadores[myIdx]) {
-        await Anim.dealAnim(mazoEl, discardZone, G.jugadores[myIdx].mano || [], 0);
+    // Renderizar mano primero (invisible) para que dealAnim tenga posiciones destino
+    render();
+    const handZone = document.getElementById('discard-zone');
+    if (mazoEl && handZone && G.jugadores[myIdx]) {
+        await Anim.dealAnim(mazoEl, handZone, G.jugadores[myIdx].mano || [], 0);
     }
 }
 

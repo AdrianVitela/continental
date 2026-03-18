@@ -525,24 +525,99 @@ async function handlePagar(data) {
 
 async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
-        // Capturar posición de las cartas ANTES de limpiar buildingCards
         const discardZone = document.getElementById('discard-zone');
         const buildingRow = document.getElementById('building-row');
-        const cardEls = [...(discardZone?.querySelectorAll('.card') || [])];
 
-        // Obtener también cartas de los slots de construcción
-        const slotCards = [...(buildingRow?.querySelectorAll('.card') || [])];
-        const allCards  = [...cardEls, ...slotCards];
+        // 1. Capturar clones visuales ANTES de tocar el DOM
+        const allCardEls = [
+            ...(discardZone?.querySelectorAll('.card') || []),
+            ...(buildingRow?.querySelectorAll('.card')  || []),
+        ];
 
+        // Crear ghosts fijos en su posición actual
+        const ghosts = allCardEls.map(el => {
+            const rect  = el.getBoundingClientRect();
+            const ghost = el.cloneNode(true);
+            ghost.style.cssText = `
+                position:fixed; z-index:9990; pointer-events:none;
+                width:${rect.width}px; height:${rect.height}px;
+                left:${rect.left}px; top:${rect.top}px;
+                border-radius:var(--r);
+                box-shadow:0 8px 24px rgba(0,0,0,.5);
+                transition:none;
+            `;
+            document.body.appendChild(ghost);
+            return { ghost, rect };
+        });
+
+        // 2. Actualizar estado y renderizar mesa con bajadas
         buildingCards.clear();
-
-        // Render para que aparezcan los slots de bajadas en la mesa
         render();
 
-        const bajadas = document.getElementById('table-bajadas');
-        if (allCards.length && bajadas) {
-            await Anim.bajarAnim(allCards, bajadas);
+        await new Promise(r => requestAnimationFrame(r));
+        await new Promise(r => requestAnimationFrame(r));
+
+        // 3. Destino: slots de bajadas del jugador en la mesa
+        const bajadas   = document.getElementById('table-bajadas');
+        const myBajadas = bajadas?.querySelector(`[data-jugador-idx="${myIdx}"]`);
+        const slots     = myBajadas?.querySelectorAll('.jugada-cards') || bajadas?.querySelectorAll('.jugada-cards');
+        const slotArr   = [...(slots || [])];
+        const dstEl     = slotArr[0] || bajadas;
+        const dstRect   = dstEl?.getBoundingClientRect();
+
+        if (!dstRect) {
+            ghosts.forEach(({ ghost }) => ghost.remove());
+            return;
         }
+
+        // 4. Animar cada ghost volando al destino
+        const perSlot = Math.max(1, Math.ceil(ghosts.length / Math.max(slotArr.length, 1)));
+
+        ghosts.forEach(({ ghost, rect }, i) => {
+            const slotIdx  = Math.floor(i / perSlot);
+            const targetEl = slotArr[slotIdx] || dstEl;
+            const tRect    = targetEl?.getBoundingClientRect() || dstRect;
+
+            const delay = i * 60;
+
+            setTimeout(() => {
+                // Fase 1: salto hacia arriba
+                ghost.style.transition = 'all 150ms cubic-bezier(.34,1.56,.64,1)';
+                ghost.style.transform  = `translateY(-20px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
+
+                setTimeout(() => {
+                    // Fase 2: volar al destino
+                    const dx = tRect.left + tRect.width  / 2 - rect.left - rect.width  / 2;
+                    const dy = tRect.top  + tRect.height / 2 - rect.top  - rect.height / 2;
+
+                    ghost.style.transition = 'all 360ms cubic-bezier(.22,1,.36,1)';
+                    ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(.9) rotate(0deg)`;
+                    ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.7)';
+
+                    setTimeout(() => {
+                        // Flash + partículas al aterrizar
+                        ghost.style.transition = 'all 80ms ease';
+                        ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(1.06)`;
+                        ghost.style.boxShadow  = '0 0 40px rgba(200,160,69,1)';
+
+                        Anim.spawnParticles(
+                            tRect.left + tRect.width  / 2,
+                            tRect.top  + tRect.height / 2,
+                            8
+                        );
+
+                        setTimeout(() => {
+                            ghost.style.transition = 'opacity 100ms ease';
+                            ghost.style.opacity    = '0';
+                            setTimeout(() => ghost.remove(), 110);
+                        }, 90);
+                    }, 340);
+                }, 160);
+            }, delay);
+        });
+
+        // Esperar a que terminen todas las animaciones
+        await new Promise(r => setTimeout(r, ghosts.length * 60 + 700));
     }
 }
 

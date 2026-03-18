@@ -416,7 +416,8 @@ const Anim = (() => {
     shuffleAnim, 
     dealAnim, 
     floatScore, 
-    bajarAnim 
+    bajarAnim,
+    spawnParticles
   };
 })();
 

@@ -1163,11 +1163,28 @@ function render() {
     renderScoreboard();
     renderOpponents();
     renderTableBajadas();
+    // Restaurar cartas ya animadas para que no parpadeen en re-renders
+    restoreAnimatedBajadas();
     renderMazo();
     renderFondo(me);
     renderPlayerInfo(me);
     renderHand();
     renderActions();
+}
+
+// Muestra inmediatamente las cartas ya animadas (evita flash en re-renders)
+function restoreAnimatedBajadas() {
+    if (!_animatedBajadas.size) return;
+    const bajEl = document.getElementById('table-bajadas');
+    if (!bajEl) return;
+    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+        const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
+        if (_animatedBajadas.has(id)) {
+            el.style.opacity    = '1';
+            el.style.transform  = 'none';
+            el.style.transition = 'none';
+        }
+    });
 }
 
 function renderScoreboard() {

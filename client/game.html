@@ -128,8 +128,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 .opp-backs  { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
 .cback-xs {
   width: 12px; height: 17px; border-radius: 2px;
-  background: linear-gradient(135deg, #1a3680, #0d2050);
-  border: 1px solid rgba(255,255,255,.15);
+  background: var(--skin-bg, linear-gradient(135deg, #1a3680, #0d2050));
+  border: 1px solid var(--skin-border, rgba(255,255,255,.15));
+  box-shadow: var(--skin-glow, none);
 }
 
 /* ===== ZONA CENTRAL ===== */

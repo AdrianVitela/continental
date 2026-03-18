@@ -525,11 +525,24 @@ async function handlePagar(data) {
 
 async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
-        buildingCards.clear();
+        // Capturar posición de las cartas ANTES de limpiar buildingCards
         const discardZone = document.getElementById('discard-zone');
-        const bajadas = document.getElementById('table-bajadas');
+        const buildingRow = document.getElementById('building-row');
         const cardEls = [...(discardZone?.querySelectorAll('.card') || [])];
-        if (cardEls.length && bajadas) await Anim.bajarAnim(cardEls, bajadas);
+
+        // Obtener también cartas de los slots de construcción
+        const slotCards = [...(buildingRow?.querySelectorAll('.card') || [])];
+        const allCards  = [...cardEls, ...slotCards];
+
+        buildingCards.clear();
+
+        // Render para que aparezcan los slots de bajadas en la mesa
+        render();
+
+        const bajadas = document.getElementById('table-bajadas');
+        if (allCards.length && bajadas) {
+            await Anim.bajarAnim(allCards, bajadas);
+        }
     }
 }
 

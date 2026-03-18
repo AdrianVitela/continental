@@ -309,56 +309,102 @@ const Anim = (() => {
   }
 
   // Animación de bajar: las cartas se abren en abanico y luego colapsan a la zona de bajada
+  // Partículas doradas al aterrizar
+  function spawnParticles(x, y, count = 12) {
+    const colors = ['#c8a045', '#ffe066', '#fff4c2', '#f0c040', '#ffffff'];
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      const angle  = (Math.PI * 2 / count) * i + (Math.random() - .5) * .5;
+      const speed  = 40 + Math.random() * 60;
+      const size   = 4 + Math.random() * 5;
+      const color  = colors[Math.floor(Math.random() * colors.length)];
+      const dur    = 500 + Math.random() * 300;
+      p.style.cssText = `
+        position:fixed; z-index:10000; pointer-events:none;
+        width:${size}px; height:${size}px;
+        border-radius:${Math.random() > .5 ? '50%' : '2px'};
+        background:${color};
+        left:${x}px; top:${y}px;
+        transform:translate(-50%,-50%);
+        box-shadow: 0 0 4px ${color};
+      `;
+      document.body.appendChild(p);
+      const tx = Math.cos(angle) * speed;
+      const ty = Math.sin(angle) * speed;
+      p.animate([
+        { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+        { transform: `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity: 0 },
+      ], { duration: dur, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'forwards' });
+      setTimeout(() => p.remove(), dur + 50);
+    }
+  }
+
   async function bajarAnim(cardEls, destEl) {
-    const rots = [-12, -6, 0, 6, 12, -10, -4, 2, 8, -8, -2, 4, 10];
-    const dstRect = destEl?.getBoundingClientRect();
-    
-    const promises = [...cardEls].map((el, i) => new Promise(resolve => {
-      const rect = el.getBoundingClientRect();
+    const slots = destEl?.querySelectorAll('.building-slot-cards');
+
+    // Agrupar cartas por slot — si no hay slots usar destEl como fallback
+    const cardArray = [...cardEls];
+    const slotCount = slots?.length || 1;
+    const perSlot   = Math.ceil(cardArray.length / slotCount);
+
+    const promises = cardArray.map((el, i) => new Promise(resolve => {
+      const rect     = el.getBoundingClientRect();
+      const slotIdx  = Math.floor(i / perSlot);
+      const slotEl   = slots?.[slotIdx] || destEl;
+      const dstRect  = slotEl?.getBoundingClientRect();
+
+      // Ghost de la carta
       const ghost = el.cloneNode(true);
-      
       ghost.style.cssText = `
-        position: fixed; 
-        z-index: ${9990 + i}; 
-        pointer-events: none;
-        width: ${rect.width}px; 
-        height: ${rect.height}px;
-        left: ${rect.left}px; 
-        top: ${rect.top}px;
-        box-shadow: 0 12px 30px rgba(0,0,0,.5);
-        border-radius: var(--r);
-        transition: none;
+        position:fixed; z-index:${9990 + i}; pointer-events:none;
+        width:${rect.width}px; height:${rect.height}px;
+        left:${rect.left}px; top:${rect.top}px;
+        border-radius:var(--r);
+        box-shadow:0 12px 30px rgba(0,0,0,.5);
+        transition:none;
       `;
       document.body.appendChild(ghost);
-      
-      const delay = i * 40;
-      
+
+      const delay = i * 55;
+
       setTimeout(() => {
-        ghost.style.transition = 'all 180ms cubic-bezier(.34,1.56,.64,1)';
-        ghost.style.transform = `translateY(-20px) rotate(${rots[i % rots.length]}deg) scale(1.08)`;
-        
+        // Fase 1: ligero salto hacia arriba
+        ghost.style.transition = 'all 150ms cubic-bezier(.34,1.56,.64,1)';
+        ghost.style.transform  = `translateY(-18px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
+
         setTimeout(() => {
-          if (dstRect) {
-            ghost.style.transition = 'all 300ms cubic-bezier(.22,1,.36,1)';
-            ghost.style.left = `${dstRect.left + dstRect.width/2 - rect.width/2}px`;
-            ghost.style.top = `${dstRect.top + dstRect.height/2 - rect.height/2}px`;
-            ghost.style.transform = 'scale(.7) rotate(0deg)';
-            ghost.style.opacity = '0';
-          } else {
-            ghost.style.transition = 'all 280ms var(--eout)';
-            ghost.style.transform = 'translateY(-60px) scale(.6)';
-            ghost.style.opacity = '0';
-          }
-          
-          setTimeout(() => { 
-            ghost.remove(); 
-            resolve(); 
-          }, 310);
-        }, 200);
+          if (!dstRect) { ghost.remove(); resolve(); return; }
+
+          // Fase 2: volar al slot destino
+          const tx = dstRect.left + (i % perSlot) * (rect.width * 0.6) - rect.left;
+          const ty = dstRect.top  - rect.top;
+
+          ghost.style.transition = 'all 340ms cubic-bezier(.22,1,.36,1)';
+          ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(.95) rotate(0deg)`;
+          ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.6), 0 8px 24px rgba(0,0,0,.4)';
+
+          setTimeout(() => {
+            // Flash dorado al aterrizar
+            ghost.style.transition = 'all 80ms ease';
+            ghost.style.boxShadow  = '0 0 40px rgba(200,160,69,1), 0 0 80px rgba(255,220,100,.5)';
+            ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(1.05) rotate(0deg)`;
+
+            // Partículas en el punto de aterrizaje
+            const landX = dstRect.left + dstRect.width  / 2;
+            const landY = dstRect.top  + dstRect.height / 2;
+            spawnParticles(landX, landY, 10);
+
+            setTimeout(() => {
+              ghost.style.transition = 'opacity 120ms ease';
+              ghost.style.opacity    = '0';
+              setTimeout(() => { ghost.remove(); resolve(); }, 130);
+            }, 100);
+          }, 320);
+        }, 160);
       }, delay);
     }));
-    
-    return Promise.all(promises);
+
+    await Promise.all(promises);
   }
 
   return { 

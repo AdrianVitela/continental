@@ -523,18 +523,27 @@ async function handlePagar(data) {
     }
 }
 
+// Oculta cartas de bajadas recién renderizadas para animarlas después
+function hideBajadasCards() {
+    const bajEl = document.getElementById('table-bajadas');
+    if (!bajEl) return;
+    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+        el.style.opacity = '0';
+        el.style.transform = 'scale(.6) translateY(-18px)';
+        el.style.transition = 'none';
+    });
+}
+
 // Anima las cartas recién aparecidas en la mesa con card-land
 function animateBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     if (!bajEl) return;
-    const cards = bajEl.querySelectorAll('.card-sm, .joker-sm');
+    const cards = [...bajEl.querySelectorAll('.card-sm, .joker-sm')];
     cards.forEach((el, i) => {
-        el.style.opacity = '0';
         setTimeout(() => {
-            el.classList.add('card-land');
-            el.style.opacity = '';
-            // Limpiar clase después de la animación
-            setTimeout(() => el.classList.remove('card-land'), 400);
+            el.style.transition = 'opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1)';
+            el.style.opacity    = '1';
+            el.style.transform  = 'scale(1) translateY(0)';
         }, i * 45);
     });
 }
@@ -566,9 +575,10 @@ async function handleBajar(data) {
             return { ghost, rect };
         });
 
-        // 2. Actualizar estado y renderizar mesa con bajadas
+        // 2. Actualizar estado y renderizar mesa con bajadas (ocultas)
         buildingCards.clear();
         render();
+        hideBajadasCards(); // ocultar inmediatamente antes de que el browser pinte
 
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));

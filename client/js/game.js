@@ -590,6 +590,9 @@ async function handleTomarFondo(data) {
         const wrapper = document.createElement('div');
         wrapper.innerHTML = srcCard ? srcCard.outerHTML : '<div class="cback"></div>';
         const ghost = wrapper.firstElementChild;
+        // Aplicar skin al ghost
+        const _sc = getMySkinClass();
+        if (_sc) ghost.classList.add(..._sc.trim().split(' '));
         ghost.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
             width:${src.width}px; height:${src.height}px;
@@ -643,6 +646,9 @@ async function handleCastigo(data) {
         const g1w = document.createElement('div');
         g1w.innerHTML = fondoCard ? fondoCard.outerHTML : '<div class="cback"></div>';
         const g1 = g1w.firstElementChild;
+        // Aplicar skin al ghost del fondo
+        const _skinCls = getMySkinClass();
+        if (_skinCls) g1.classList.add(..._skinCls.trim().split(' '));
         g1.style.cssText = `
             position:fixed; z-index:9999; pointer-events:none;
             width:${srcFondo.width}px; height:${srcFondo.height}px;

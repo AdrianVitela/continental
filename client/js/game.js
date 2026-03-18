@@ -707,12 +707,7 @@ async function handleCastigo(data) {
 
     } else {
         // Otro jugador se castigó
-        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
-        if (oppEl) {
-            oppEl.style.transition = 'box-shadow .2s ease';
-            oppEl.style.boxShadow  = '0 0 25px rgba(200,160,69,.9)';
-            setTimeout(() => oppEl.style.boxShadow = '', 500);
-        }
+        animateCastigo(data.jugadorIdx);
     }
 }
 
@@ -763,6 +758,46 @@ function animateOponenteBajo(jugadorIdx) {
     setTimeout(() => txt.remove(), 1000);
 
     // Partículas doradas
+    Anim.spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, 14);
+}
+
+function animateCastigo(jugadorIdx) {
+    const oppEl = document.querySelector(`.opp[data-idx="${jugadorIdx}"]`);
+    if (!oppEl) return;
+
+    // Flash naranja en la tarjeta
+    oppEl.style.transition = 'box-shadow .15s ease, border-color .15s ease';
+    oppEl.style.boxShadow  = '0 0 30px rgba(255,140,0,.9), 0 0 60px rgba(255,140,0,.4)';
+    oppEl.style.borderColor = 'rgba(255,140,0,.9)';
+    setTimeout(() => {
+        oppEl.style.boxShadow   = '';
+        oppEl.style.borderColor = '';
+    }, 800);
+
+    // Texto flotante "¡CASTIGO!"
+    const rect = oppEl.getBoundingClientRect();
+    const txt  = document.createElement('div');
+    txt.textContent = '¡CASTIGO!';
+    txt.style.cssText = `
+        position:fixed;
+        left:${rect.left + rect.width / 2}px;
+        top:${rect.top}px;
+        transform:translate(-50%, -10px);
+        font-family:'Cormorant Garamond',serif;
+        font-size:1.3rem;
+        font-weight:700;
+        color:#ff8c00;
+        text-shadow:0 0 20px rgba(255,140,0,.8), 0 2px 8px rgba(0,0,0,.8);
+        pointer-events:none;
+        z-index:9999;
+        white-space:nowrap;
+        animation:floatUp .9s cubic-bezier(.22,1,.36,1) forwards;
+    `;
+    document.body.appendChild(txt);
+    setTimeout(() => txt.remove(), 1000);
+
+    // Partículas naranjas
+    const colors = ['#ff8c00', '#ffa500', '#ffb732', '#fff'];
     Anim.spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, 14);
 }
 

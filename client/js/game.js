@@ -523,6 +523,22 @@ async function handlePagar(data) {
     }
 }
 
+// Anima las cartas recién aparecidas en la mesa con card-land
+function animateBajadas() {
+    const bajEl = document.getElementById('table-bajadas');
+    if (!bajEl) return;
+    const cards = bajEl.querySelectorAll('.card-sm, .joker-sm');
+    cards.forEach((el, i) => {
+        el.style.opacity = '0';
+        setTimeout(() => {
+            el.classList.add('card-land');
+            el.style.opacity = '';
+            // Limpiar clase después de la animación
+            setTimeout(() => el.classList.remove('card-land'), 400);
+        }, i * 45);
+    });
+}
+
 async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
         const discardZone = document.getElementById('discard-zone');
@@ -618,6 +634,9 @@ async function handleBajar(data) {
 
         // Esperar a que terminen todas las animaciones
         await new Promise(r => setTimeout(r, ghosts.length * 60 + 700));
+
+        // Animar aparición de cartas en la mesa
+        animateBajadas();
     }
 }
 

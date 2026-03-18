@@ -523,32 +523,78 @@ async function handlePagar(data) {
     }
 }
 
-// Oculta cartas de bajadas recién renderizadas para animarlas después
+// Oculta SOLO las cartas nuevas (sin data-animated) para animarlas después
 function hideBajadasCards() {
     const bajEl = document.getElementById('table-bajadas');
     if (!bajEl) return;
-    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
-        el.style.opacity = '0';
+    bajEl.querySelectorAll('.card-sm:not([data-animated]), .joker-sm:not([data-animated])').forEach(el => {
+        el.style.opacity   = '0';
         el.style.transform = 'scale(.6) translateY(-18px)';
         el.style.transition = 'none';
     });
 }
 
-// Anima las cartas recién aparecidas en la mesa con card-land
+// Anima SOLO las cartas nuevas (sin data-animated)
 function animateBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     if (!bajEl) return;
-    const cards = [...bajEl.querySelectorAll('.card-sm, .joker-sm')];
+    const cards = [...bajEl.querySelectorAll('.card-sm:not([data-animated]), .joker-sm:not([data-animated])')];
     cards.forEach((el, i) => {
         setTimeout(() => {
             el.style.transition = 'opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1)';
             el.style.opacity    = '1';
             el.style.transform  = 'scale(1) translateY(0)';
+            el.dataset.animated = '1';
         }, i * 45);
     });
 }
 
+// Flash + texto "¡SE BAJÓ!" sobre la tarjeta del oponente
+function animateOponenteBajo(jugadorIdx) {
+    const oppEl = document.querySelector(`.opp[data-idx="${jugadorIdx}"]`);
+    if (!oppEl) return;
+
+    // Flash en la tarjeta
+    oppEl.style.transition = 'box-shadow .15s ease, border-color .15s ease';
+    oppEl.style.boxShadow  = '0 0 30px rgba(200,160,69,.9), 0 0 60px rgba(200,160,69,.4)';
+    oppEl.style.borderColor = 'rgba(200,160,69,.9)';
+    setTimeout(() => {
+        oppEl.style.boxShadow   = '';
+        oppEl.style.borderColor = '';
+    }, 800);
+
+    // Texto flotante "¡SE BAJÓ!"
+    const rect = oppEl.getBoundingClientRect();
+    const txt  = document.createElement('div');
+    txt.textContent = '¡SE BAJÓ!';
+    txt.style.cssText = `
+        position:fixed;
+        left:${rect.left + rect.width / 2}px;
+        top:${rect.top}px;
+        transform:translate(-50%, -10px);
+        font-family:'Cormorant Garamond',serif;
+        font-size:1.3rem;
+        font-weight:700;
+        color:#ffe066;
+        text-shadow:0 0 20px rgba(200,160,69,.8), 0 2px 8px rgba(0,0,0,.8);
+        pointer-events:none;
+        z-index:9999;
+        white-space:nowrap;
+        animation:floatUp .9s cubic-bezier(.22,1,.36,1) forwards;
+    `;
+    document.body.appendChild(txt);
+    setTimeout(() => txt.remove(), 1000);
+
+    // Partículas doradas
+    Anim.spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, 14);
+}
+
 async function handleBajar(data) {
+    // Si otro jugador se bajó — mostrar animación de atención
+    if (data.jugadorIdx !== myIdx) {
+        animateOponenteBajo(data.jugadorIdx);
+        return;
+    }
     if (data.jugadorIdx === myIdx) {
         const discardZone = document.getElementById('discard-zone');
         const buildingRow = document.getElementById('building-row');

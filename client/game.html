@@ -1219,9 +1219,17 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
       } else {
         showSpeechBubble(nombre, texto);
       }
-      // Confetti si es el mensaje de victoria
+      // Efectos por mensaje
       if (texto.includes('gané') || texto.includes('gane')) {
         showConfetti();
+      } else if (texto.includes('dame mi carta')) {
+        shakeEl(document.getElementById('mazo-wrap'), 'soft');
+      } else if (texto.includes('astígate') || texto.includes('astigate')) {
+        flashTurnPlayer('red');
+      } else if (texto.includes('mala suerte')) {
+        vignette();
+      } else if (texto.includes('Buena jugada')) {
+        greenParticles(nombre);
       }
     }
   }
@@ -1346,6 +1354,90 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
       toggle.textContent = '💬🔴';
       clearTimeout(toggle._badgeT);
       toggle._badgeT = setTimeout(() => { toggle.textContent = '💬'; }, 5000);
+    }
+  }
+
+  // Shake suave en un elemento
+  function shakeEl(el, intensity = 'soft') {
+    if (!el) return;
+    const frames = intensity === 'soft'
+      ? [0, -4, 4, -3, 3, -2, 2, 0]
+      : [0, -8, 8, -6, 6, -4, 4, 0];
+    let i = 0;
+    const iv = setInterval(() => {
+      el.style.transform = `translateX(${frames[i] || 0}px)`;
+      i++;
+      if (i >= frames.length) { clearInterval(iv); el.style.transform = ''; }
+    }, 40);
+  }
+
+  // Flash rojo en la tarjeta del jugador activo
+  function flashTurnPlayer(color) {
+    if (typeof G === 'undefined' || !G) return;
+    const idx = G.turno;
+    const el = idx === myIdx
+      ? document.getElementById('discard-zone')
+      : document.querySelector(`.opp[data-idx="${idx}"]`);
+    if (!el) return;
+    const glowColor = color === 'red' ? 'rgba(220,50,50,.9)' : 'rgba(46,204,113,.9)';
+    el.style.transition = 'box-shadow .15s ease';
+    el.style.boxShadow  = `0 0 28px ${glowColor}`;
+    setTimeout(() => { el.style.boxShadow = ''; }, 600);
+  }
+
+  // Vignette oscuro breve
+  function vignette() {
+    const el = document.createElement('div');
+    el.style.cssText = `
+      position:fixed; inset:0; z-index:9993; pointer-events:none;
+      background:radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,.75) 100%);
+      animation:vignetteAnim 1.2s ease forwards;
+    `;
+    if (!document.querySelector('#vignetteKeyframes')) {
+      const s = document.createElement('style');
+      s.id = 'vignetteKeyframes';
+      s.textContent = '@keyframes vignetteAnim{0%{opacity:0}30%{opacity:1}100%{opacity:0}}';
+      document.head.appendChild(s);
+    }
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 1300);
+  }
+
+  // Partículas verdes desde la tarjeta del que manda el mensaje
+  function greenParticles(nombre) {
+    if (typeof G === 'undefined' || !G) return;
+    const idx = G.jugadores.findIndex(j => j.nombre === nombre);
+    const el = idx === myIdx
+      ? document.getElementById('my-name')
+      : document.querySelector(`.opp[data-idx="${idx}"]`);
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    const colors = ['#2ecc71','#27ae60','#a8f0c6','#fff'];
+    for (let i = 0; i < 16; i++) {
+      const p = document.createElement('div');
+      const angle = (Math.PI * 2 / 16) * i + (Math.random() - .5) * .4;
+      const speed = 35 + Math.random() * 50;
+      const size  = 5 + Math.random() * 5;
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const dur   = 500 + Math.random() * 300;
+      p.style.cssText = `
+        position:fixed; z-index:9995; pointer-events:none;
+        width:${size}px; height:${size}px;
+        border-radius:50%; background:${color};
+        left:${cx}px; top:${cy}px;
+        box-shadow:0 0 4px ${color};
+        transform:translate(-50%,-50%);
+      `;
+      document.body.appendChild(p);
+      const tx = Math.cos(angle) * speed;
+      const ty = Math.sin(angle) * speed;
+      p.animate([
+        { transform:'translate(-50%,-50%) scale(1)', opacity:1 },
+        { transform:`translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px)) scale(0)`, opacity:0 }
+      ], { duration: dur, easing:'cubic-bezier(.22,1,.36,1)', fill:'forwards' });
+      setTimeout(() => p.remove(), dur + 50);
     }
   }
 

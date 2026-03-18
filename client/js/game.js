@@ -1163,8 +1163,6 @@ function render() {
     renderScoreboard();
     renderOpponents();
     renderTableBajadas();
-    // Restaurar cartas ya animadas para que no parpadeen en re-renders
-    restoreAnimatedBajadas();
     renderMazo();
     renderFondo(me);
     renderPlayerInfo(me);
@@ -1284,6 +1282,17 @@ function renderTableBajadas() {
         });
         bajEl.appendChild(wrap);
     });
+    // Restaurar cartas ya animadas SIN transición para evitar flash en re-renders
+    if (_animatedBajadas.size) {
+        bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+            const id = el.dataset.id || el.dataset.comodinId || el.textContent.trim();
+            if (_animatedBajadas.has(id)) {
+                el.style.opacity    = '1';
+                el.style.transform  = 'none';
+                el.style.transition = 'none';
+            }
+        });
+    }
 }
 
 function renderMazo() {

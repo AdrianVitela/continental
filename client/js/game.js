@@ -35,6 +35,7 @@ let ackSent = false;
 let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null;
+let hideHandDuringDeal = false;
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
@@ -641,6 +642,7 @@ async function handleNewRound() {
     await Anim.shuffleAnim(mazoEl);
 
     // 2. Renderizar mano oculta para tener posiciones destino
+    hideHandDuringDeal = true;
     render();
     const cardEls = handZone?.querySelectorAll('.card');
     cardEls?.forEach(el => { el.style.opacity = '0'; el.style.transition = 'none'; });
@@ -649,13 +651,18 @@ async function handleNewRound() {
     await new Promise(r => requestAnimationFrame(r));
     await new Promise(r => requestAnimationFrame(r));
 
-    if (!mazoEl || !handZone || !mano.length) return;
+    if (!mazoEl || !handZone || !mano.length) {
+        hideHandDuringDeal = false;
+        renderHand();
+        return;
+    }
 
     const src = mazoEl.getBoundingClientRect();
+    const targetEls = [...handZone.querySelectorAll('.card')];
 
     // 3. Animar cada carta una por una
     for (let i = 0; i < mano.length; i++) {
-        await new Promise(r => setTimeout(r, i * 100));
+        if (i > 0) await new Promise(r => setTimeout(r, 140));
 
         const ghost = document.createElement('div');
         ghost.className = `cback ${getMySkinClass()}`;
@@ -670,12 +677,12 @@ async function handleNewRound() {
         `;
         document.body.appendChild(ghost);
 
-        const targetEl = handZone.querySelectorAll('.card')[i];
+        const targetEl = targetEls[i];
         const dst = targetEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
 
         await new Promise(r => setTimeout(r, 16));
 
-        ghost.style.transition = 'all 280ms cubic-bezier(.22,1,.36,1)';
+        ghost.style.transition = 'all 360ms cubic-bezier(.22,1,.36,1)';
         ghost.style.left      = `${dst.left}px`;
         ghost.style.top       = `${dst.top}px`;
         ghost.style.width     = `${dst.width}px`;
@@ -685,12 +692,14 @@ async function handleNewRound() {
         // Mostrar carta real cuando llega el ghost
         setTimeout(() => {
             if (targetEl) {
-                targetEl.style.transition = 'opacity 100ms ease';
+                targetEl.style.transition = 'opacity 160ms ease';
                 targetEl.style.opacity = '1';
             }
             ghost.remove();
-        }, 260);
+        }, 330);
     }
+
+    hideHandDuringDeal = false;
 }
 
 async function handleTomarMazo(data) {
@@ -1259,11 +1268,21 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
                             flex-shrink:0;
                         `;
+                    } else if (!carta?.valor || !carta?.palo) {
+                        cardEl.innerHTML = `<div style="font-size:.7rem;color:#c8a045">?</div>`;
+                        cardEl.style.cssText = `
+                            width:28px;height:40px;border-radius:4px;
+                            background:linear-gradient(135deg,#1f355f,#0d1c36);
+                            border:1px solid rgba(255,255,255,.18);
+                            display:flex;align-items:center;justify-content:center;
+                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            flex-shrink:0; position:relative;
+                        `;
                     } else {
                         const sc = SUIT_CLS_LOCAL[carta.palo] || '';
                         const isRed = sc === 'red-s';
                         cardEl.innerHTML = `
-                            <div style="font-size:.55rem;font-weight:700;color:${isRed?'#e05050':'#e8e8e8'};line-height:1.1;text-align:center">
+                            <div style="font-size:.55rem;font-weight:700;color:${isRed?'#e05050':'#1b1b1b'};line-height:1.1;text-align:center">
                                 ${carta.valor}<br>${carta.palo}
                             </div>`;
                         cardEl.style.cssText = `
@@ -1981,6 +2000,10 @@ function createCardElement(c, fromSlot = null) {
     const el = document.createElement('div');
     el.className = 'card' + (c.id === selId ? ' selected' : '');
     if (intercambioMode && selId && c.id === selId) el.classList.add('pending-intercambio');
+    if (hideHandDuringDeal) {
+        el.style.opacity = '0';
+        el.style.transition = 'none';
+    }
     el.dataset.id = c.id;
     if (fromSlot !== null) el.dataset.slot = fromSlot;
     el.draggable = false;

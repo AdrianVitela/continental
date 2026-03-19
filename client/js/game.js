@@ -35,7 +35,7 @@ let ackSent = false;
 let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null;
-let hideHandDuringDeal = false;
+let hideHandDuringDeal = true;
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
@@ -562,12 +562,14 @@ function setupSocketEvents() {
             await handleNewRound();
         } else if (isReconnect) {
             // En reconexión solo renderizar, no animar
+            hideHandDuringDeal = false;
             render();
             // Si el juego terminó mientras estábamos desconectados
             if (G.estado === 'fin_juego' && G.jugadores) {
                 showModalJuego(G.jugadores);
             }
         } else {
+            hideHandDuringDeal = false;
             render();
             await applyEvent(event, data, prev);
         }
@@ -2175,6 +2177,13 @@ function renderActions() {
     const btns = document.getElementById('action-btns');
     const instr = document.getElementById('instr');
     const cb = document.getElementById('castigo-banner');
+    const logLine = document.getElementById('log-line');
+
+    const starterIdx = G.jugadores?.length ? ((G.dealer + 1) % G.jugadores.length) : -1;
+    const resumenRonda = G.jugadores?.length
+        ? `Ronda ${G.ronda}. Dealer: ${G.jugadores[G.dealer]?.nombre || '—'}. Inicia: ${G.jugadores[starterIdx]?.nombre || '—'}.`
+        : '';
+    if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || resumenRonda;
 
     if (cb) cb.style.display = 'none';
     if (btns) btns.innerHTML = '';
@@ -2351,8 +2360,6 @@ function renderActions() {
             break;
     }
 
-    const logLine = document.getElementById('log-line');
-    if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || '';
 }
 
 // ═══════════════════════════════════════════════════

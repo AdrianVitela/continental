@@ -445,6 +445,25 @@ function setupSocketEvents() {
         document.getElementById('mode-pill').textContent = '🔴 Desconectado';
     });
     WS.on('state_update', async ({ event, data, state, tableColor }) => {
+        if (!WS._heartbeatStarted) {
+            WS._heartbeatStarted = true;
+
+            clearInterval(WS._pingInterval);
+            clearTimeout(WS._pongTimeout);
+
+            WS._pingInterval = setInterval(() => {
+                if (WS.ws?.readyState === WebSocket.OPEN) {
+                    WS.send({ type: 'ping' });
+                    console.log("📡 ping enviado");
+
+                    clearTimeout(WS._pongTimeout);
+                    WS._pongTimeout = setTimeout(() => {
+                        console.warn("💀 sin pong → cerrando");
+                        WS.ws.close();
+                    }, 10000);
+                }
+            }, 15000);
+        }
         if (!state) return;
         const prev = G;
         G = state;

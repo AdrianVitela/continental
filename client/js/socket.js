@@ -35,23 +35,15 @@
           const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
           const nombre  = usuario.nombre || localStorage.getItem('nombre_' + pid) || 'Jugador';
           WS.send({ type: 'join_room', code, nombre, playerId: pid, userId: usuario.id || null });
+        
+        WS.send({
+          type: 'join_room',
+          code,
+          nombre,
+          playerId: pid,
+          userId: usuario.id || null
+        });
         }
-        // Heartbeat — ping cada 15s para mantener viva la conexión con Railway
-        clearInterval(WS._pingInterval);
-        clearTimeout(WS._pongTimeout);
-        WS._pingInterval = setInterval(() => {
-          if (ws?.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'ping' }));
-            console.log("📡 ping enviado");
-            
-            // ⏱️ esperar pong
-            clearTimeout(WS._pongTimeout);
-            WS._pongTimeout = setTimeout(() => {
-              console.warn('[WS] No pong, cerrando conexión');
-              ws.close();
-            }, 10000);
-          } 
-        }, 15000);
       };
 
       ws.onmessage = (e) => {

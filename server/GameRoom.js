@@ -76,6 +76,17 @@ class GameRoom {
     if (!this.engine) return { ok: false, error: 'Partida no iniciada.' };
 
     let result;
+    const actor = this.players.find(p => p.id === playerId);
+
+    console.log('[ROOM]', this.code, 'accion:start', {
+      player: actor?.nombre || playerId,
+      type: msg.type,
+      estado: this.engine.estado,
+      turno: this.engine.turno,
+      turnoJugador: this.engine.jActivo?.nombre || null,
+      castigo_idx: this.engine.castigo_idx,
+      data: msg.type === 'castigo' ? { acepta: msg.acepta } : undefined,
+    });
 
     try {
       switch (msg.type) {
@@ -127,7 +138,28 @@ class GameRoom {
       return { ok: false, error: 'Error interno procesando la acción.' };
     }
 
-    if (!result || !result.ok) return result || { ok: false, error: 'Sin resultado.' };
+    if (!result || !result.ok) {
+      console.warn('[ROOM]', this.code, 'accion:error', {
+        player: actor?.nombre || playerId,
+        type: msg.type,
+        estado: this.engine.estado,
+        turno: this.engine.turno,
+        turnoJugador: this.engine.jActivo?.nombre || null,
+        castigo_idx: this.engine.castigo_idx,
+        error: result?.error || 'Sin resultado.',
+      });
+      return result || { ok: false, error: 'Sin resultado.' };
+    }
+
+    console.log('[ROOM]', this.code, 'accion:ok', {
+      player: actor?.nombre || playerId,
+      type: msg.type,
+      event: result.event,
+      estado: this.engine.estado,
+      turno: this.engine.turno,
+      turnoJugador: this.engine.jActivo?.nombre || null,
+      castigo_idx: this.engine.castigo_idx,
+    });
 
     this._resetTurnTimer();
     this._save();

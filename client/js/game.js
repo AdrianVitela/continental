@@ -439,10 +439,18 @@ function setupSocketEvents() {
     WS.on('_connected', () => {
         document.getElementById('modal-disconnected').classList.remove('show');
         document.getElementById('mode-pill').textContent = '🟢 Conectado';
+        console.log('[GAME] socket conectado', { room: ROOM, myId: MY_ID, socketId: WS._socketId || null });
     });
     WS.on('_disconnected', () => {
         document.getElementById('modal-disconnected').classList.add('show');
         document.getElementById('mode-pill').textContent = '🔴 Desconectado';
+        console.warn('[GAME] socket desconectado', {
+            room: ROOM,
+            myId: MY_ID,
+            socketId: WS._socketId || null,
+            online: navigator.onLine,
+            visible: document.visibilityState,
+        });
     });
     WS.on('state_update', async ({ event, data, state, tableColor }) => {
         if (!WS._heartbeatStarted) {
@@ -453,18 +461,41 @@ function setupSocketEvents() {
 
             WS._pingInterval = setInterval(() => {
                 if (WS.ws?.readyState === WebSocket.OPEN) {
+                    WS._lastPingAt = Date.now();
                     WS.send({ type: 'ping' });
-                    console.log("📡 ping enviado");
+                    console.log('[GAME] 📡 ping enviado', {
+                        socketId: WS._socketId || null,
+                        room: ROOM,
+                        visible: document.visibilityState,
+                        online: navigator.onLine,
+                    });
 
                     clearTimeout(WS._pongTimeout);
                     WS._pongTimeout = setTimeout(() => {
-                        console.warn("💀 sin pong → cerrando");
+                        console.warn('[GAME] 💀 sin pong -> cerrando socket', {
+                            socketId: WS._socketId || null,
+                            room: ROOM,
+                            msSincePing: WS._lastPingAt ? Date.now() - WS._lastPingAt : null,
+                            msSincePong: WS._lastPongAt ? Date.now() - WS._lastPongAt : null,
+                            readyState: WS.ws?.readyState,
+                            visible: document.visibilityState,
+                            online: navigator.onLine,
+                        });
                         WS.ws.close();
                     }, 10000);
                 }
             }, 15000);
         }
         if (!state) return;
+        console.log('[GAME] state_update', {
+            event,
+            room: ROOM,
+            myId: MY_ID,
+            estado: state.estado,
+            turno: state.turno,
+            castigo_idx: state.castigo_idx,
+            data,
+        });
         const prev = G;
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);

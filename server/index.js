@@ -32,6 +32,11 @@ app.get('/admin',    (_, res) => res.sendFile(path.join(__dirname, '../client/ad
 
 const rooms   = new Map();
 const clients = new Map();
+let socketSeq = 0;
+
+function logWs(...args) {
+  console.log('[WS]', ...args);
+}
 
 function genCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -73,23 +78,41 @@ setInterval(() => {
 const serverPingInterval = setInterval(() => {
   wss.clients.forEach(client => {
     if (client.readyState === 1) { // OPEN
+      client.lastServerPingAt = Date.now();
       client.ping();
     }
   });
 }, 15000);
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  ws._socketId = ++socketSeq;
+  ws._remoteAddress = req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress || 'unknown';
+  logWs(`socket#${ws._socketId} conectado desde ${ws._remoteAddress}`);
   // Responder a pongs para saber que el cliente sigue vivo
   ws.on('pong', () => {
     ws.isAlive = true;
+    ws.lastPongAt = Date.now();
+    const ctx = clients.get(ws);
+    logWs(`socket#${ws._socketId} pong`, {
+      room: ctx?.roomCode || null,
+      player: ctx?.nombre || null,
+      msSincePing: ws.lastServerPingAt ? Date.now() - ws.lastServerPingAt : null,
+    });
   });
   ws.isAlive = true;
+  ws.lastPongAt = Date.now();
   clients.set(ws, { playerId: null, roomCode: null, nombre: null });
 
   ws.on('message', async (raw) => {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     const ctx = clients.get(ws);
+    if (msg.type !== 'ping') {
+      logWs(`socket#${ws._socketId} -> ${msg.type}`, {
+        room: ctx?.roomCode || null,
+        player: ctx?.nombre || null,
+      });
+    }
 
     try {
       switch (msg.type) {
@@ -126,6 +149,11 @@ wss.on('connection', (ws) => {
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
           });
           rooms.set(code, room);
+          logWs(`socket#${ws._socketId} creó sala ${code}`, {
+            host: safeNombre,
+            mode,
+            maxPlayers: room.maxPlayers,
+          });
           send(ws, { type: 'room_created', code, playerId, lobbyState: room.lobbyState() });
           break;
         }
@@ -164,6 +192,14 @@ wss.on('connection', (ws) => {
           const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
+          logWs(`socket#${ws._socketId} join_room ${safeCode}`, {
+            player: safeNombre,
+            playerId,
+            reconnect: wasReconnecting,
+            roomStatus: room.status,
+            players: room.players.map(p => ({ nombre: p.nombre, conectado: p.conectado })),
+          });
+
           send(ws, { type: 'room_joined', code: safeCode, playerId, lobbyState: room.lobbyState() });
 
           if (room.engine && wasReconnecting) {
@@ -198,6 +234,10 @@ wss.on('connection', (ws) => {
         }
 
         case 'ping':
+          logWs(`socket#${ws._socketId} ping cliente`, {
+            room: ctx?.roomCode || null,
+            player: ctx?.nombre || null,
+          });
           send(ws, { type: 'pong' });
           break;
 
@@ -231,7 +271,13 @@ wss.on('connection', (ws) => {
 
   ws.on('close', (code, reason) => {
     const ctx = clients.get(ws);
-    console.log(`[WS] Desconexión — player: ${ctx?.nombre || 'unknown'} | code: ${code} | reason: ${reason?.toString() || 'none'}`);
+    logWs(`socket#${ws._socketId} desconexión`, {
+      player: ctx?.nombre || 'unknown',
+      room: ctx?.roomCode || null,
+      code,
+      reason: reason?.toString() || 'none',
+      msSincePong: ws.lastPongAt ? Date.now() - ws.lastPongAt : null,
+    });
     if (ctx?.roomCode) {
       const room = rooms.get(ctx.roomCode);
       if (room) room.removePlayer(ctx.playerId);
@@ -241,7 +287,12 @@ wss.on('connection', (ws) => {
 
   ws.on('error', (err) => {
     const ctx = clients.get(ws);
-    console.error(`[WS] Error socket — player: ${ctx?.nombre || 'unknown'} | ${err.message}`);
+    console.error('[WS] Error socket', {
+      socketId: ws._socketId,
+      player: ctx?.nombre || 'unknown',
+      room: ctx?.roomCode || null,
+      message: err.message,
+    });
     ws.terminate();
   });
 });

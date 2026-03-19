@@ -51,15 +51,21 @@
         } catch (_) {}
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
         clearInterval(WS._pingInterval);
+        clearTimeout(WS._pongTimeout);
+        console.warn('[WS] Conexión cerrada — code:', e.code, '| reason:', e.reason || '(sin razón)', '| clean:', e.wasClean);
         WS.emit('_disconnected');
         if (!intentionalClose) {
+          console.log('[WS] Reconectando en', reconnectDelay, 'ms...');
           setTimeout(() => { reconnectDelay = Math.min(reconnectDelay * 1.5, 10000); WS.connect(); }, reconnectDelay);
         }
       };
 
-      ws.onerror = () => ws.close();
+      ws.onerror = (e) => {
+        console.error('[WS] Error de socket:', e);
+        ws.close();
+      };
     },
 
     send(msg) {

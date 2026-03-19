@@ -213,8 +213,9 @@ wss.on('connection', (ws) => {
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code, reason) => {
     const ctx = clients.get(ws);
+    console.log(`[WS] Desconexión — player: ${ctx?.nombre || 'unknown'} | code: ${code} | reason: ${reason?.toString() || 'none'}`);
     if (ctx?.roomCode) {
       const room = rooms.get(ctx.roomCode);
       if (room) room.removePlayer(ctx.playerId);
@@ -223,7 +224,8 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('error', (err) => {
-    console.error('[WS] error en socket:', err.message);
+    const ctx = clients.get(ws);
+    console.error(`[WS] Error socket — player: ${ctx?.nombre || 'unknown'} | ${err.message}`);
     ws.terminate();
   });
 });

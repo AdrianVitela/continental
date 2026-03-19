@@ -68,7 +68,22 @@ setInterval(() => {
   }
 }, 30 * 60 * 1000);
 
+// Ping nativo del servidor a todos los clientes cada 15s
+// Esto mantiene viva la conexión a través del proxy de Railway
+const serverPingInterval = setInterval(() => {
+  wss.clients.forEach(client => {
+    if (client.readyState === 1) { // OPEN
+      client.ping();
+    }
+  });
+}, 15000);
+
 wss.on('connection', (ws) => {
+  // Responder a pongs para saber que el cliente sigue vivo
+  ws.on('pong', () => {
+    ws.isAlive = true;
+  });
+  ws.isAlive = true;
   clients.set(ws, { playerId: null, roomCode: null, nombre: null });
 
   ws.on('message', async (raw) => {

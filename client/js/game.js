@@ -518,7 +518,7 @@ async function applyEvent(event, data, prev) {
         case 'intercambiar_comodin':
             await handleIntercambiarComodin(data); break;
         case 'fin_ronda':
-            handleFinRonda(data); break;
+            await handleFinRonda(data); break;
         case 'fin_juego':
             showModalJuego(data.jugadores); break;
     }
@@ -1004,7 +1004,7 @@ async function handleIntercambiarComodin(data) {
     }
 }
 
-function handleFinRonda(data) {
+async function handleFinRonda(data) {
     // Primero float scores
     setTimeout(() => {
         G.jugadores.forEach((j, i) => {

@@ -1,6 +1,7 @@
 // client/js/game.js
 'use strict';
 let castigoEnviado = false;
+let pendingCastigo = null;
 const params = new URLSearchParams(location.search);
 const MY_ID = params.get('pid');
 const ROOM = params.get('code');
@@ -435,6 +436,35 @@ function init() {
     WS.connect();
 }
 
+function clearPendingCastigo(reason = '') {
+    if (pendingCastigo || castigoEnviado) {
+        console.log('[GAME] clearPendingCastigo', { reason, pendingCastigo });
+    }
+    pendingCastigo = null;
+    castigoEnviado = false;
+}
+
+function maybeReplayPendingCastigo(event) {
+    if (event !== 'reconnect' || !pendingCastigo || !G) return;
+    const sigueVigente = G.estado === 'fase_castigo' && G.castigo_idx === myIdx;
+    if (!sigueVigente) {
+        clearPendingCastigo('castigo ya no vigente tras reconnect');
+        return;
+    }
+    if (pendingCastigo.replayedSocketId === WS._socketId) return;
+
+    pendingCastigo.replayedSocketId = WS._socketId || null;
+    castigoEnviado = true;
+    console.log('[GAME] replay pending castigo', {
+        socketId: WS._socketId || null,
+        pendingCastigo,
+        estado: G.estado,
+        castigo_idx: G.castigo_idx,
+        turno: G.turno,
+    });
+    WS.send({ type: 'castigo', acepta: pendingCastigo.acepta });
+}
+
 function setupSocketEvents() {
     WS.on('_connected', () => {
         document.getElementById('modal-disconnected').classList.remove('show');
@@ -444,6 +474,7 @@ function setupSocketEvents() {
     WS.on('_disconnected', () => {
         document.getElementById('modal-disconnected').classList.add('show');
         document.getElementById('mode-pill').textContent = '🔴 Desconectado';
+        castigoEnviado = false;
         console.warn('[GAME] socket desconectado', {
             room: ROOM,
             myId: MY_ID,
@@ -500,6 +531,14 @@ function setupSocketEvents() {
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
         if (tableColor) applyTableTheme(tableColor);
+
+        if (event === 'castigo_acepta' || event === 'castigo_pasa') {
+            clearPendingCastigo(`ack ${event}`);
+        } else if (pendingCastigo && (G.estado !== 'fase_castigo' || G.castigo_idx !== myIdx)) {
+            clearPendingCastigo('estado cambió antes de confirmar castigo');
+        }
+
+        maybeReplayPendingCastigo(event);
 
         const isNewRound = event === 'game_started' || event === 'nueva_ronda';
         const isReconnect = event === 'reconnect';
@@ -1318,7 +1357,17 @@ function acCastigo(acepta) {
         return;
     }
     if (castigoEnviado) return;
+    pendingCastigo = {
+        acepta,
+        room: ROOM,
+        playerId: MY_ID,
+        castigo_idx: G.castigo_idx,
+        turno: G.turno,
+        sentAt: Date.now(),
+        replayedSocketId: null,
+    };
     castigoEnviado = true;
+    console.log('[GAME] enviar castigo', { pendingCastigo });
     WS.send({ type: 'castigo', acepta });
 }
 

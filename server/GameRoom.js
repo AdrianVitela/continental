@@ -46,9 +46,17 @@ class GameRoom {
     return player;
   }
 
-  removePlayer(id) {
+  removePlayer(id, closingWs = null) {
     const p = this.players.find(p => p.id === id);
     if (!p) return;
+    if (closingWs && p.ws && p.ws !== closingWs) {
+      console.log('[ROOM]', this.code, 'ignore stale close', {
+        player: p.nombre,
+        closingSocketId: closingWs._socketId || null,
+        activeSocketId: p.ws._socketId || null,
+      });
+      return;
+    }
     p.ws = null;
     p.conectado = false;
     if (this.engine) {

@@ -280,7 +280,7 @@ wss.on('connection', (ws, req) => {
     });
     if (ctx?.roomCode) {
       const room = rooms.get(ctx.roomCode);
-      if (room) room.removePlayer(ctx.playerId);
+      if (room) room.removePlayer(ctx.playerId, ws);
     }
     clients.delete(ws);
   });

@@ -528,6 +528,12 @@ function setupSocketEvents() {
             castigo_idx: state.castigo_idx,
             data,
         });
+
+        if (_firstLoad && event === 'player_connection_changed' && data?.playerId === MY_ID) {
+            console.log('[GAME] ignorando player_connection_changed inicial propio');
+            return;
+        }
+
         const prev = G;
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
@@ -543,14 +549,15 @@ function setupSocketEvents() {
 
         const isNewRound = event === 'game_started' || event === 'nueva_ronda';
         const isReconnect = event === 'reconnect';
-        const isFirstLoad = _firstLoad && !isReconnect;
+        const isInitialReconnect = _firstLoad && isReconnect;
         _firstLoad = false;
 
-        // Animar reparto solo si es ronda nueva (no recarga ni reconexión)
+        // Animar reparto si inicia ronda nueva o si esta es la primera
+        // reconexión al entrar a game.html y aún no se animó la ronda actual.
         const roundKey = `dealt_${ROOM}_r${G.ronda}`;
         const yaAnimado = sessionStorage.getItem(roundKey);
 
-        if ((isNewRound || isFirstLoad) && !yaAnimado) {
+        if ((isNewRound || isInitialReconnect) && !yaAnimado) {
             sessionStorage.setItem(roundKey, '1');
             await handleNewRound();
         } else if (isReconnect) {

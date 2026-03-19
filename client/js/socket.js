@@ -23,6 +23,13 @@
           const nombre = localStorage.getItem('nombre_' + pid) || 'Jugador';
           WS.send({ type: 'join_room', code, nombre, playerId: pid });
         }
+        // Heartbeat — ping cada 25s para mantener conexión viva
+        clearInterval(WS._pingInterval);
+        WS._pingInterval = setInterval(() => {
+          if (ws?.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 25000);
       };
 
       ws.onmessage = (e) => {
@@ -34,6 +41,7 @@
       };
 
       ws.onclose = () => {
+        clearInterval(WS._pingInterval);
         WS.emit('_disconnected');
         if (!intentionalClose) {
           setTimeout(() => { reconnectDelay = Math.min(reconnectDelay * 1.5, 10000); WS.connect(); }, reconnectDelay);

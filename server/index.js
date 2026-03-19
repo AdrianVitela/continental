@@ -181,6 +181,10 @@ wss.on('connection', (ws) => {
           break;
         }
 
+        case 'ping':
+          send(ws, { type: 'pong' });
+          break;
+
         case 'set_table_color': {
           const room = rooms.get(ctx.roomCode);
           if (!room || !ctx.playerId) return;

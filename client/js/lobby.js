@@ -13,6 +13,7 @@ const CODE_RE  = /^[A-Z0-9]+$/;
 
 const COOKIE_KEY  = 'continental_nombre';
 const COOKIE_DAYS = 365;
+const ACTIVE_LOBBY_KEY = 'continental_active_lobby';
 
 /* ================================================================
    POOL DE NOMBRES PREDEFINIDOS
@@ -159,6 +160,45 @@ let _activeNameTarget = 'crear';
 // Índice de inicio del shuffle actual
 let _shuffleOffset = 0;
 const NAMES_PER_PAGE = 12;
+
+function saveActiveLobbySession () {
+  if (!myCode || !myId) return;
+  sessionStorage.setItem(ACTIVE_LOBBY_KEY, JSON.stringify({
+    code: myCode,
+    playerId: myId,
+    isHost,
+  }));
+}
+
+function getActiveLobbySession () {
+  try {
+    return JSON.parse(sessionStorage.getItem(ACTIVE_LOBBY_KEY) || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearActiveLobbySession () {
+  sessionStorage.removeItem(ACTIVE_LOBBY_KEY);
+}
+
+function rejoinActiveLobbyIfNeeded () {
+  const active = getActiveLobbySession();
+  if (!active?.code || !active?.playerId) return;
+
+  myCode = active.code;
+  myId = active.playerId;
+  isHost = !!active.isHost;
+
+  const nombre = (window.getAuthNombre ? window.getAuthNombre() : '') || getCookie(COOKIE_KEY);
+  const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+  const userId = usuario?.id || null;
+
+  if (!nombre) return;
+
+  console.log('[LOBBY] rejoin automático', { code: myCode, playerId: myId, isHost });
+  WS.send({ type: 'join_room', nombre, userId, code: myCode, playerId: myId });
+}
 
 /* ================================================================
    COOKIES
@@ -429,6 +469,7 @@ function showLobby (lobbyState, pid, code, host) {
   myId   = pid;
   myCode = code;
   isHost = host;
+  saveActiveLobbySession();
 
   document.getElementById('lobby-setup').style.display = 'none';
   const lr = document.getElementById('lobby-room');
@@ -478,13 +519,18 @@ function updateLobbyState (lobbyState) {
    EVENTOS DEL SOCKET
    ================================================================ */
 function setupSocketEvents () {
+  WS.on('_connected', () => {
+    rejoinActiveLobbyIfNeeded();
+  });
+
   WS.on('room_created', ({ code, playerId, lobbyState }) => {
     showLobby(lobbyState, playerId, code, true);
     localStorage.setItem('cid_' + code, playerId);
   });
 
   WS.on('room_joined', ({ code, playerId, lobbyState }) => {
-    showLobby(lobbyState, playerId, code, false);
+    const soyHost = lobbyState?.players?.[0]?.id === playerId;
+    showLobby(lobbyState, playerId, code, soyHost);
     localStorage.setItem('cid_' + code, playerId);
   });
 
@@ -516,6 +562,7 @@ function setupSocketEvents () {
       // El host ya tiene currentTableColor; los demás lo reciben en tableColor del servidor
       const color = tableColor || currentTableColor || 'green';
       currentTableColor = color;
+      clearActiveLobbySession();
       sessionStorage.setItem('tableColor', color);
       if (musicAudio) sessionStorage.setItem('musicTime', musicAudio.currentTime);
       sessionStorage.setItem('musicPlaying', musicPlaying ? '1' : '0');
@@ -523,7 +570,10 @@ function setupSocketEvents () {
     }
   });
 
-  WS.on('error', ({ msg }) => toast(msg));
+  WS.on('error', ({ msg }) => {
+    if (msg === 'Sala no encontrada.') clearActiveLobbySession();
+    toast(msg);
+  });
 }
 
 /* ================================================================

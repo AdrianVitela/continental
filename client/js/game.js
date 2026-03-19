@@ -1,6 +1,6 @@
 // client/js/game.js
 'use strict';
-
+let castigoEnviado = false;
 const params = new URLSearchParams(location.search);
 const MY_ID = params.get('pid');
 const ROOM = params.get('code');
@@ -522,7 +522,12 @@ async function applyEvent(event, data, prev) {
         case 'bajar':
             await handleBajar(data); break;
         case 'castigo_acepta':
-            await handleCastigo(data); break;
+        case 'castigo_pasa':
+            castigoEnviado = false;
+            if (event === 'castigo_acepta') {
+                await handleCastigo(data);
+            }
+            break;
         case 'intercambiar_comodin':
             await handleIntercambiarComodin(data); break;
         case 'fin_ronda':
@@ -1221,8 +1226,13 @@ function acFondoDrag(insertIdx) {
 }
 
 function acCastigo(acepta) {
+    if (G.estado !== 'fase_castigo') {
+        console.warn("🚫 Intento de castigo fuera de fase");
+        return;
+    }
+    if (castigoEnviado) return;
+    castigoEnviado = true;
     WS.send({ type: 'castigo', acepta });
-    cancelIntercambio();
 }
 
 function acBajar() {

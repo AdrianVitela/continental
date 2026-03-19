@@ -38,6 +38,10 @@ class GameRoom {
       }
       return p;
     }
+    const sameSocketPlayer = this.players.find(p => p.ws === ws);
+    if (sameSocketPlayer) {
+      return sameSocketPlayer;
+    }
     if (this.players.length >= this.maxPlayers) return null;
     if (this.status !== 'lobby') return null;
     const player = { id, nombre, badge, skin, ws, conectado: true };

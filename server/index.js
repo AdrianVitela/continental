@@ -174,7 +174,6 @@ wss.on('connection', (ws, req) => {
           const wasReconnecting = !!existingId && room.players.some(p => p.id === existingId);
 
           const playerId = existingId || randomUUID();
-          ctx.playerId = playerId;
           ctx.roomCode = safeCode;
           ctx.nombre   = safeNombre;
 
@@ -192,18 +191,20 @@ wss.on('connection', (ws, req) => {
           const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
+          ctx.playerId = player.id;
+
           logWs(`socket#${ws._socketId} join_room ${safeCode}`, {
             player: safeNombre,
-            playerId,
+            playerId: player.id,
             reconnect: wasReconnecting,
             roomStatus: room.status,
             players: room.players.map(p => ({ nombre: p.nombre, conectado: p.conectado })),
           });
 
-          send(ws, { type: 'room_joined', code: safeCode, playerId, lobbyState: room.lobbyState() });
+          send(ws, { type: 'room_joined', code: safeCode, playerId: player.id, lobbyState: room.lobbyState() });
 
           if (room.engine && wasReconnecting) {
-            send(ws, { type: 'state_update', event: 'reconnect', state: room.engine.stateFor(playerId) });
+            send(ws, { type: 'state_update', event: 'reconnect', state: room.engine.stateFor(player.id) });
           }
           break;
         }

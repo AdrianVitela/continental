@@ -154,12 +154,23 @@ let playersList = [];
 let currentTableColor = 'green';
 let musicPlaying = false;
 let musicAudio = null;
+let lobbyActionPending = false;
 
 // Para el modal de nombres: qué input está activo
 let _activeNameTarget = 'crear';
 // Índice de inicio del shuffle actual
 let _shuffleOffset = 0;
 const NAMES_PER_PAGE = 12;
+
+function setLobbyActionPending (pending) {
+  lobbyActionPending = pending;
+
+  const createBtn = document.getElementById('btn-create-room');
+  const joinBtn = document.getElementById('btn-join-room');
+
+  if (createBtn) createBtn.disabled = pending;
+  if (joinBtn) joinBtn.disabled = pending;
+}
 
 function saveActiveLobbySession () {
   if (!myCode || !myId) return;
@@ -444,6 +455,8 @@ function crearSala () {
   const usuario  = JSON.parse(localStorage.getItem('usuario') || 'null');
   const userId   = usuario?.id || null;
   if (!nombre) { window.location.href = '/login'; return; }
+  if (lobbyActionPending) return;
+  setLobbyActionPending(true);
   WS.send({ type: 'create_room', nombre, userId, mode: gameMode, maxPlayers });
 }
 
@@ -455,6 +468,8 @@ function unirse () {
   const code     = cInput.value.trim().toUpperCase();
   if (!nombre) { window.location.href = '/login'; return; }
   if (!validateCode(code)) return;
+  if (lobbyActionPending) return;
+  setLobbyActionPending(true);
   WS.send({ type: 'join_room', nombre, userId, code });
 }
 
@@ -466,6 +481,7 @@ function iniciarJuego () {
    SALA DE ESPERA
    ================================================================ */
 function showLobby (lobbyState, pid, code, host) {
+  setLobbyActionPending(false);
   myId   = pid;
   myCode = code;
   isHost = host;
@@ -523,6 +539,10 @@ function setupSocketEvents () {
     rejoinActiveLobbyIfNeeded();
   });
 
+  WS.on('_disconnected', () => {
+    setLobbyActionPending(false);
+  });
+
   WS.on('room_created', ({ code, playerId, lobbyState }) => {
     showLobby(lobbyState, playerId, code, true);
     localStorage.setItem('cid_' + code, playerId);
@@ -571,6 +591,7 @@ function setupSocketEvents () {
   });
 
   WS.on('error', ({ msg }) => {
+    setLobbyActionPending(false);
     if (msg === 'Sala no encontrada.') clearActiveLobbySession();
     toast(msg);
   });

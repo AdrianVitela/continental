@@ -19,9 +19,11 @@
 
       intentionalClose = false;
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      console.log("🟢 NUEVO SOCKET intentando conectar...");
       ws = new WebSocket(`${proto}://${location.host}`);
 
       ws.onopen = () => {
+        console.log("✅ SOCKET CONECTADO");
         isConnecting = false;
         reconnectDelay = 1000;
         WS.emit('_connected');
@@ -40,6 +42,7 @@
         WS._pingInterval = setInterval(() => {
           if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
+            console.log("📡 ping enviado");
             
             // ⏱️ esperar pong
             clearTimeout(WS._pongTimeout);
@@ -54,7 +57,9 @@
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
+          console.log("📩 mensaje recibido:", msg);
           if (msg.type === 'pong') {
+            console.log("✅ pong recibido");
             clearTimeout(WS._pongTimeout);
             return;
           }
@@ -67,6 +72,7 @@
         isConnecting = false;
         clearInterval(WS._pingInterval);
         clearTimeout(WS._pongTimeout);
+        console.warn("🔴 SOCKET CERRADO:", e.code);
         console.warn('[WS] Conexión cerrada — code:', e.code, '| reason:', e.reason || '(sin razón)', '| clean:', e.wasClean);
         WS.emit('_disconnected');
         if (!intentionalClose) {

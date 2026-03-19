@@ -343,6 +343,88 @@ function slotsListosParaBajar() {
 // INICIALIZACIÓN Y SOCKET
 // ═══════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════
+// EFECTOS DE SONIDO (Web Audio API)
+// ═══════════════════════════════════════════════════
+const SFX = (() => {
+    let ctx = null;
+    function getCtx() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        return ctx;
+    }
+    function play(type) {
+        try {
+            const ac = getCtx();
+            const g  = ac.createGain();
+            g.connect(ac.destination);
+
+            if (type === 'robar') {
+                // Sonido suave de carta deslizándose
+                const o = ac.createOscillator();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(600, ac.currentTime);
+                o.frequency.exponentialRampToValueAtTime(300, ac.currentTime + 0.12);
+                g.gain.setValueAtTime(0.15, ac.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.12);
+                o.connect(g); o.start(); o.stop(ac.currentTime + 0.12);
+
+            } else if (type === 'pagar') {
+                // Sonido negativo corto
+                const o = ac.createOscillator();
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(200, ac.currentTime);
+                o.frequency.exponentialRampToValueAtTime(100, ac.currentTime + 0.18);
+                g.gain.setValueAtTime(0.12, ac.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.18);
+                o.connect(g); o.start(); o.stop(ac.currentTime + 0.18);
+
+            } else if (type === 'bajar') {
+                // Fanfarria corta positiva — 3 notas
+                [0, 0.1, 0.2].forEach((t, i) => {
+                    const o = ac.createOscillator();
+                    const gn = ac.createGain();
+                    o.type = 'triangle';
+                    o.frequency.value = [440, 554, 659][i];
+                    gn.gain.setValueAtTime(0.18, ac.currentTime + t);
+                    gn.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + 0.15);
+                    o.connect(gn); gn.connect(ac.destination);
+                    o.start(ac.currentTime + t);
+                    o.stop(ac.currentTime + t + 0.15);
+                });
+
+            } else if (type === 'carta') {
+                // Click suave al contar carta
+                const buf = ac.createBuffer(1, ac.sampleRate * 0.05, ac.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < data.length; i++) {
+                    data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) * 0.3;
+                }
+                const src = ac.createBufferSource();
+                src.buffer = buf;
+                src.connect(g);
+                g.gain.setValueAtTime(0.4, ac.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.05);
+                src.start();
+
+            } else if (type === 'victoria') {
+                // Fanfarria de victoria — 5 notas ascendentes
+                [0, 0.12, 0.24, 0.36, 0.48].forEach((t, i) => {
+                    const o = ac.createOscillator();
+                    const gn = ac.createGain();
+                    o.type = 'triangle';
+                    o.frequency.value = [392, 440, 494, 587, 659][i];
+                    gn.gain.setValueAtTime(0.2, ac.currentTime + t);
+                    gn.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + t + 0.2);
+                    o.connect(gn); gn.connect(ac.destination);
+                    o.start(ac.currentTime + t);
+                    o.stop(ac.currentTime + t + 0.2);
+                });
+            }
+        } catch(e) {}
+    }
+    return { play };
+})();
+
 let _firstLoad = true;
 const _animatedBajadas = new Set(); // IDs de cartas ya animadas en mesa
 
@@ -923,6 +1005,7 @@ async function handleIntercambiarComodin(data) {
 }
 
 function handleFinRonda(data) {
+    // Primero float scores
     setTimeout(() => {
         G.jugadores.forEach((j, i) => {
             const pts = data.puntos?.[i];
@@ -932,8 +1015,174 @@ function handleFinRonda(data) {
                 : document.querySelector(`.opp[data-idx="${i}"] .opp-name`);
             if (el) Anim.floatScore(el, pts.pts_r, pts.pts_r === 0);
         });
-        setTimeout(() => showModalRonda(data.ganadorIdx, data.puntos), 600);
     }, 300);
+
+    // Luego animación de conteo si hay manosFinales
+    const delay = data.manosFinales?.some(m => m.mano?.length > 0) ? 800 : 900;
+    setTimeout(async () => {
+        if (data.manosFinales?.some(m => m.mano?.length > 0)) {
+            await showConteoCartas(data.manosFinales, data.ganadorIdx);
+        }
+        showModalRonda(data.ganadorIdx, data.puntos);
+    }, delay);
+}
+
+async function showConteoCartas(manosFinales, ganadorIdx) {
+    return new Promise(resolve => {
+        const PUNTOS_CLIENT = {
+            'A': 20, 'J': 10, 'Q': 10, 'K': 10, '10': 10,
+            '9': 10, '8': 10, '2': 5, '3': 5, '4': 5, '5': 5, '6': 5, '7': 5
+        };
+        const SUIT_CLS_LOCAL = { '♠': 'blk-s', '♥': 'red-s', '♦': 'red-s', '♣': 'blk-s' };
+
+        // Solo jugadores con cartas
+        const perdedores = manosFinales.filter(m => m.mano?.length > 0);
+        if (!perdedores.length) { resolve(); return; }
+
+        // Overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position:fixed; inset:0; z-index:8000; pointer-events:none;
+            background:rgba(0,0,0,.65); backdrop-filter:blur(3px);
+            display:flex; flex-direction:column; align-items:center;
+            justify-content:center; gap:16px; padding:20px;
+        `;
+        document.body.appendChild(overlay);
+
+        // Título
+        const titulo = document.createElement('div');
+        titulo.textContent = '🃏 Conteo de cartas';
+        titulo.style.cssText = `
+            font-family:'Cormorant Garamond',serif;
+            font-size:1.6rem; font-weight:700; color:var(--gold);
+            text-shadow:0 0 20px rgba(200,160,69,.5);
+            letter-spacing:2px; margin-bottom:4px;
+        `;
+        overlay.appendChild(titulo);
+
+        // Contenedor de filas por jugador
+        const rows = document.createElement('div');
+        rows.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(600px,95vw)';
+        overlay.appendChild(rows);
+
+        let allDone = 0;
+        const totalPerdedores = perdedores.length;
+
+        perdedores.forEach((m, pi) => {
+            // Fila del jugador
+            const row = document.createElement('div');
+            row.style.cssText = `
+                background:rgba(0,0,0,.4);
+                border:1px solid rgba(200,160,69,.2);
+                border-radius:12px; padding:12px 16px;
+                display:flex; flex-direction:column; gap:8px;
+            `;
+
+            // Header con nombre y total
+            const header = document.createElement('div');
+            header.style.cssText = 'display:flex;align-items:center;justify-content:space-between';
+            const nombre = document.createElement('span');
+            nombre.textContent = m.nombre;
+            nombre.style.cssText = 'font-size:.9rem;color:var(--text);font-weight:600';
+            const total = document.createElement('span');
+            total.textContent = '0 pts';
+            total.style.cssText = `
+                font-family:'Cormorant Garamond',serif;
+                font-size:1.3rem; font-weight:700; color:var(--gold);
+                min-width:80px; text-align:right;
+                transition:color .2s;
+            `;
+            header.appendChild(nombre);
+            header.appendChild(total);
+            row.appendChild(header);
+
+            // Cartas
+            const cardsRow = document.createElement('div');
+            cardsRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:40px';
+            row.appendChild(cardsRow);
+            rows.appendChild(row);
+
+            // Animar cartas una por una
+            let acum = 0;
+            m.mano.forEach((carta, ci) => {
+                setTimeout(() => {
+                    // Crear carta
+                    const cardEl = document.createElement('div');
+                    const pts = carta.pts || (carta.comodin ? 50 : (PUNTOS_CLIENT[carta.valor] || 10));
+
+                    if (carta.comodin) {
+                        cardEl.innerHTML = `<div style="font-size:.6rem">🃏</div>`;
+                        cardEl.style.cssText = `
+                            width:28px;height:40px;border-radius:4px;
+                            background:linear-gradient(135deg,#4a2080,#2a1040);
+                            border:1px solid rgba(255,220,100,.4);
+                            display:flex;align-items:center;justify-content:center;
+                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            flex-shrink:0;
+                        `;
+                    } else {
+                        const sc = SUIT_CLS_LOCAL[carta.palo] || '';
+                        const isRed = sc === 'red-s';
+                        cardEl.innerHTML = `
+                            <div style="font-size:.55rem;font-weight:700;color:${isRed?'#e05050':'#e8e8e8'};line-height:1.1;text-align:center">
+                                ${carta.valor}<br>${carta.palo}
+                            </div>`;
+                        cardEl.style.cssText = `
+                            width:28px;height:40px;border-radius:4px;
+                            background:#f5f0e8; border:1px solid rgba(0,0,0,.15);
+                            display:flex;align-items:center;justify-content:center;
+                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            flex-shrink:0; position:relative;
+                        `;
+                    }
+                    cardsRow.appendChild(cardEl);
+
+                    // Aparecer con bounce
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            cardEl.style.transform = 'scale(1)';
+                            SFX.play('carta');
+                        });
+                    });
+
+                    // Badge de puntos sobre la carta
+                    setTimeout(() => {
+                        const badge = document.createElement('div');
+                        badge.textContent = `+${pts}`;
+                        badge.style.cssText = `
+                            position:absolute; top:-8px; right:-4px;
+                            background:var(--gold); color:#0b1e12;
+                            font-size:.5rem; font-weight:700;
+                            border-radius:8px; padding:1px 4px;
+                            pointer-events:none; z-index:1;
+                            animation:popIn .2s cubic-bezier(.34,1.56,.64,1) both;
+                        `;
+                        cardEl.style.position = 'relative';
+                        cardEl.appendChild(badge);
+
+                        // Sumar al total
+                        acum += pts;
+                        total.textContent = `${acum} pts`;
+                        if (acum > 0) total.style.color = '#ff7070';
+
+                        // Último
+                        if (ci === m.mano.length - 1) {
+                            allDone++;
+                            if (allDone === totalPerdedores) {
+                                // Esperar y cerrar
+                                setTimeout(() => {
+                                    overlay.style.transition = 'opacity 400ms ease';
+                                    overlay.style.opacity = '0';
+                                    setTimeout(() => { overlay.remove(); resolve(); }, 400);
+                                }, 1800);
+                            }
+                        }
+                    }, 150);
+
+                }, pi * 200 + ci * 180);
+            });
+        });
+    });
 }
 
 // ═══════════════════════════════════════════════════
@@ -946,6 +1195,7 @@ function isPayable() { return isMyTurn() && ['esperando_accion', 'esperando_pago
 function acMazo() {
     if (!isMyTurn() || G.estado !== 'esperando_robo') return;
     cancelIntercambio();
+    SFX.play('robar');
     WS.send({ type: 'tomar_mazo' });
 }
 
@@ -979,6 +1229,7 @@ function acBajar() {
         jugadas.push({ tipo: def.type, cartas: cartasReales });
     }
     if (jugadas.length === 0) { toast('❌ No hay cartas en los slots de construcción'); return; }
+    SFX.play('bajar');
     WS.send({ type: 'bajar', jugadas });
     cancelIntercambio();
 }
@@ -994,6 +1245,7 @@ function acPagar(cartaId) {
             updateSlotUI(slotIndex, cards);
         }
     });
+    SFX.play('pagar');
     WS.send({ type: 'pagar', cartaId: id });
     selId = null;
     cancelIntercambio();
@@ -1968,16 +2220,128 @@ function showModalRonda(ganadorIdx, puntos) {
 }
 
 function showModalJuego(jugadores) {
-    const modal = document.getElementById('modal-juego');
-    if (!modal) return;
+    SFX.play('victoria');
+    showConfetti();
+    showPodio(jugadores);
+}
+
+function showConfetti() {
+    const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#fff','#c8a045'];
+    for (let i = 0; i < 120; i++) {
+        setTimeout(() => {
+            const el = document.createElement('div');
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            const size  = 6 + Math.random() * 9;
+            el.style.cssText = `
+                position:fixed; left:${Math.random()*100}vw; top:-10px;
+                width:${size}px; height:${size}px;
+                background:${color};
+                border-radius:${Math.random()>.5?'50%':'2px'};
+                pointer-events:none; z-index:9994;
+                animation:confettiFall ${2000+Math.random()*2000}ms ease-in forwards;
+            `;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 4100);
+        }, Math.random() * 1000);
+    }
+}
+
+function showPodio(jugadores) {
     const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);
-    document.getElementById('mj-scores').innerHTML = sorted.map((j, i) => `
-        <div class="srow ${i === 0 ? 'winner' : ''}">
-            <span>${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i]} ${j.nombre}</span>
-            <span class="srow-pts">${j.pts_t} pts</span>
-        </div>
-    `).join('');
-    modal.classList.add('show');
+    const podioColors = [
+        { bg: 'linear-gradient(135deg,#c8a045,#7a5c00)', border: 'rgba(200,160,69,.8)', medal: '🥇', label: '1er lugar', glow: '0 0 30px rgba(200,160,69,.6)' },
+        { bg: 'linear-gradient(135deg,#8a8a8a,#4a4a4a)', border: 'rgba(200,200,200,.5)', medal: '🥈', label: '2do lugar', glow: '0 0 20px rgba(150,150,150,.4)' },
+        { bg: 'linear-gradient(135deg,#8a5a2a,#4a2a10)', border: 'rgba(180,100,40,.5)', medal: '🥉', label: '3er lugar', glow: '0 0 16px rgba(180,100,40,.3)' },
+    ];
+
+    const overlay = document.createElement('div');
+    overlay.id = 'podio-overlay';
+    overlay.style.cssText = `
+        position:fixed; inset:0; z-index:9000;
+        background:rgba(0,0,0,.85); backdrop-filter:blur(6px);
+        display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:20px; padding:24px;
+    `;
+
+    // Título
+    const titulo = document.createElement('div');
+    titulo.innerHTML = '🏆 ¡Fin del juego!';
+    titulo.style.cssText = `
+        font-family:'Cormorant Garamond',serif;
+        font-size:clamp(2rem,6vw,3rem); font-weight:700;
+        color:var(--gold); letter-spacing:3px;
+        text-shadow:0 0 40px rgba(200,160,69,.6);
+        opacity:0; transform:translateY(-20px);
+        transition:all .5s ease;
+    `;
+    overlay.appendChild(titulo);
+
+    // Podio cards
+    const podioWrap = document.createElement('div');
+    podioWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:min(400px,92vw)';
+    overlay.appendChild(podioWrap);
+
+    // Botón nueva partida
+    const btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'margin-top:8px;opacity:0;transition:opacity .5s ease .8s';
+    btnWrap.innerHTML = `<button onclick="location.href='/'" style="
+        background:linear-gradient(135deg,var(--gold),#b8920a);
+        color:#0b1e12; border:none; border-radius:12px;
+        padding:14px 32px; font-size:1rem; font-weight:700;
+        cursor:pointer; letter-spacing:1px; text-transform:uppercase;
+        font-family:inherit;
+    ">Nueva Partida →</button>`;
+    overlay.appendChild(btnWrap);
+
+    document.body.appendChild(overlay);
+
+    // Animar título
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            titulo.style.opacity = '1';
+            titulo.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Animar cada posición con delay
+    sorted.forEach((j, i) => {
+        const col = podioColors[i] || { bg:'rgba(0,0,0,.3)', border:'rgba(255,255,255,.1)', medal:['4️⃣','5️⃣'][i-3]||'', label:`${i+1}º lugar`, glow:'none' };
+
+        setTimeout(() => {
+            const card = document.createElement('div');
+            card.style.cssText = `
+                background:${col.bg};
+                border:2px solid ${col.border};
+                border-radius:14px; padding:16px 20px;
+                display:flex; align-items:center; gap:14px;
+                box-shadow:${col.glow};
+                opacity:0; transform:translateX(-30px);
+                transition:all .4s cubic-bezier(.22,1,.36,1);
+            `;
+
+            card.innerHTML = `
+                <div style="font-size:${i===0?'2.2rem':'1.6rem'};line-height:1">${col.medal}</div>
+                <div style="flex:1">
+                    <div style="font-size:${i===0?'1.1rem':'.95rem'};font-weight:700;color:#fff">${j.nombre}</div>
+                    <div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px">${col.label}</div>
+                </div>
+                <div style="font-family:'Cormorant Garamond',serif;font-size:${i===0?'1.6rem':'1.2rem'};font-weight:700;color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
+            `;
+
+            podioWrap.appendChild(card);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateX(0)';
+                    if (i === 0) SFX.play('victoria');
+                });
+            });
+        }, 300 + i * 300);
+    });
+
+    // Mostrar botón
+    setTimeout(() => { btnWrap.style.opacity = '1'; }, 300 + sorted.length * 300 + 400);
 }
 
 function toast(msg, type = 'red') {

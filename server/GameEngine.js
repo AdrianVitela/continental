@@ -987,6 +987,18 @@ class GameEngine {
         return this._ok('fin_ronda', {
             ganadorIdx,
             puntos: this.jugadores.map(j => ({ pts_r: j.pts_r, pts_t: j.pts_t })),
+            // Cartas en mano de cada jugador para animación de conteo
+            manosFinales: this.jugadores.map((j, i) => ({
+                jugadorIdx: i,
+                nombre: j.nombre,
+                mano: i === ganadorIdx ? [] : j.mano.map(c => ({
+                    id: c.id,
+                    valor: c.valor,
+                    palo: c.palo || null,
+                    comodin: c.comodin || false,
+                    pts: c.comodin ? 50 : (PUNTOS[c.valor] || 10),
+                })),
+            })),
             ...extra
         });
     }

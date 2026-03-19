@@ -1059,6 +1059,38 @@ async function handleFinRonda(data) {
     }, delay);
 }
 
+function getCartaConteoCompleta(carta) {
+    const PUNTOS_CONTEO = {
+        'A': 20, 'J': 10, 'Q': 10, 'K': 10, '10': 10,
+        '9': 10, '8': 10, '2': 5, '3': 5, '4': 5, '5': 5, '6': 5, '7': 5
+    };
+
+    if (!carta || carta.hidden || (!carta.comodin && !carta.valor)) {
+        const fallbackMap = new Map();
+
+        const me = G?.jugadores?.[myIdx];
+        (me?.mano || []).forEach(c => {
+            if (c?.id != null) fallbackMap.set(c.id, c);
+        });
+
+        buildingCards.forEach(cards => {
+            cards.forEach(c => {
+                if (c?.id != null) fallbackMap.set(c.id, c);
+            });
+        });
+
+        const fallback = fallbackMap.get(carta?.id);
+        if (fallback) {
+            return {
+                ...fallback,
+                pts: fallback.comodin ? 50 : (PUNTOS_CONTEO[fallback.valor] || 10),
+            };
+        }
+    }
+
+    return carta;
+}
+
 async function showConteoCartas(manosFinales, ganadorIdx) {
     return new Promise(resolve => {
         const PUNTOS_CLIENT = {
@@ -1068,7 +1100,12 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
         const SUIT_CLS_LOCAL = { '♠': 'blk-s', '♥': 'red-s', '♦': 'red-s', '♣': 'blk-s' };
 
         // Solo jugadores con cartas
-        const perdedores = manosFinales.filter(m => m.mano?.length > 0);
+        const perdedores = manosFinales
+            .map(m => ({
+                ...m,
+                mano: (m.mano || []).map(carta => getCartaConteoCompleta(carta)),
+            }))
+            .filter(m => m.mano?.length > 0);
         if (!perdedores.length) { resolve(); return; }
 
         // Overlay

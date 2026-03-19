@@ -492,6 +492,14 @@ function setupSocketEvents () {
     if (lobbyState) updateLobbyState(lobbyState);
   });
 
+  WS.on('player_reconnected', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
+  WS.on('player_disconnected', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
   WS.on('table_color_changed', ({ color, lobbyState }) => {
     currentTableColor = color;
     // Actualizar swatches si el host los ve

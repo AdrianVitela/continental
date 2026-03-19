@@ -32,7 +32,10 @@ class GameRoom {
       p.ws = ws;
       p.conectado = true;
       if (this.engine) this.engine._findPlayer(id).conectado = true;
-      this.broadcast({ type: 'player_reconnected', nombre }, id);
+      this.broadcast({ type: 'player_reconnected', nombre, lobbyState: this.lobbyState() }, id);
+      if (this.engine) {
+        this._broadcastState('player_connection_changed', { playerId: id, conectado: true });
+      }
       return p;
     }
     if (this.players.length >= this.maxPlayers) return null;
@@ -52,7 +55,10 @@ class GameRoom {
       const ej = this.engine._findPlayer(id);
       if (ej) ej.conectado = false;
     }
-    this.broadcast({ type: 'player_disconnected', nombre: p.nombre });
+    this.broadcast({ type: 'player_disconnected', nombre: p.nombre, lobbyState: this.lobbyState() });
+    if (this.engine) {
+      this._broadcastState('player_connection_changed', { playerId: id, conectado: false });
+    }
   }
 
   startGame() {

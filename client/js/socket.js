@@ -8,6 +8,8 @@
   let isConnecting = false;
 
   const WS = {
+    get ws() { return ws; },
+
     connect() {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         console.warn('[WS] Ya hay conexión activa');
@@ -34,8 +36,6 @@
         if (code && pid) {
           const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
           const nombre  = usuario.nombre || localStorage.getItem('nombre_' + pid) || 'Jugador';
-          WS.send({ type: 'join_room', code, nombre, playerId: pid, userId: usuario.id || null });
-        
         WS.send({
           type: 'join_room',
           code,
@@ -64,6 +64,7 @@
         isConnecting = false;
         clearInterval(WS._pingInterval);
         clearTimeout(WS._pongTimeout);
+        WS._heartbeatStarted = false;
         console.warn("🔴 SOCKET CERRADO:", e.code);
         console.warn('[WS] Conexión cerrada — code:', e.code, '| reason:', e.reason || '(sin razón)', '| clean:', e.wasClean);
         WS.emit('_disconnected');

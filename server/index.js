@@ -40,7 +40,7 @@ function genCode() {
   return c;
 }
 
-const NAME_RE = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]{2,18}$/;
+const NAME_RE = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const CODE_RE = /^[A-Z0-9]{4,5}$/;
 
 function validateNombre(nombre) {
@@ -49,7 +49,7 @@ function validateNombre(nombre) {
   if (!v)            return 'El nombre no puede estar vacío.';
   if (v.length < 2)  return 'El nombre debe tener al menos 2 caracteres.';
   if (v.length > 18) return 'El nombre no puede superar los 18 caracteres.';
-  if (!NAME_RE.test(v)) return 'El nombre solo puede contener letras y números.';
+  if (!NAME_RE.test(v)) return 'El nombre solo puede contener letras, números y espacios.';
   return null;
 }
 
@@ -143,6 +143,8 @@ wss.on('connection', (ws) => {
           const room = rooms.get(safeCode);
           if (!room) return send(ws, { type: 'error', msg: 'Sala no encontrada.' });
 
+          const wasReconnecting = !!existingId && room.players.some(p => p.id === existingId);
+
           const playerId = existingId || randomUUID();
           ctx.playerId = playerId;
           ctx.roomCode = safeCode;
@@ -163,9 +165,8 @@ wss.on('connection', (ws) => {
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           send(ws, { type: 'room_joined', code: safeCode, playerId, lobbyState: room.lobbyState() });
-          room.broadcast({ type: 'player_joined', nombre: safeNombre, lobbyState: room.lobbyState() }, playerId);
 
-          if (room.engine) {
+          if (room.engine && wasReconnecting) {
             send(ws, { type: 'state_update', event: 'reconnect', state: room.engine.stateFor(playerId) });
           }
           break;

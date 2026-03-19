@@ -5,14 +5,24 @@
   let ws = null;
   let reconnectDelay = 1000;
   let intentionalClose = false;
+  let isConnecting = false;
 
   const WS = {
     connect() {
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        console.warn('[WS] Ya hay conexión activa');
+        return;
+      }
+
+      if (isConnecting) return;
+      isConnecting = true;
+
       intentionalClose = false;
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       ws = new WebSocket(`${proto}://${location.host}`);
 
       ws.onopen = () => {
+        isConnecting = false;
         reconnectDelay = 1000;
         WS.emit('_connected');
         // Restore session if mid-game
@@ -30,7 +40,14 @@
         WS._pingInterval = setInterval(() => {
           if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
-          }
+            
+            // ⏱️ esperar pong
+            clearTimeout(WS._pongTimeout);
+            WS._pongTimeout = setTimeout(() => {
+              console.warn('[WS] No pong, cerrando conexión');
+              ws.close();
+            }, 10000);
+          } 
         }, 15000);
       };
 
@@ -47,6 +64,7 @@
       };
 
       ws.onclose = (e) => {
+        isConnecting = false;
         clearInterval(WS._pingInterval);
         clearTimeout(WS._pongTimeout);
         console.warn('[WS] Conexión cerrada — code:', e.code, '| reason:', e.reason || '(sin razón)', '| clean:', e.wasClean);
@@ -59,7 +77,6 @@
 
       ws.onerror = (e) => {
         console.error('[WS] Error de socket:', e);
-        ws.close();
       };
     },
 

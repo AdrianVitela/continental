@@ -20,21 +20,32 @@
         const code = params.get('code');
         const pid  = params.get('pid');
         if (code && pid) {
-          const nombre = localStorage.getItem('nombre_' + pid) || 'Jugador';
-          WS.send({ type: 'join_room', code, nombre, playerId: pid });
+          const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
+          const nombre  = usuario.nombre || localStorage.getItem('nombre_' + pid) || 'Jugador';
+          WS.send({ type: 'join_room', code, nombre, playerId: pid, userId: usuario.id || null });
         }
-        // Heartbeat — ping cada 25s para mantener conexión viva
+        // Heartbeat — ping cada 20s para mantener conexión viva
         clearInterval(WS._pingInterval);
+        clearTimeout(WS._pongTimeout);
         WS._pingInterval = setInterval(() => {
           if (ws?.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
+            // Si no llega pong en 5s, forzar reconexión
+            WS._pongTimeout = setTimeout(() => {
+              console.warn('[WS] pong timeout, reconnecting...');
+              ws.close();
+            }, 5000);
           }
-        }, 25000);
+        }, 20000);
       };
 
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data);
+          if (msg.type === 'pong') {
+            clearTimeout(WS._pongTimeout);
+            return;
+          }
           WS.emit(msg.type, msg);
           WS.emit('*', msg); // wildcard
         } catch (_) {}

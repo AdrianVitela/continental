@@ -452,16 +452,24 @@ function setupSocketEvents() {
         if (tableColor) applyTableTheme(tableColor);
 
         const isNewRound = event === 'game_started' || event === 'nueva_ronda';
-        const isFirstLoad = _firstLoad;
+        const isReconnect = event === 'reconnect';
+        const isFirstLoad = _firstLoad && !isReconnect;
         _firstLoad = false;
 
-        // Animar reparto solo si es ronda nueva (no recarga)
+        // Animar reparto solo si es ronda nueva (no recarga ni reconexión)
         const roundKey = `dealt_${ROOM}_r${G.ronda}`;
         const yaAnimado = sessionStorage.getItem(roundKey);
 
         if ((isNewRound || isFirstLoad) && !yaAnimado) {
             sessionStorage.setItem(roundKey, '1');
             await handleNewRound();
+        } else if (isReconnect) {
+            // En reconexión solo renderizar, no animar
+            render();
+            // Si el juego terminó mientras estábamos desconectados
+            if (G.estado === 'fin_juego' && G.jugadores) {
+                showModalJuego(G.jugadores);
+            }
         } else {
             render();
             await applyEvent(event, data, prev);

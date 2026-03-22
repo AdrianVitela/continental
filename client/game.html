@@ -30,8 +30,19 @@
   78%  { transform: scale(.98) translateY(0) rotate(0deg); }
   100% { opacity:1; transform: scale(1) translateY(0) rotate(0deg); filter: brightness(1); }
 }
+
+@keyframes pileLand {
+  0%   { transform: translateY(8px) scale(.985); box-shadow: 0 0 0 rgba(200,160,69,0); }
+  55%  { transform: translateY(-2px) scale(1.01); box-shadow: 0 0 24px rgba(200,160,69,.18); }
+  100% { transform: translateY(0) scale(1); box-shadow: 0 0 0 rgba(200,160,69,0); }
+}
+
 .card-land {
   animation: cardLand 320ms cubic-bezier(.22,1,.36,1) both;
+}
+
+.pile-land {
+  animation: pileLand 360ms cubic-bezier(.22,1,.36,1) both;
 }
 
 /* ===== TEMAS DE MESA ===== */

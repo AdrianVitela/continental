@@ -933,13 +933,28 @@ async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
         const discardZone = document.getElementById('discard-zone');
         const buildingRow = document.getElementById('building-row');
-        const bajadas = document.getElementById('table-bajadas');
 
         // 1. Capturar clones visuales ANTES de tocar el DOM
         const allCardEls = [
             ...(discardZone?.querySelectorAll('.card') || []),
             ...(buildingRow?.querySelectorAll('.card')  || []),
         ];
+
+        // Crear ghosts fijos en su posición actual
+        const ghosts = allCardEls.map(el => {
+            const rect  = el.getBoundingClientRect();
+            const ghost = el.cloneNode(true);
+            ghost.style.cssText = `
+                position:fixed; z-index:9990; pointer-events:none;
+                width:${rect.width}px; height:${rect.height}px;
+                left:${rect.left}px; top:${rect.top}px;
+                border-radius:var(--r);
+                box-shadow:0 8px 24px rgba(0,0,0,.5);
+                transition:none;
+            `;
+            document.body.appendChild(ghost);
+            return { ghost, rect };
+        });
 
         // 2. Actualizar estado y renderizar mesa con bajadas (ocultas)
         buildingCards.clear();
@@ -948,21 +963,63 @@ async function handleBajar(data) {
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
+        // 3. Destino: slots de bajadas del jugador en la mesa
+        const bajadas   = document.getElementById('table-bajadas');
         const myBajadas = bajadas?.querySelector(`[data-jugador-idx="${myIdx}"]`);
-        if (!bajadas) return;
+        const slots     = myBajadas?.querySelectorAll('.jugada-cards') || bajadas?.querySelectorAll('.jugada-cards');
+        const slotArr   = [...(slots || [])];
+        const dstEl     = slotArr[0] || bajadas;
+        const dstRect   = dstEl?.getBoundingClientRect();
 
-        await Anim.bajarAnim(allCardEls, myBajadas || bajadas, {
-            slotSelector: '.jugada-cards',
-            stepDelay: 60,
-            lift: 20,
-            jumpDuration: 150,
-            flyDuration: 360,
-            landDuration: 80,
-            fadeDuration: 100,
-            particles: 8,
-            flyScale: .9,
-            landScale: 1.06,
+        if (!dstRect) {
+            ghosts.forEach(({ ghost }) => ghost.remove());
+            return;
+        }
+
+        // 4. Animar cada ghost volando al destino
+        const perSlot = Math.max(1, Math.ceil(ghosts.length / Math.max(slotArr.length, 1)));
+
+        ghosts.forEach(({ ghost, rect }, i) => {
+            const slotIdx  = Math.floor(i / perSlot);
+            const targetEl = slotArr[slotIdx] || dstEl;
+            const tRect    = targetEl?.getBoundingClientRect() || dstRect;
+
+            const delay = i * 60;
+
+            setTimeout(() => {
+                ghost.style.transition = 'all 150ms cubic-bezier(.34,1.56,.64,1)';
+                ghost.style.transform  = `translateY(-20px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
+
+                setTimeout(() => {
+                    const dx = tRect.left + tRect.width  / 2 - rect.left - rect.width  / 2;
+                    const dy = tRect.top  + tRect.height / 2 - rect.top  - rect.height / 2;
+
+                    ghost.style.transition = 'all 360ms cubic-bezier(.22,1,.36,1)';
+                    ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(.9) rotate(0deg)`;
+                    ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.7)';
+
+                    setTimeout(() => {
+                        ghost.style.transition = 'all 80ms ease';
+                        ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(1.06)`;
+                        ghost.style.boxShadow  = '0 0 40px rgba(200,160,69,1)';
+
+                        Anim.spawnParticles(
+                            tRect.left + tRect.width  / 2,
+                            tRect.top  + tRect.height / 2,
+                            8
+                        );
+
+                        setTimeout(() => {
+                            ghost.style.transition = 'opacity 100ms ease';
+                            ghost.style.opacity    = '0';
+                            setTimeout(() => ghost.remove(), 110);
+                        }, 90);
+                    }, 340);
+                }, 160);
+            }, delay);
         });
+
+        await new Promise(r => setTimeout(r, ghosts.length * 60 + 700));
 
 
     }
@@ -1843,6 +1900,12 @@ function renderTableBajadas() {
         if (!id) return;
         if (!_animatedBajadas.has(id)) {
             _animatedBajadas.add(id);
+            const pile = el.closest('.bajada-pile');
+            if (pile) {
+                pile.classList.remove('pile-land');
+                pile.offsetHeight;
+                pile.classList.add('pile-land');
+            }
             el.style.animation = 'none';
             el.offsetHeight;
             el.style.animation = `cardLand 320ms cubic-bezier(.22,1,.36,1) ${i * 40}ms both`;

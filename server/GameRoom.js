@@ -195,13 +195,22 @@ class GameRoom {
 
   _handleAckFinRonda(playerId) {
     this.readyAcks.add(playerId);
-    const connected = this.players.filter(p => p.conectado).map(p => p.id);
+    const connectedPlayers = this.players.filter(p => p.conectado);
+    const connected = connectedPlayers.map(p => p.id);
     if (connected.every(id => this.readyAcks.has(id))) {
       this.readyAcks.clear();
       const result = this.engine.finalizarRonda();
       this._resetTurnTimer();
       this._save();
       this._broadcastState(result.event, result.data);
+    } else {
+      this._broadcastState('esperando_siguiente_ronda', {
+        readyCount: connected.filter(id => this.readyAcks.has(id)).length,
+        totalCount: connected.length,
+        waitingNames: connectedPlayers
+          .filter(p => !this.readyAcks.has(p.id))
+          .map(p => p.nombre),
+      });
     }
     return { ok: true };
   }

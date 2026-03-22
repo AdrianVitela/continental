@@ -541,6 +541,10 @@ function setupSocketEvents() {
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
         if (tableColor) applyTableTheme(tableColor);
 
+        if (event === 'esperando_siguiente_ronda') {
+            showNextRoundWait(data);
+        }
+
         if (event === 'castigo_acepta' || event === 'castigo_pasa') {
             clearPendingCastigo(`ack ${event}`);
         } else if (pendingCastigo && (G.estado !== 'fase_castigo' || G.castigo_idx !== myIdx)) {
@@ -553,6 +557,8 @@ function setupSocketEvents() {
         const isReconnect = event === 'reconnect';
         const isInitialReconnect = _firstLoad && isReconnect;
         _firstLoad = false;
+
+        if (isNewRound) hideNextRoundWait();
 
         // Animar reparto si inicia ronda nueva o si esta es la primera
         // reconexión al entrar a game.html y aún no se animó la ronda actual.
@@ -635,6 +641,8 @@ async function applyEvent(event, data, prev) {
             await handleFinRonda(data); break;
         case 'fin_juego':
             showModalJuego(data.jugadores); break;
+        case 'esperando_siguiente_ronda':
+            break;
     }
 }
 
@@ -669,15 +677,15 @@ async function handleNewRound() {
     }
 
     await Anim.dealAnim(mazoEl, handZone, mano, 0, {
-        stepDelay: 140,
-        duration: 360,
-        hold: 330,
-        preScale: 1.1,
+        stepDelay: 82,
+        duration: 255,
+        hold: 225,
+        preScale: 1.06,
         revealOptions: {
-            opacityDuration: 160,
-            scaleDuration: 220,
-            scaleFrom: 1.06,
-            settleDelay: 90,
+            opacityDuration: 110,
+            scaleDuration: 150,
+            scaleFrom: 1.04,
+            settleDelay: 55,
         },
     });
 
@@ -1600,7 +1608,41 @@ function ackRonda() {
     if (ackSent) return;
     ackSent = true;
     document.getElementById('modal-ronda').classList.remove('show');
+    const connected = getConnectedPlayers();
+    showNextRoundWait({
+        readyCount: 1,
+        totalCount: connected.length || 1,
+        waitingNames: connected
+            .filter(j => j.id !== MY_ID)
+            .map(j => j.nombre),
+    });
     WS.send({ type: 'ack_fin_ronda' });
+}
+
+function getConnectedPlayers() {
+    return (G?.jugadores || []).filter(j => j.conectado !== false);
+}
+
+function showNextRoundWait(data = {}) {
+    const modal = document.getElementById('modal-next-round-wait');
+    const progress = document.getElementById('next-round-progress');
+    const detail = document.getElementById('next-round-detail');
+    if (!modal || !progress || !detail) return;
+
+    const connected = getConnectedPlayers();
+    const totalCount = data.totalCount || connected.length || 1;
+    const readyCount = Math.min(data.readyCount || 1, totalCount);
+    const waitingNames = Array.isArray(data.waitingNames) ? data.waitingNames : [];
+
+    progress.textContent = `${readyCount}/${totalCount} listos`;
+    detail.textContent = waitingNames.length
+        ? `Esperando a: ${waitingNames.join(', ')}`
+        : 'Esperando confirmación de los demás jugadores...';
+    modal.classList.add('show');
+}
+
+function hideNextRoundWait() {
+    document.getElementById('modal-next-round-wait')?.classList.remove('show');
 }
 
 // ═══════════════════════════════════════════════════

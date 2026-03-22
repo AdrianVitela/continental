@@ -36,6 +36,8 @@ let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null;
 let hideHandDuringDeal = true;
+let _lastRenderedTurn = null;
+let _turnJustChanged = false;
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
@@ -666,47 +668,18 @@ async function handleNewRound() {
         return;
     }
 
-    const src = mazoEl.getBoundingClientRect();
-    const targetEls = [...handZone.querySelectorAll('.card')];
-
-    // 3. Animar cada carta una por una
-    for (let i = 0; i < mano.length; i++) {
-        if (i > 0) await new Promise(r => setTimeout(r, 140));
-
-        const ghost = document.createElement('div');
-        ghost.className = `cback ${getMySkinClass()}`;
-        ghost.style.cssText = `
-            position:fixed; z-index:9999; pointer-events:none;
-            width:${src.width}px; height:${src.height}px;
-            left:${src.left}px; top:${src.top}px;
-            border-radius:var(--r);
-            box-shadow:0 8px 28px rgba(0,0,0,.6);
-            transform:scale(1.1);
-            transition:none;
-        `;
-        document.body.appendChild(ghost);
-
-        const targetEl = targetEls[i];
-        const dst = targetEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
-
-        await new Promise(r => setTimeout(r, 16));
-
-        ghost.style.transition = 'all 360ms cubic-bezier(.22,1,.36,1)';
-        ghost.style.left      = `${dst.left}px`;
-        ghost.style.top       = `${dst.top}px`;
-        ghost.style.width     = `${dst.width}px`;
-        ghost.style.height    = `${dst.height}px`;
-        ghost.style.transform = `scale(1) rotate(${(Math.random()-.5)*5}deg)`;
-
-        // Mostrar carta real cuando llega el ghost
-        setTimeout(() => {
-            if (targetEl) {
-                targetEl.style.transition = 'opacity 160ms ease';
-                targetEl.style.opacity = '1';
-            }
-            ghost.remove();
-        }, 330);
-    }
+    await Anim.dealAnim(mazoEl, handZone, mano, 0, {
+        stepDelay: 140,
+        duration: 360,
+        hold: 330,
+        preScale: 1.1,
+        revealOptions: {
+            opacityDuration: 160,
+            scaleDuration: 220,
+            scaleFrom: 1.06,
+            settleDelay: 90,
+        },
+    });
 
     hideHandDuringDeal = false;
 }
@@ -729,42 +702,15 @@ async function handleTomarMazo(data) {
 
         await new Promise(r => requestAnimationFrame(r));
 
-        const dst = newCardEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
+        await Anim.transferGhostToTarget(mazoEl, newCardEl || handZone, {
+            useBackSkin: true,
+            duration: 300,
+            hold: 280,
+            preScale: 1.1,
+            endBoxShadow: '0 0 20px rgba(200,160,69,.5)'
+        });
 
-        // Ghost volando desde el mazo
-        const ghost = document.createElement('div');
-        ghost.className = `cback ${getMySkinClass()}`;
-        ghost.style.cssText = `
-            position:fixed; z-index:9999; pointer-events:none;
-            width:${src.width}px; height:${src.height}px;
-            left:${src.left}px; top:${src.top}px;
-            border-radius:var(--r);
-            box-shadow:0 8px 28px rgba(0,0,0,.6);
-            transform:scale(1.1);
-            transition:none;
-        `;
-        document.body.appendChild(ghost);
-
-        await new Promise(r => setTimeout(r, 16));
-
-        ghost.style.transition = 'all 300ms cubic-bezier(.22,1,.36,1)';
-        ghost.style.left       = `${dst.left}px`;
-        ghost.style.top        = `${dst.top}px`;
-        ghost.style.width      = `${dst.width}px`;
-        ghost.style.height     = `${dst.height}px`;
-        ghost.style.transform  = 'scale(1)';
-        ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.5)';
-
-        await new Promise(r => setTimeout(r, 280));
-
-        // Mostrar carta real con bounce
-        if (newCardEl) {
-            newCardEl.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
-            newCardEl.style.transform  = 'scale(1.15)';
-            newCardEl.style.opacity    = '1';
-            setTimeout(() => { newCardEl.style.transform = 'scale(1)'; }, 80);
-        }
-        ghost.remove();
+        if (newCardEl) Anim.revealCard(newCardEl);
 
     } else {
         // Otro jugador robó — pequeño destello en su tarjeta
@@ -783,40 +729,21 @@ async function handleTomarFondo(data) {
         const handZone = document.getElementById('discard-zone');
         if (!fondoEl || !handZone) return;
         const srcCard = fondoEl.querySelector('.card');
-        const src = (srcCard || fondoEl).getBoundingClientRect();
         render();
         const newCardEl = handZone.querySelector(`.card[data-id="${data.carta?.id}"]`);
         if (newCardEl) { newCardEl.style.opacity = '0'; newCardEl.style.transition = 'none'; }
         await new Promise(r => requestAnimationFrame(r));
-        const dst = newCardEl?.getBoundingClientRect() || handZone.getBoundingClientRect();
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = srcCard ? srcCard.outerHTML : '<div class="cback"></div>';
-        const ghost = wrapper.firstElementChild;
-        // Aplicar skin al ghost
-        const _sc = getMySkinClass();
-        if (_sc) ghost.classList.add(..._sc.trim().split(' '));
-        ghost.style.cssText = `
-            position:fixed; z-index:9999; pointer-events:none;
-            width:${src.width}px; height:${src.height}px;
-            left:${src.left}px; top:${src.top}px;
-            border-radius:var(--r);
-            box-shadow:0 10px 30px rgba(0,0,0,.6);
-            transform:scale(1.05); transition:none;
-        `;
-        document.body.appendChild(ghost);
-        await new Promise(r => setTimeout(r, 16));
-        ghost.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
-        ghost.style.left = `${dst.left}px`; ghost.style.top = `${dst.top}px`;
-        ghost.style.width = `${dst.width}px`; ghost.style.height = `${dst.height}px`;
-        ghost.style.transform = `scale(1) rotate(${(Math.random()-.5)*6}deg)`;
-        ghost.style.boxShadow = '0 0 20px rgba(200,160,69,.6)';
-        await new Promise(r => setTimeout(r, 300));
-        if (newCardEl) {
-            newCardEl.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
-            newCardEl.style.opacity = '1'; newCardEl.style.transform = 'scale(1.15)';
-            setTimeout(() => { newCardEl.style.transform = 'scale(1)'; }, 80);
-        }
-        ghost.remove();
+
+        await Anim.transferGhostToTarget(srcCard || fondoEl, newCardEl || handZone, {
+            templateEl: srcCard || null,
+            useBackSkin: !srcCard,
+            duration: 320,
+            hold: 300,
+            preScale: 1.05,
+            endBoxShadow: '0 0 20px rgba(200,160,69,.6)'
+        });
+
+        if (newCardEl) Anim.revealCard(newCardEl);
     } else {
         const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
         if (oppEl) {
@@ -835,39 +762,12 @@ async function handleCastigo(data) {
         if (!fondoEl || !mazoEl || !handZone) return;
 
         const fondoCard = fondoEl.querySelector('.card');
-        const srcFondo  = (fondoCard || fondoEl).getBoundingClientRect();
-        const srcMazo   = mazoEl.getBoundingClientRect();
 
         // Flash en el fondo
         fondoEl.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
         fondoEl.style.transform  = 'scale(1.15)';
         fondoEl.style.boxShadow  = '0 0 40px rgba(200,160,69,.9)';
         setTimeout(() => { fondoEl.style.transform = 'scale(1)'; fondoEl.style.boxShadow = ''; }, 150);
-
-        // Crear ghosts ANTES del render
-        const g1w = document.createElement('div');
-        g1w.innerHTML = fondoCard ? fondoCard.outerHTML : '<div class="cback"></div>';
-        const g1 = g1w.firstElementChild;
-        // Aplicar skin al ghost del fondo
-        const _skinCls = getMySkinClass();
-        if (_skinCls) g1.classList.add(..._skinCls.trim().split(' '));
-        g1.style.cssText = `
-            position:fixed; z-index:9999; pointer-events:none;
-            width:${srcFondo.width}px; height:${srcFondo.height}px;
-            left:${srcFondo.left}px; top:${srcFondo.top}px;
-            border-radius:var(--r); box-shadow:0 10px 30px rgba(0,0,0,.6);
-        `;
-        document.body.appendChild(g1);
-
-        const g2 = document.createElement('div');
-        g2.className = `cback ${getMySkinClass()}`;
-        g2.style.cssText = `
-            position:fixed; z-index:9999; pointer-events:none;
-            width:${srcMazo.width}px; height:${srcMazo.height}px;
-            left:${srcMazo.left}px; top:${srcMazo.top}px;
-            border-radius:var(--r); box-shadow:0 10px 30px rgba(0,0,0,.6);
-        `;
-        document.body.appendChild(g2);
 
         render();
 
@@ -883,35 +783,35 @@ async function handleCastigo(data) {
         }
         // Fallback: últimas 2 cartas
         if (newCards.length < 2) newCards = [...handZone.querySelectorAll('.card')].slice(-2);
-        if (newCards.length < 2) { g1.remove(); g2.remove(); return; }
+        if (newCards.length < 2) return;
 
         newCards.forEach(el => { el.style.opacity = '0'; el.style.transition = 'none'; });
 
-        const dst1 = newCards[0]?.getBoundingClientRect();
-        const dst2 = newCards[1]?.getBoundingClientRect();
-        if (!dst1 || !dst2) { g1.remove(); g2.remove(); return; }
+        const firstTarget = newCards[0];
+        const secondTarget = newCards[1];
 
-        await new Promise(r => setTimeout(r, 20));
+        await Promise.all([
+            Anim.transferGhostToTarget(fondoCard || fondoEl, firstTarget, {
+                templateEl: fondoCard || null,
+                useBackSkin: !fondoCard,
+                duration: 320,
+                hold: 320,
+                preScale: 1,
+                endBoxShadow: '0 0 20px rgba(200,160,69,.6)'
+            }),
+            (async () => {
+                await new Promise(r => setTimeout(r, 120));
+                await Anim.transferGhostToTarget(mazoEl, secondTarget, {
+                    useBackSkin: true,
+                    duration: 260,
+                    hold: 260,
+                    preScale: 1,
+                    endBoxShadow: '0 0 20px rgba(200,160,69,.6)'
+                });
+            })()
+        ]);
 
-        // Volar carta del fondo
-        g1.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
-        g1.style.left = `${dst1.left}px`; g1.style.top = `${dst1.top}px`;
-
-        // Volar carta del mazo con pequeño delay
-        setTimeout(() => {
-            g2.style.transition = 'all 260ms cubic-bezier(.22,1,.36,1)';
-            g2.style.left = `${dst2.left}px`; g2.style.top = `${dst2.top}px`;
-        }, 120);
-
-        // Reveal ambas cartas
-        setTimeout(() => {
-            newCards.forEach(el => {
-                el.style.transition = 'opacity 80ms ease, transform 200ms cubic-bezier(.34,1.56,.64,1)';
-                el.style.opacity = '1'; el.style.transform = 'scale(1.15)';
-                setTimeout(() => el.style.transform = 'scale(1)', 80);
-            });
-            g1.remove(); g2.remove();
-        }, 350);
+        newCards.forEach(el => Anim.revealCard(el));
 
     } else {
         // Otro jugador se castigó
@@ -1020,28 +920,13 @@ async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
         const discardZone = document.getElementById('discard-zone');
         const buildingRow = document.getElementById('building-row');
+        const bajadas = document.getElementById('table-bajadas');
 
         // 1. Capturar clones visuales ANTES de tocar el DOM
         const allCardEls = [
             ...(discardZone?.querySelectorAll('.card') || []),
             ...(buildingRow?.querySelectorAll('.card')  || []),
         ];
-
-        // Crear ghosts fijos en su posición actual
-        const ghosts = allCardEls.map(el => {
-            const rect  = el.getBoundingClientRect();
-            const ghost = el.cloneNode(true);
-            ghost.style.cssText = `
-                position:fixed; z-index:9990; pointer-events:none;
-                width:${rect.width}px; height:${rect.height}px;
-                left:${rect.left}px; top:${rect.top}px;
-                border-radius:var(--r);
-                box-shadow:0 8px 24px rgba(0,0,0,.5);
-                transition:none;
-            `;
-            document.body.appendChild(ghost);
-            return { ghost, rect };
-        });
 
         // 2. Actualizar estado y renderizar mesa con bajadas (ocultas)
         buildingCards.clear();
@@ -1050,67 +935,21 @@ async function handleBajar(data) {
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
-        // 3. Destino: slots de bajadas del jugador en la mesa
-        const bajadas   = document.getElementById('table-bajadas');
         const myBajadas = bajadas?.querySelector(`[data-jugador-idx="${myIdx}"]`);
-        const slots     = myBajadas?.querySelectorAll('.jugada-cards') || bajadas?.querySelectorAll('.jugada-cards');
-        const slotArr   = [...(slots || [])];
-        const dstEl     = slotArr[0] || bajadas;
-        const dstRect   = dstEl?.getBoundingClientRect();
+        if (!bajadas) return;
 
-        if (!dstRect) {
-            ghosts.forEach(({ ghost }) => ghost.remove());
-            return;
-        }
-
-        // 4. Animar cada ghost volando al destino
-        const perSlot = Math.max(1, Math.ceil(ghosts.length / Math.max(slotArr.length, 1)));
-
-        ghosts.forEach(({ ghost, rect }, i) => {
-            const slotIdx  = Math.floor(i / perSlot);
-            const targetEl = slotArr[slotIdx] || dstEl;
-            const tRect    = targetEl?.getBoundingClientRect() || dstRect;
-
-            const delay = i * 60;
-
-            setTimeout(() => {
-                // Fase 1: salto hacia arriba
-                ghost.style.transition = 'all 150ms cubic-bezier(.34,1.56,.64,1)';
-                ghost.style.transform  = `translateY(-20px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
-
-                setTimeout(() => {
-                    // Fase 2: volar al destino
-                    const dx = tRect.left + tRect.width  / 2 - rect.left - rect.width  / 2;
-                    const dy = tRect.top  + tRect.height / 2 - rect.top  - rect.height / 2;
-
-                    ghost.style.transition = 'all 360ms cubic-bezier(.22,1,.36,1)';
-                    ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(.9) rotate(0deg)`;
-                    ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.7)';
-
-                    setTimeout(() => {
-                        // Flash + partículas al aterrizar
-                        ghost.style.transition = 'all 80ms ease';
-                        ghost.style.transform  = `translate(${dx}px, ${dy}px) scale(1.06)`;
-                        ghost.style.boxShadow  = '0 0 40px rgba(200,160,69,1)';
-
-                        Anim.spawnParticles(
-                            tRect.left + tRect.width  / 2,
-                            tRect.top  + tRect.height / 2,
-                            8
-                        );
-
-                        setTimeout(() => {
-                            ghost.style.transition = 'opacity 100ms ease';
-                            ghost.style.opacity    = '0';
-                            setTimeout(() => ghost.remove(), 110);
-                        }, 90);
-                    }, 340);
-                }, 160);
-            }, delay);
+        await Anim.bajarAnim(allCardEls, myBajadas || bajadas, {
+            slotSelector: '.jugada-cards',
+            stepDelay: 60,
+            lift: 20,
+            jumpDuration: 150,
+            flyDuration: 360,
+            landDuration: 80,
+            fadeDuration: 100,
+            particles: 8,
+            flyScale: .9,
+            landScale: 1.06,
         });
-
-        // Esperar a que terminen todas las animaciones
-        await new Promise(r => setTimeout(r, ghosts.length * 60 + 700));
 
 
     }
@@ -1186,6 +1025,11 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
             '9': 10, '8': 10, '2': 5, '3': 5, '4': 5, '5': 5, '6': 5, '7': 5
         };
         const SUIT_CLS_LOCAL = { '♠': 'blk-s', '♥': 'red-s', '♦': 'red-s', '♣': 'blk-s' };
+        const compact = window.innerWidth <= 575;
+        const rowDelay = compact ? 140 : 200;
+        const cardDelay = compact ? 130 : 180;
+        const badgeDelay = compact ? 110 : 150;
+        const outroDelay = compact ? 1400 : 1800;
 
         // Solo jugadores con cartas
         const perdedores = manosFinales
@@ -1203,6 +1047,8 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
             background:rgba(0,0,0,.65); backdrop-filter:blur(3px);
             display:flex; flex-direction:column; align-items:center;
             justify-content:center; gap:16px; padding:20px;
+            opacity:0; transform:scale(.985);
+            transition:opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1);
         `;
         document.body.appendChild(overlay);
 
@@ -1214,6 +1060,8 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
             font-size:1.6rem; font-weight:700; color:var(--gold);
             text-shadow:0 0 20px rgba(200,160,69,.5);
             letter-spacing:2px; margin-bottom:4px;
+            opacity:0; transform:translateY(-14px);
+            transition:opacity 320ms ease, transform 420ms cubic-bezier(.22,1,.36,1);
         `;
         overlay.appendChild(titulo);
 
@@ -1221,6 +1069,15 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
         const rows = document.createElement('div');
         rows.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(600px,95vw)';
         overlay.appendChild(rows);
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                overlay.style.transform = 'scale(1)';
+                titulo.style.opacity = '1';
+                titulo.style.transform = 'translateY(0)';
+            });
+        });
 
         let allDone = 0;
         const totalPerdedores = perdedores.length;
@@ -1233,6 +1090,9 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                 border:1px solid rgba(200,160,69,.2);
                 border-radius:12px; padding:12px 16px;
                 display:flex; flex-direction:column; gap:8px;
+                box-shadow:0 18px 34px rgba(0,0,0,.24);
+                opacity:0; transform:translateY(16px) scale(.985);
+                transition:opacity 260ms ease, transform 360ms cubic-bezier(.22,1,.36,1), border-color 220ms ease, box-shadow 220ms ease;
             `;
 
             // Header con nombre y total
@@ -1247,7 +1107,7 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                 font-family:'Cormorant Garamond',serif;
                 font-size:1.3rem; font-weight:700; color:var(--gold);
                 min-width:80px; text-align:right;
-                transition:color .2s;
+                transition:color .2s, transform .18s ease;
             `;
             header.appendChild(nombre);
             header.appendChild(total);
@@ -1258,6 +1118,11 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
             cardsRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:40px';
             row.appendChild(cardsRow);
             rows.appendChild(row);
+
+            setTimeout(() => {
+                row.style.opacity = '1';
+                row.style.transform = 'translateY(0) scale(1)';
+            }, pi * 70);
 
             // Animar cartas una por una
             let acum = 0;
@@ -1274,8 +1139,11 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             background:linear-gradient(135deg,#4a2080,#2a1040);
                             border:1px solid rgba(255,220,100,.4);
                             display:flex;align-items:center;justify-content:center;
-                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            transform:perspective(400px) rotateY(90deg) translateY(8px) scale(.86);
+                            opacity:0;
+                            transition:transform 260ms cubic-bezier(.22,1,.36,1), opacity 180ms ease, box-shadow 180ms ease;
                             flex-shrink:0;
+                            box-shadow:0 10px 24px rgba(18,6,40,.36);
                         `;
                     } else if (!carta?.valor || !carta?.palo) {
                         cardEl.innerHTML = `<div style="font-size:.7rem;color:#c8a045">?</div>`;
@@ -1284,8 +1152,11 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             background:linear-gradient(135deg,#1f355f,#0d1c36);
                             border:1px solid rgba(255,255,255,.18);
                             display:flex;align-items:center;justify-content:center;
-                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            transform:perspective(400px) rotateY(90deg) translateY(8px) scale(.86);
+                            opacity:0;
+                            transition:transform 260ms cubic-bezier(.22,1,.36,1), opacity 180ms ease, box-shadow 180ms ease;
                             flex-shrink:0; position:relative;
+                            box-shadow:0 10px 24px rgba(9,18,40,.3);
                         `;
                     } else {
                         const sc = SUIT_CLS_LOCAL[carta.palo] || '';
@@ -1298,16 +1169,21 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             width:28px;height:40px;border-radius:4px;
                             background:#f5f0e8; border:1px solid rgba(0,0,0,.15);
                             display:flex;align-items:center;justify-content:center;
-                            transform:scale(0); transition:transform 200ms cubic-bezier(.34,1.56,.64,1);
+                            transform:perspective(400px) rotateY(90deg) translateY(8px) scale(.86);
+                            opacity:0;
+                            transition:transform 260ms cubic-bezier(.22,1,.36,1), opacity 180ms ease, box-shadow 180ms ease;
                             flex-shrink:0; position:relative;
+                            box-shadow:0 10px 24px rgba(20,14,8,.18);
                         `;
                     }
                     cardsRow.appendChild(cardEl);
 
-                    // Aparecer con bounce
+                    // Aparecer con flip suave
                     requestAnimationFrame(() => {
                         requestAnimationFrame(() => {
-                            cardEl.style.transform = 'scale(1)';
+                            cardEl.style.opacity = '1';
+                            cardEl.style.transform = 'perspective(400px) rotateY(0deg) translateY(0) scale(1)';
+                            cardEl.style.boxShadow = '0 14px 26px rgba(0,0,0,.2), 0 0 0 1px rgba(255,255,255,.05) inset';
                             SFX.play('carta');
                         });
                     });
@@ -1322,7 +1198,8 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             font-size:.5rem; font-weight:700;
                             border-radius:8px; padding:1px 4px;
                             pointer-events:none; z-index:1;
-                            animation:popIn .2s cubic-bezier(.34,1.56,.64,1) both;
+                            animation:popIn .2s cubic-bezier(.34,1.56,.64,1) both, floatUp .9s cubic-bezier(.22,1,.36,1) .28s both;
+                            box-shadow:0 8px 14px rgba(200,160,69,.22);
                         `;
                         cardEl.style.position = 'relative';
                         cardEl.appendChild(badge);
@@ -1331,6 +1208,13 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                         acum += pts;
                         total.textContent = `${acum} pts`;
                         if (acum > 0) total.style.color = '#ff7070';
+                        total.style.transform = 'scale(1.08)';
+                        setTimeout(() => { total.style.transform = 'scale(1)'; }, 120);
+
+                        if (ci === m.mano.length - 1) {
+                            row.style.borderColor = 'rgba(200,160,69,.36)';
+                            row.style.boxShadow = '0 20px 40px rgba(0,0,0,.28), 0 0 0 1px rgba(200,160,69,.08) inset';
+                        }
 
                         // Último
                         if (ci === m.mano.length - 1) {
@@ -1338,15 +1222,16 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
                             if (allDone === totalPerdedores) {
                                 // Esperar y cerrar
                                 setTimeout(() => {
-                                    overlay.style.transition = 'opacity 400ms ease';
+                                    overlay.style.transition = 'opacity 400ms ease, transform 400ms cubic-bezier(.22,1,.36,1)';
                                     overlay.style.opacity = '0';
+                                    overlay.style.transform = 'scale(1.015)';
                                     setTimeout(() => { overlay.remove(); resolve(); }, 400);
-                                }, 1800);
+                                }, outroDelay);
                             }
                         }
-                    }, 150);
+                    }, badgeDelay);
 
-                }, pi * 200 + ci * 180);
+                }, pi * rowDelay + ci * cardDelay);
             });
         });
     });
@@ -1785,6 +1670,7 @@ function restoreAnimatedBajadas() {
 function render() {
     if (!G || myIdx < 0) return;
     const me = G.jugadores[myIdx];
+    _turnJustChanged = _lastRenderedTurn !== null && _lastRenderedTurn !== G.turno;
     document.getElementById('ronda-pill').textContent = `Ronda ${G.ronda} de 7`;
     document.getElementById('req-pill').textContent = REQ_LABELS[G.ronda] || '';
     renderScoreboard();
@@ -1797,6 +1683,8 @@ function render() {
     renderActions();
     restoreAnimatedBajadas();
     applyMySkin();
+    _lastRenderedTurn = G.turno;
+    _turnJustChanged = false;
 }
 
 
@@ -1816,7 +1704,7 @@ function renderOpponents() {
     G.jugadores.forEach((j, i) => {
         if (i === myIdx) return;
         const d = document.createElement('div');
-        d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
+        d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}${_turnJustChanged && i === G.turno ? ' turn-arrive' : ''}`;
         d.dataset.idx = i;
         d.innerHTML = `
             <div class="opp-name">${badgeHtml(j.badge)}${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
@@ -1946,7 +1834,16 @@ function renderPlayerInfo(me) {
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
     const dot = document.getElementById('pulse-dot');
     if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';
-    document.getElementById('turn-tag').textContent = isMyTurn() ? '' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+    const turnTag = document.getElementById('turn-tag');
+    const header = document.querySelector('.player-header');
+    if (header) {
+        header.classList.toggle('my-turn', isMyTurn());
+        header.classList.toggle('turn-arrive', _turnJustChanged && isMyTurn());
+    }
+    if (turnTag) {
+        turnTag.textContent = isMyTurn() ? 'Tu turno' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+        turnTag.classList.toggle('turn-live', isMyTurn());
+    }
 }
 
 // ═══════════════════════════════════════════════════
@@ -2407,6 +2304,12 @@ function showModalRonda(ganadorIdx, puntos) {
         </div>
     `).join('');
     ackSent = false;
+    const card = modal.querySelector('.modal');
+    if (card) {
+        card.classList.remove('modal-pop');
+        void card.offsetWidth;
+        card.classList.add('modal-pop');
+    }
     modal.classList.add('show');
 }
 
@@ -2539,12 +2442,17 @@ function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;
     t.textContent = msg;
-    t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
-                         type === 'yellow' ? 'rgba(200,160,69,.9)' :
-                         'rgba(180,50,50,.9)';
+    t.classList.remove('toast-green', 'toast-yellow', 'toast-red', 'show');
+    t.classList.add(type === 'green' ? 'toast-green' : type === 'yellow' ? 'toast-yellow' : 'toast-red');
     t.style.display = 'block';
     clearTimeout(t._t);
-    t._t = setTimeout(() => t.style.display = 'none', 2600);
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => t.classList.add('show'));
+    });
+    t._t = setTimeout(() => {
+        t.classList.remove('show');
+        setTimeout(() => { t.style.display = 'none'; }, 220);
+    }, 2600);
 }
 
 // Exponer funciones para los onclick

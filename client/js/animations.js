@@ -3,6 +3,44 @@
 'use strict';
 
 const Anim = (() => {
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function getMotionProfile() {
+    const width = window.innerWidth || 1280;
+    const reduced = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = typeof window.matchMedia === 'function'
+      && window.matchMedia('(pointer: coarse)').matches;
+
+    if (reduced) {
+      return { speed: 0.72, reveal: 0.78, distance: 0.82, particles: 0.45, shuffleReps: 2 };
+    }
+    if (width <= 575 || coarse) {
+      return { speed: 0.84, reveal: 0.88, distance: 0.9, particles: 0.65, shuffleReps: 2 };
+    }
+    if (width <= 991) {
+      return { speed: 0.93, reveal: 0.95, distance: 0.96, particles: 0.8, shuffleReps: 3 };
+    }
+    if (width >= 1600) {
+      return { speed: 1.08, reveal: 1.04, distance: 1.05, particles: 1.08, shuffleReps: 4 };
+    }
+    return { speed: 1, reveal: 1, distance: 1, particles: 1, shuffleReps: 3 };
+  }
+
+  function scaleMs(value, factor) {
+    return Math.max(0, Math.round(value * factor));
+  }
+
+  function scaleDistance(value, factor) {
+    return Math.round(value * factor * 100) / 100;
+  }
+
+  function scaleCount(value, factor) {
+    return Math.max(1, Math.round(value * factor));
+  }
+
   // Obtener clase de skin del jugador local
   function getMySkin() {
     try {
@@ -89,6 +127,94 @@ const Anim = (() => {
     });
   }
 
+  function revealCard(targetEl, opts = {}) {
+    if (!targetEl) return;
+    const motion = getMotionProfile();
+    const {
+      opacityDuration = 80,
+      scaleDuration = 200,
+      scaleFrom = 1.15,
+      scaleTo = 1,
+      easing = 'cubic-bezier(.34,1.56,.64,1)',
+      settleDelay = 80,
+    } = opts;
+
+    const opacityMs = scaleMs(opacityDuration, motion.reveal);
+    const scaleMsValue = scaleMs(scaleDuration, motion.reveal);
+    const settleMs = scaleMs(settleDelay, motion.reveal);
+
+    targetEl.style.transition = `opacity ${opacityMs}ms ease, transform ${scaleMsValue}ms ${easing}`;
+    targetEl.style.opacity = '1';
+    targetEl.style.transform = `scale(${scaleFrom})`;
+    setTimeout(() => {
+      targetEl.style.transform = `scale(${scaleTo})`;
+    }, settleMs);
+  }
+
+  async function transferGhostToTarget(sourceEl, targetEl, opts = {}) {
+    if (!sourceEl || !targetEl) return;
+
+    const motion = getMotionProfile();
+
+    const {
+      templateEl = null,
+      useBackSkin = false,
+      duration = 320,
+      hold = null,
+      preScale = 1.05,
+      rotateStart = 0,
+      rotateEnd = (Math.random() - .5) * 6,
+      zIndex = 9999,
+      borderRadius = 'var(--r)',
+      startBoxShadow = '0 8px 28px rgba(0,0,0,.6)',
+      endBoxShadow = null,
+      extraClassName = '',
+      extraStyle = '',
+    } = opts;
+
+    const durationMs = scaleMs(duration, motion.speed);
+    const holdMs = hold == null ? null : scaleMs(hold, motion.speed);
+
+    const src = sourceEl.getBoundingClientRect();
+    const dst = targetEl.getBoundingClientRect();
+    const ghost = templateEl
+      ? templateEl.cloneNode(true)
+      : document.createElement('div');
+
+    if (!templateEl) {
+      ghost.className = useBackSkin
+        ? `cback ${getMySkin()} ${extraClassName}`.trim()
+        : extraClassName.trim();
+    } else if (extraClassName) {
+      ghost.classList.add(...extraClassName.trim().split(/\s+/).filter(Boolean));
+    }
+
+    ghost.style.cssText = `
+      position:fixed; z-index:${zIndex}; pointer-events:none;
+      width:${src.width}px; height:${src.height}px;
+      left:${src.left}px; top:${src.top}px;
+      border-radius:${borderRadius};
+      box-shadow:${startBoxShadow};
+      transform:scale(${preScale}) rotate(${rotateStart}deg);
+      transition:none;
+      ${extraStyle}
+    `;
+    document.body.appendChild(ghost);
+
+    await wait(16);
+
+    ghost.style.transition = `all ${durationMs}ms cubic-bezier(.22,1,.36,1)`;
+    ghost.style.left = `${dst.left}px`;
+    ghost.style.top = `${dst.top}px`;
+    ghost.style.width = `${dst.width}px`;
+    ghost.style.height = `${dst.height}px`;
+    ghost.style.transform = `scale(1) rotate(${rotateEnd}deg)`;
+    if (endBoxShadow) ghost.style.boxShadow = endBoxShadow;
+
+    await wait(holdMs ?? Math.max(durationMs - 20, 0));
+    ghost.remove();
+  }
+
   // Anima una carta que va del mazo o fondo a una mano específica
   async function flyToHand(sourceEl, handZoneEl, insertIdx, cardEl) {
     if (!sourceEl || !handZoneEl) return;
@@ -148,6 +274,7 @@ const Anim = (() => {
   // Un rival "lanza" una carta al fondo (animación de pago)
   async function rivalPaysToFondo(oppEl, fondoEl, cardSmEl) {
     if (!oppEl || !fondoEl) return;
+    const motion = getMotionProfile();
     
     const src = oppEl.getBoundingClientRect();
     const dst = fondoEl.getBoundingClientRect();
@@ -172,7 +299,10 @@ const Anim = (() => {
     const dx = dst.left - src.left + dst.width/2 - 31;
     const dy = dst.top - src.top + dst.height/2 - 45;
     
-    ghost.style.transition = `all 420ms cubic-bezier(.22,1,.36,1)`;
+    const flightMs = scaleMs(420, motion.speed);
+    const flipMs = scaleMs(210, motion.speed);
+
+    ghost.style.transition = `all ${flightMs}ms cubic-bezier(.22,1,.36,1)`;
     ghost.style.transform = `translate(${dx}px, ${dy}px) rotate(15deg) scale(1)`;
 
     // A mitad del recorrido, voltea para mostrar el frente
@@ -182,9 +312,9 @@ const Anim = (() => {
         ghost.style.background = '';
         ghost.className = 'card';
       }
-    }, 210);
+    }, flipMs);
 
-    await new Promise(r => setTimeout(r, 420));
+    await wait(flightMs);
     ghost.remove();
   }
 
@@ -195,93 +325,67 @@ const Anim = (() => {
         resolve(); 
         return; 
       }
+      const motion = getMotionProfile();
       
       const layers = mazoEl.querySelectorAll('.cback');
       let delay = 0;
       
-      for (let rep = 0; rep < 3; rep++) {
+      for (let rep = 0; rep < motion.shuffleReps; rep++) {
         for (const layer of layers) {
           setTimeout(() => {
-            layer.style.transition = 'transform .12s ease-in-out';
+            layer.style.transition = `transform ${scaleMs(120, motion.speed)}ms ease-in-out`;
             layer.style.transform = `translateX(${(Math.random()-.5)*10}px) rotate(${(Math.random()-.5)*6}deg)`;
             setTimeout(() => { 
               layer.style.transform = ''; 
-            }, 130);
+            }, scaleMs(130, motion.speed));
           }, delay);
-          delay += 60;
+          delay += scaleMs(60, motion.speed);
         }
       }
-      setTimeout(resolve, delay + 150);
+      setTimeout(resolve, delay + scaleMs(150, motion.speed));
     });
   }
 
   // Animación de repartir: las cartas vuelan del mazo a cada mano
-  async function dealAnim(mazoEl, handZoneEl, cards, startDelay = 0) {
-    const src = mazoEl?.getBoundingClientRect();
-    if (!src || !handZoneEl) return;
+  async function dealAnim(mazoEl, handZoneEl, cards, startDelay = 0, opts = {}) {
+    if (!mazoEl || !handZoneEl) return;
+    const motion = getMotionProfile();
+
+    const {
+      stepDelay = 90,
+      duration = 320,
+      hold = 300,
+      preScale = 1.05,
+      endBoxShadow = null,
+      revealOptions = {},
+    } = opts;
+
+    const startDelayMs = scaleMs(startDelay, motion.speed);
+    const stepDelayMs = scaleMs(stepDelay, motion.speed);
 
     // Ocultar las cartas reales mientras animamos
     const cardEls = handZoneEl.querySelectorAll('.card');
     cardEls.forEach(el => { el.style.opacity = '0'; });
 
-    const promises = [];
-
     for (let i = 0; i < cards.length; i++) {
-      const p = new Promise(async resolve => {
-        await new Promise(r => setTimeout(r, startDelay + i * 90));
+      await wait(startDelayMs + (i * stepDelayMs));
 
-        // Ghost card volando desde el mazo
-        const ghost = document.createElement('div');
-        ghost.className = `cback ${getMySkin()}`;
-        ghost.style.cssText = `
-          position: fixed;
-          z-index: 9999;
-          pointer-events: none;
-          width: ${src.width}px;
-          height: ${src.height}px;
-          left: ${src.left}px;
-          top: ${src.top}px;
-          transition: none;
-          border-radius: var(--r);
-          box-shadow: 0 8px 28px rgba(0,0,0,.6);
-          transform: scale(1.05);
-        `;
-        document.body.appendChild(ghost);
-
-        // Destino: posición de la carta i en la mano
-        const targetCard = handZoneEl.querySelectorAll('.card')[i];
-        const dst = targetCard
-          ? targetCard.getBoundingClientRect()
-          : handZoneEl.getBoundingClientRect();
-
-        await new Promise(r => setTimeout(r, 16));
-
-        ghost.style.transition = 'all 320ms cubic-bezier(.22,1,.36,1)';
-        ghost.style.left  = `${dst.left}px`;
-        ghost.style.top   = `${dst.top}px`;
-        ghost.style.width = `${dst.width}px`;
-        ghost.style.height= `${dst.height}px`;
-        ghost.style.transform = `scale(1) rotate(${(Math.random()-.5)*6}deg)`;
-
-        await new Promise(r => setTimeout(r, 300));
-
-        // Mostrar carta real y quitar ghost
-        if (targetCard) {
-          targetCard.style.transition = 'opacity 80ms ease';
-          targetCard.style.opacity = '1';
-        }
-        ghost.remove();
-        resolve();
+      const targetCard = handZoneEl.querySelectorAll('.card')[i];
+      await transferGhostToTarget(mazoEl, targetCard || handZoneEl, {
+        useBackSkin: true,
+        duration,
+        hold,
+        preScale,
+        endBoxShadow,
       });
-      promises.push(p);
+      if (targetCard) revealCard(targetCard, revealOptions);
     }
-
-    await Promise.all(promises);
   }
 
   // Muestra números flotantes de puntuación (+15, -0, etc.) al finalizar ronda
   function floatScore(el, pts, isGain = false) {
     if (!el) return;
+    const motion = getMotionProfile();
     
     const rect = el.getBoundingClientRect();
     const num = document.createElement('div');
@@ -298,7 +402,7 @@ const Anim = (() => {
       text-shadow: 0 2px 8px rgba(0,0,0,.5);
       pointer-events: none;
       z-index: 500;
-      animation: floatUp .9s cubic-bezier(.22,1,.36,1) both;
+      animation: floatUp ${scaleMs(900, motion.speed)}ms cubic-bezier(.22,1,.36,1) both;
     `;
     
     // Inyecta la animación si no existe
@@ -314,7 +418,7 @@ const Anim = (() => {
     }
     
     document.body.appendChild(num);
-    setTimeout(() => num.remove(), 950);
+    setTimeout(() => num.remove(), scaleMs(950, motion.speed));
   }
 
   // Animación de bajar: las cartas se abren en abanico y luego colapsan a la zona de bajada
@@ -348,8 +452,30 @@ const Anim = (() => {
     }
   }
 
-  async function bajarAnim(cardEls, destEl) {
-    const slots = destEl?.querySelectorAll('.building-slot-cards');
+  async function bajarAnim(cardEls, destEl, opts = {}) {
+    const motion = getMotionProfile();
+    const {
+      slotSelector = '.building-slot-cards',
+      stepDelay = 55,
+      lift = 18,
+      jumpDuration = 150,
+      flyDuration = 340,
+      landDuration = 80,
+      fadeDuration = 120,
+      particles = 10,
+      landScale = 1.05,
+      flyScale = .95,
+    } = opts;
+
+    const stepDelayMs = scaleMs(stepDelay, motion.speed);
+    const jumpMs = scaleMs(jumpDuration, motion.speed);
+    const flyMs = scaleMs(flyDuration, motion.speed);
+    const landMs = scaleMs(landDuration, motion.speed);
+    const fadeMs = scaleMs(fadeDuration, motion.speed);
+    const liftDistance = scaleDistance(lift, motion.distance);
+    const particleCount = scaleCount(particles, motion.particles);
+
+    const slots = destEl?.querySelectorAll(slotSelector);
 
     // Agrupar cartas por slot — si no hay slots usar destEl como fallback
     const cardArray = [...cardEls];
@@ -374,12 +500,12 @@ const Anim = (() => {
       `;
       document.body.appendChild(ghost);
 
-      const delay = i * 55;
+      const delay = i * stepDelayMs;
 
       setTimeout(() => {
         // Fase 1: ligero salto hacia arriba
-        ghost.style.transition = 'all 150ms cubic-bezier(.34,1.56,.64,1)';
-        ghost.style.transform  = `translateY(-18px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
+        ghost.style.transition = `all ${jumpMs}ms cubic-bezier(.34,1.56,.64,1)`;
+        ghost.style.transform  = `translateY(-${liftDistance}px) scale(1.1) rotate(${(Math.random()-.5)*8}deg)`;
 
         setTimeout(() => {
           if (!dstRect) { ghost.remove(); resolve(); return; }
@@ -388,28 +514,28 @@ const Anim = (() => {
           const tx = dstRect.left + (i % perSlot) * (rect.width * 0.6) - rect.left;
           const ty = dstRect.top  - rect.top;
 
-          ghost.style.transition = 'all 340ms cubic-bezier(.22,1,.36,1)';
-          ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(.95) rotate(0deg)`;
+          ghost.style.transition = `all ${flyMs}ms cubic-bezier(.22,1,.36,1)`;
+          ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(${flyScale}) rotate(0deg)`;
           ghost.style.boxShadow  = '0 0 20px rgba(200,160,69,.6), 0 8px 24px rgba(0,0,0,.4)';
 
           setTimeout(() => {
             // Flash dorado al aterrizar
-            ghost.style.transition = 'all 80ms ease';
+            ghost.style.transition = `all ${landMs}ms ease`;
             ghost.style.boxShadow  = '0 0 40px rgba(200,160,69,1), 0 0 80px rgba(255,220,100,.5)';
-            ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(1.05) rotate(0deg)`;
+            ghost.style.transform  = `translate(${tx}px, ${ty}px) scale(${landScale}) rotate(0deg)`;
 
             // Partículas en el punto de aterrizaje
             const landX = dstRect.left + dstRect.width  / 2;
             const landY = dstRect.top  + dstRect.height / 2;
-            spawnParticles(landX, landY, 10);
+            spawnParticles(landX, landY, particleCount);
 
             setTimeout(() => {
-              ghost.style.transition = 'opacity 120ms ease';
+              ghost.style.transition = `opacity ${fadeMs}ms ease`;
               ghost.style.opacity    = '0';
-              setTimeout(() => { ghost.remove(); resolve(); }, 130);
-            }, 100);
-          }, 320);
-        }, 160);
+              setTimeout(() => { ghost.remove(); resolve(); }, fadeMs + 10);
+            }, landMs + 20);
+          }, Math.max(flyMs - 20, 0));
+        }, jumpMs + 10);
       }, delay);
     }));
 
@@ -420,6 +546,8 @@ const Anim = (() => {
     capturePositions, 
     flipAnimate, 
     flyCard, 
+    revealCard,
+    transferGhostToTarget,
     flyToHand, 
     rivalPaysToFondo, 
     shuffleAnim, 

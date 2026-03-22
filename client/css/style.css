@@ -70,7 +70,8 @@ body::before {
   flex-shrink: 0;
   cursor: grab;
   will-change: transform;
-  transition: box-shadow 0.15s, transform 0.15s;
+  transform-origin: center 85%;
+  transition: box-shadow 0.18s var(--eout), transform 0.18s var(--eout), filter 0.18s var(--eout);
 }
 
 .card:active {
@@ -184,6 +185,7 @@ body::before {
   font-size: 0.7rem;
   font-weight: 700;
   flex-shrink: 0;
+  transition: transform .16s var(--eout), box-shadow .16s var(--eout), border-color .16s var(--eout), filter .16s var(--eout);
 }
 
 .card-sm.natural {
@@ -206,15 +208,21 @@ body::before {
 }
 
 .card:hover:not(.dragging):not(.disabled) {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.55);
-  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.48), 0 0 0 1px rgba(255,255,255,.06) inset;
+  transform: translateY(-5px) rotate(-1.2deg) scale(1.035);
+  filter: saturate(1.03);
   z-index: 5;
 }
 
 .card.selected {
-  transform: translateY(-10px) scale(1.04) !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 0 2px var(--gold), 0 0 12px rgba(200, 160, 69, 0.45);
+  transform: translateY(-11px) rotate(-1.6deg) scale(1.05) !important;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.56), 0 0 0 2px var(--gold), 0 0 16px rgba(200, 160, 69, 0.5);
+  filter: saturate(1.06);
   z-index: 6;
+}
+
+.card.pending-intercambio {
+  animation: selectedExchangePulse 1.05s ease-in-out infinite;
 }
 
 .card.disabled {
@@ -239,6 +247,44 @@ body::before {
   box-shadow: 0 22px 55px rgba(0, 0, 0, 0.7), 0 0 0 2px rgba(200, 160, 69, 0.5);
   border-radius: var(--r);
   will-change: transform;
+}
+
+.bajada-pile:hover .card-sm,
+.bajada-pile:hover .joker-sm {
+  transform: translateY(-1px);
+}
+
+.comodin-intercambiable {
+  cursor: pointer;
+}
+
+.comodin-intercambiable:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 10px 22px rgba(0,0,0,.36), 0 0 0 1px rgba(200,160,69,.18) inset;
+}
+
+.joker-highlight {
+  animation: jokerHintPulse 1.15s ease-in-out infinite;
+}
+
+@keyframes selectedExchangePulse {
+  0%, 100% {
+    box-shadow: 0 16px 34px rgba(0,0,0,.56), 0 0 0 2px var(--gold), 0 0 12px rgba(200,160,69,.3);
+  }
+  50% {
+    box-shadow: 0 18px 38px rgba(0,0,0,.58), 0 0 0 2px var(--gold-hi), 0 0 18px rgba(200,160,69,.52);
+  }
+}
+
+@keyframes jokerHintPulse {
+  0%, 100% {
+    box-shadow: 0 2px 6px rgba(0,0,0,.4), 0 0 0 0 rgba(200,160,69,0);
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    box-shadow: 0 10px 18px rgba(0,0,0,.35), 0 0 0 5px rgba(200,160,69,.08);
+    transform: translateY(-1px) scale(1.03);
+  }
 }
 
 /* ============================================

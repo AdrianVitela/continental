@@ -204,9 +204,11 @@ class GameRoom {
       this._save();
       this._broadcastState(result.event, result.data);
     } else {
+      const readyPlayerIds = connected.filter(id => this.readyAcks.has(id));
       this._broadcastState('esperando_siguiente_ronda', {
-        readyCount: connected.filter(id => this.readyAcks.has(id)).length,
+        readyCount: readyPlayerIds.length,
         totalCount: connected.length,
+        readyPlayerIds,
         waitingNames: connectedPlayers
           .filter(p => !this.readyAcks.has(p.id))
           .map(p => p.nombre),

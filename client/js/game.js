@@ -542,7 +542,12 @@ function setupSocketEvents() {
         if (tableColor) applyTableTheme(tableColor);
 
         if (event === 'esperando_siguiente_ronda') {
-            showNextRoundWait(data);
+            const readyPlayerIds = Array.isArray(data?.readyPlayerIds) ? data.readyPlayerIds : [];
+            if (readyPlayerIds.includes(MY_ID)) {
+                showNextRoundWait(data);
+            } else {
+                hideNextRoundWait();
+            }
         }
 
         if (event === 'castigo_acepta' || event === 'castigo_pasa') {

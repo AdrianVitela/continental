@@ -146,8 +146,15 @@ body::before {
 .skin-rojo      { --skin-bg: linear-gradient(135deg, #7a1a1a, #3d0a0a); --skin-border: rgba(255,100,100,.25); --skin-inner: rgba(255,100,100,.15); }
 .skin-obsidiana { --skin-bg: linear-gradient(135deg, #1a1a1a, #0a0a0a); --skin-border: rgba(200,160,69,.3);  --skin-inner: rgba(200,160,69,.15); }
 .skin-esmeralda { --skin-bg: linear-gradient(135deg, #0d3320, #061a10); --skin-border: rgba(46,204,113,.25); --skin-inner: rgba(46,204,113,.12); }
+.skin-plata     { --skin-bg: linear-gradient(135deg, #8b96a6, #4d5663, #d7dde6, #4d5663); --skin-border: rgba(225,235,245,.55); --skin-inner: rgba(235,242,250,.24); --skin-glow: 0 0 10px rgba(215,221,230,.28); }
+.skin-bronce    { --skin-bg: linear-gradient(135deg, #8a5630, #4a2815, #b97a4a, #4a2815); --skin-border: rgba(206,139,85,.48); --skin-inner: rgba(232,176,118,.18); --skin-glow: 0 0 10px rgba(185,122,74,.22); }
+.skin-zafiro    { --skin-bg: linear-gradient(135deg, #0b2458, #07122d, #1d58b8, #07122d); --skin-border: rgba(93,152,255,.46); --skin-inner: rgba(133,181,255,.2); --skin-glow: 0 0 12px rgba(49,112,255,.24); }
 .skin-dorado    { --skin-bg: linear-gradient(135deg, #7a5c00, #3d2e00, #c8a045, #3d2e00); --skin-border: rgba(200,160,69,.6); --skin-inner: rgba(255,220,100,.3); --skin-glow: 0 0 12px rgba(200,160,69,.5); }
 .skin-neon      { --skin-bg: linear-gradient(135deg, #001a33, #003366); --skin-border: rgba(0,200,255,.5);  --skin-inner: rgba(0,200,255,.25); --skin-glow: 0 0 14px rgba(0,200,255,.6), 0 0 4px rgba(0,200,255,.9); }
+.skin-imperial  { --skin-bg: linear-gradient(135deg, #3f0018, #160008, #8f0f3b, #160008); --skin-border: rgba(255,133,183,.48); --skin-inner: rgba(255,168,206,.18); --skin-glow: 0 0 14px rgba(201,39,104,.25); }
+.skin-amatista  { --skin-bg: linear-gradient(135deg, #35105e, #170728, #7e39c6, #170728); --skin-border: rgba(186,132,255,.52); --skin-inner: rgba(205,165,255,.2); --skin-glow: 0 0 14px rgba(146,82,255,.25); }
+.skin-cobalto   { --skin-bg: linear-gradient(135deg, #0a1e46, #071024, #1453c2, #071024); --skin-border: rgba(88,151,255,.5); --skin-inner: rgba(129,180,255,.2); --skin-glow: 0 0 14px rgba(36,104,232,.22); }
+.skin-marfil    { --skin-bg: linear-gradient(135deg, #8a7b63, #4a4134, #e6d8bc, #4a4134); --skin-border: rgba(240,225,194,.52); --skin-inner: rgba(255,244,223,.22); --skin-glow: 0 0 12px rgba(230,216,188,.24); }
 
 .cback {
   width: var(--cw);

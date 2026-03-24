@@ -128,10 +128,14 @@ router.get('/me', async (req, res) => {
 });
 
 // ── POST /api/me/skin ────────────────────────────────────────────
-const SKINS_LIBRES     = ['clasico', 'rojo', 'obsidiana', 'esmeralda'];
+const SKINS_LIBRES     = ['clasico', 'rojo', 'obsidiana', 'esmeralda', 'plata', 'bronce', 'zafiro'];
 const SKINS_EXCLUSIVOS = {
   'dorado': ['owner'],
   'neon':   ['owner', 'vip', 'beta_tester'],
+  'imperial': ['owner'],
+  'amatista': ['vip'],
+  'cobalto': ['beta_tester'],
+  'marfil': ['early_adopter'],
 };
 
 router.post('/me/skin', async (req, res) => {

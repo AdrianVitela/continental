@@ -27,6 +27,8 @@ const REQ = {
 };
 
 const VN = { 'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13 };
+const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
+const GUIDE_DONE_GAME_KEY = 'continental_guide_done_game';
 
 let G = null;
 let myIdx = -1;
@@ -38,8 +40,217 @@ let selectedComodinInfo = null;
 let hideHandDuringDeal = true;
 let _lastRenderedTurn = null;
 let _turnJustChanged = false;
+let guideAutoTimer = null;
+let guideState = { active: false, steps: [], index: 0, doneKey: null };
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
+
+function isGuideEnabled() {
+    return localStorage.getItem(GUIDE_ENABLED_KEY) === '1';
+}
+
+function setGuideEnabled(enabled) {
+    if (enabled) localStorage.setItem(GUIDE_ENABLED_KEY, '1');
+    else localStorage.removeItem(GUIDE_ENABLED_KEY);
+    syncGuidePreferenceUi();
+}
+
+function syncGuidePreferenceUi() {
+    const enabled = isGuideEnabled();
+    const btn = document.getElementById('btn-guide-game');
+    const toggle = document.getElementById('guide-auto-toggle');
+    const status = document.getElementById('guide-settings-status');
+
+    if (btn) {
+        btn.textContent = enabled ? '📘 Guía ON' : '📘 Guía OFF';
+        btn.style.borderColor = enabled ? 'rgba(200,160,69,.4)' : 'rgba(255,255,255,.14)';
+        btn.style.color = enabled ? 'var(--gold)' : 'var(--text-dim)';
+    }
+    if (toggle) toggle.checked = enabled;
+    if (status) {
+        status.textContent = enabled
+            ? 'La guía se abrirá automáticamente la primera vez que entres a la mesa en este navegador.'
+            : 'La guía solo se abrirá cuando la lances manualmente desde este botón.';
+    }
+}
+
+function openGuideSettings() {
+    syncGuidePreferenceUi();
+    document.getElementById('guide-settings-overlay')?.classList.add('show');
+}
+
+function closeGuideSettings() {
+    document.getElementById('guide-settings-overlay')?.classList.remove('show');
+}
+
+function toggleGuideAuto(checked) {
+    setGuideEnabled(checked);
+}
+
+function startGuideFromSettings() {
+    closeGuideSettings();
+    startGameGuide();
+}
+
+function isVisibleGuideTarget(el) {
+    return !!(el && el.getClientRects && el.getClientRects().length);
+}
+
+function buildGameGuideSteps() {
+    return {
+        doneKey: GUIDE_DONE_GAME_KEY,
+        steps: [
+            {
+                selector: '.topbar',
+                title: 'Estado de la ronda',
+                text: 'Aquí ves el número de ronda, el requisito actual, la conexión y el marcador acumulado de todos.',
+            },
+            {
+                selector: '#mazo-wrap',
+                title: 'Mazo',
+                text: 'Robas desde aquí al inicio de tu turno cuando el juego te pida tomar del mazo.',
+            },
+            {
+                selector: '#fondo-wrap',
+                title: 'Fondo',
+                text: 'El fondo muestra la carta visible. Solo puedes tomarla antes de bajarte en esa ronda.',
+            },
+            {
+                selector: '#building-row',
+                title: 'Construcción',
+                text: 'Aquí armas tus tercias o corridas antes de bajarte. Puedes reordenar y preparar la jugada sin enviarla todavía.',
+            },
+            {
+                selector: '#discard-zone',
+                title: 'Sobrantes',
+                text: 'Las cartas que no estás usando quedan aquí. Desde esta zona seleccionas, arrastras y terminas pagando al fondo.',
+            },
+            {
+                selector: '.action-bar',
+                title: 'Instrucciones y acciones',
+                text: 'Esta barra te dice exactamente qué toca hacer y te muestra los botones válidos según el estado del turno.',
+            },
+            {
+                selector: '#table-bajadas',
+                title: 'Mesa de jugadas',
+                text: 'Aquí aparecen las bajadas de todos. Después de bajarte puedes pagar cartas o acomodar comodines sobre estas jugadas.',
+            },
+        ],
+    };
+}
+
+function resolveGuideTarget(step) {
+    const target = typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
+    return isVisibleGuideTarget(target) ? target : null;
+}
+
+function positionGuideCard(rect) {
+    const card = document.getElementById('guide-card');
+    if (!card) return;
+
+    const margin = 12;
+    const cardWidth = Math.min(360, window.innerWidth - (margin * 2));
+    const desiredLeft = rect.left + (rect.width / 2) - (cardWidth / 2);
+    const left = Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, desiredLeft));
+    card.style.width = `${cardWidth}px`;
+
+    const cardHeight = card.offsetHeight || 210;
+    const belowTop = rect.bottom + 14;
+    const aboveTop = rect.top - cardHeight - 14;
+    const top = (belowTop + cardHeight <= window.innerHeight - margin || aboveTop < margin)
+        ? Math.min(window.innerHeight - cardHeight - margin, belowTop)
+        : Math.max(margin, aboveTop);
+
+    card.style.left = `${left}px`;
+    card.style.top = `${top}px`;
+}
+
+function renderGuideStep() {
+    if (!guideState.active) return;
+
+    const step = guideState.steps[guideState.index];
+    if (!step) {
+        finishGuide();
+        return;
+    }
+
+    requestAnimationFrame(() => {
+        const target = resolveGuideTarget(step);
+        if (!target) {
+            nextGuideStep();
+            return;
+        }
+
+        const rect = target.getBoundingClientRect();
+        const focus = document.getElementById('guide-focus');
+        const title = document.getElementById('guide-title');
+        const text = document.getElementById('guide-text');
+        const progress = document.getElementById('guide-progress');
+        const nextBtn = document.getElementById('guide-next-btn');
+
+        focus.style.left = `${Math.max(8, rect.left - 8)}px`;
+        focus.style.top = `${Math.max(8, rect.top - 8)}px`;
+        focus.style.width = `${Math.min(window.innerWidth - 16, rect.width + 16)}px`;
+        focus.style.height = `${rect.height + 16}px`;
+
+        title.textContent = step.title;
+        text.textContent = step.text;
+        progress.textContent = `Paso ${guideState.index + 1} de ${guideState.steps.length}`;
+        nextBtn.textContent = guideState.index === guideState.steps.length - 1 ? 'Terminar' : 'Siguiente';
+        positionGuideCard(rect);
+    });
+}
+
+function startGameGuide() {
+    const config = buildGameGuideSteps();
+    if (!config.steps.length) {
+        toast('No hay guía disponible en esta mesa.', 'green');
+        return;
+    }
+
+    guideState = {
+        active: true,
+        steps: config.steps,
+        index: 0,
+        doneKey: config.doneKey,
+    };
+    document.getElementById('guide-overlay')?.classList.add('show');
+    renderGuideStep();
+}
+
+function closeGuide() {
+    guideState.active = false;
+    document.getElementById('guide-overlay')?.classList.remove('show');
+}
+
+function finishGuide() {
+    if (guideState.doneKey) localStorage.setItem(guideState.doneKey, '1');
+    closeGuide();
+}
+
+function nextGuideStep() {
+    if (!guideState.active) return;
+    guideState.index += 1;
+    if (guideState.index >= guideState.steps.length) {
+        finishGuide();
+        return;
+    }
+    renderGuideStep();
+}
+
+function queueAutoGuide(delay = 900) {
+    clearTimeout(guideAutoTimer);
+    guideAutoTimer = setTimeout(() => {
+        if (guideState.active || !isGuideEnabled()) return;
+        if (!G || myIdx < 0) return;
+        if (localStorage.getItem(GUIDE_DONE_GAME_KEY) === '1') return;
+        startGameGuide();
+    }, delay);
+}
+
+function refreshGuideLayout() {
+    if (guideState.active) renderGuideStep();
+}
 
 // ═══════════════════════════════════════════════════
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
@@ -435,6 +646,8 @@ const _animatedBajadas = new Set(); // IDs de cartas ya animadas en mesa
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
     localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
+    syncGuidePreferenceUi();
+    window.addEventListener('resize', refreshGuideLayout);
     setupSocketEvents();
     WS.connect();
 }
@@ -586,6 +799,8 @@ function setupSocketEvents() {
             render();
             await applyEvent(event, data, prev);
         }
+
+        queueAutoGuide(isNewRound ? 1300 : 650);
     });
     WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
     WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));
@@ -2581,5 +2796,11 @@ window.activarModoIntercambio = activarModoIntercambio;
 window.cancelIntercambio = cancelIntercambio;
 window.ejecutarIntercambioDirecto = ejecutarIntercambioDirecto;
 window.ejecutarIntercambioDesdeKey = ejecutarIntercambioDesdeKey;
+window.openGuideSettings = openGuideSettings;
+window.closeGuideSettings = closeGuideSettings;
+window.toggleGuideAuto = toggleGuideAuto;
+window.startGuideFromSettings = startGuideFromSettings;
+window.closeGuide = closeGuide;
+window.nextGuideStep = nextGuideStep;
 
 document.addEventListener('DOMContentLoaded', init);

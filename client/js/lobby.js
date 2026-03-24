@@ -14,6 +14,9 @@ const CODE_RE  = /^[A-Z0-9]+$/;
 const COOKIE_KEY  = 'continental_nombre';
 const COOKIE_DAYS = 365;
 const ACTIVE_LOBBY_KEY = 'continental_active_lobby';
+const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
+const GUIDE_DONE_LOBBY_SETUP_KEY = 'continental_guide_done_lobby_setup';
+const GUIDE_DONE_LOBBY_ROOM_KEY = 'continental_guide_done_lobby_room';
 
 /* ================================================================
    POOL DE NOMBRES PREDEFINIDOS
@@ -155,6 +158,8 @@ let currentTableColor = 'green';
 let musicPlaying = false;
 let musicAudio = null;
 let lobbyActionPending = false;
+let guideAutoTimer = null;
+let guideState = { active: false, steps: [], index: 0, doneKey: null, restoreTab: null };
 
 // Para el modal de nombres: qué input está activo
 let _activeNameTarget = 'crear';
@@ -441,6 +446,246 @@ function copyCode () {
   toast('¡Código copiado!', 'green');
 }
 
+function isGuideEnabled () {
+  return localStorage.getItem(GUIDE_ENABLED_KEY) === '1';
+}
+
+function setGuideEnabled (enabled) {
+  if (enabled) localStorage.setItem(GUIDE_ENABLED_KEY, '1');
+  else localStorage.removeItem(GUIDE_ENABLED_KEY);
+  syncGuidePreferenceUi();
+}
+
+function syncGuidePreferenceUi () {
+  const enabled = isGuideEnabled();
+  const btn = document.getElementById('btn-guide');
+  const toggle = document.getElementById('guide-auto-toggle');
+  const status = document.getElementById('guide-settings-status');
+
+  if (btn) {
+    btn.textContent = enabled ? '📘 Guía ON' : '📘 Guía OFF';
+    btn.style.borderColor = enabled ? 'rgba(200,160,69,.42)' : 'rgba(255,255,255,.15)';
+    btn.style.color = enabled ? 'var(--gold)' : 'var(--text-dim)';
+  }
+  if (toggle) toggle.checked = enabled;
+  if (status) {
+    status.textContent = enabled
+      ? 'La guía se abrirá automáticamente una vez en lobby y otra al entrar a la partida. También puedes relanzarla manualmente.'
+      : 'La guía solo se abrirá cuando la pidas desde este botón.';
+  }
+}
+
+function openGuideSettings () {
+  syncGuidePreferenceUi();
+  document.getElementById('guide-settings-overlay')?.classList.add('show');
+}
+
+function closeGuideSettings () {
+  document.getElementById('guide-settings-overlay')?.classList.remove('show');
+}
+
+function toggleGuideAuto (checked) {
+  setGuideEnabled(checked);
+}
+
+function startGuideFromSettings () {
+  closeGuideSettings();
+  startCurrentGuide();
+}
+
+function isVisibleGuideTarget (el) {
+  return !!(el && el.getClientRects && el.getClientRects().length);
+}
+
+function getCurrentGuideConfig () {
+  const inRoom = document.getElementById('lobby-room')?.classList.contains('show');
+
+  if (inRoom) {
+    return {
+      doneKey: GUIDE_DONE_LOBBY_ROOM_KEY,
+      steps: [
+        {
+          selector: '#room-code-display',
+          title: 'Código de sala',
+          text: 'Este código se comparte para que los demás entren a tu misma mesa. Con un clic lo copias.',
+        },
+        {
+          selector: '#player-list',
+          title: 'Jugadores conectados',
+          text: 'Aquí ves quién ya entró, quién es host y quién se desconectó temporalmente.',
+        },
+        {
+          selector: () => document.getElementById('mesa-picker-wrap')?.style.display !== 'none'
+            ? document.getElementById('mesa-picker-wrap')
+            : document.querySelector('.music-bar'),
+          title: 'Opciones de espera',
+          text: 'El host puede cambiar el color de la mesa. Mientras esperan, todos pueden ajustar la música.',
+        },
+        {
+          selector: () => document.getElementById('btn-start')?.style.display !== 'none'
+            ? document.getElementById('btn-start')
+            : document.getElementById('waiting-msg'),
+          title: 'Inicio de partida',
+          text: 'Cuando haya suficientes jugadores, el host verá aquí el botón para iniciar. Si no eres host, esta zona te indica el estado de espera.',
+        },
+      ],
+    };
+  }
+
+  return {
+    doneKey: GUIDE_DONE_LOBBY_SETUP_KEY,
+    steps: [
+      {
+        selector: '.logo',
+        title: 'Entrada al juego',
+        text: 'Esta es la pantalla de acceso rápido. Desde aquí creas una sala nueva o te unes a una existente.',
+      },
+      {
+        selector: '.tabs',
+        title: 'Crear o unirte',
+        text: 'Usa estas pestañas para cambiar entre crear una sala y entrar con un código.',
+      },
+      {
+        selector: '#panel-crear',
+        title: 'Crear sala',
+        text: 'Aquí eliges el modo de juego, el número máximo de jugadores y luego creas la sala.',
+      },
+      {
+        selector: '#btn-create-room',
+        title: 'Crear en un toque',
+        text: 'Este botón arma la sala y te mete directo a la espera para compartir el código.',
+      },
+      {
+        selector: '#unirse-code',
+        before: () => switchTab('unirse'),
+        title: 'Unirse con código',
+        text: 'Si un amigo ya creó la sala, pega aquí el código y entra sin configurar nada más.',
+      },
+    ],
+  };
+}
+
+function resolveGuideTarget (step) {
+  const target = typeof step.selector === 'function' ? step.selector() : document.querySelector(step.selector);
+  return isVisibleGuideTarget(target) ? target : null;
+}
+
+function positionGuideCard (rect) {
+  const card = document.getElementById('guide-card');
+  if (!card) return;
+
+  const margin = 12;
+  const cardWidth = Math.min(360, window.innerWidth - (margin * 2));
+  const desiredLeft = rect.left + (rect.width / 2) - (cardWidth / 2);
+  const left = Math.max(margin, Math.min(window.innerWidth - cardWidth - margin, desiredLeft));
+  card.style.width = `${cardWidth}px`;
+
+  const cardHeight = card.offsetHeight || 210;
+  const belowTop = rect.bottom + 14;
+  const aboveTop = rect.top - cardHeight - 14;
+  const top = (belowTop + cardHeight <= window.innerHeight - margin || aboveTop < margin)
+    ? Math.min(window.innerHeight - cardHeight - margin, belowTop)
+    : Math.max(margin, aboveTop);
+
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+}
+
+function renderGuideStep () {
+  if (!guideState.active) return;
+
+  const step = guideState.steps[guideState.index];
+  if (!step) {
+    finishGuide();
+    return;
+  }
+
+  if (typeof step.before === 'function') step.before();
+
+  requestAnimationFrame(() => {
+    const target = resolveGuideTarget(step);
+    if (!target) {
+      nextGuideStep();
+      return;
+    }
+
+    const rect = target.getBoundingClientRect();
+    const focus = document.getElementById('guide-focus');
+    const title = document.getElementById('guide-title');
+    const text = document.getElementById('guide-text');
+    const progress = document.getElementById('guide-progress');
+    const nextBtn = document.getElementById('guide-next-btn');
+
+    focus.style.left = `${Math.max(8, rect.left - 8)}px`;
+    focus.style.top = `${Math.max(8, rect.top - 8)}px`;
+    focus.style.width = `${Math.min(window.innerWidth - 16, rect.width + 16)}px`;
+    focus.style.height = `${rect.height + 16}px`;
+
+    title.textContent = step.title;
+    text.textContent = step.text;
+    progress.textContent = `Paso ${guideState.index + 1} de ${guideState.steps.length}`;
+    nextBtn.textContent = guideState.index === guideState.steps.length - 1 ? 'Terminar' : 'Siguiente';
+
+    positionGuideCard(rect);
+  });
+}
+
+function startCurrentGuide () {
+  const config = getCurrentGuideConfig();
+  if (!config.steps.length) {
+    toast('No hay guía disponible en esta pantalla.', 'green');
+    return;
+  }
+
+  guideState = {
+    active: true,
+    steps: config.steps,
+    index: 0,
+    doneKey: config.doneKey,
+    restoreTab: document.getElementById('panel-crear')?.classList.contains('active') ? 'crear' : 'unirse',
+  };
+  document.getElementById('guide-overlay')?.classList.add('show');
+  renderGuideStep();
+}
+
+function closeGuide () {
+  if (!document.getElementById('lobby-room')?.classList.contains('show') && guideState.restoreTab) {
+    switchTab(guideState.restoreTab);
+  }
+  guideState.active = false;
+  document.getElementById('guide-overlay')?.classList.remove('show');
+}
+
+function finishGuide () {
+  if (guideState.doneKey) localStorage.setItem(guideState.doneKey, '1');
+  closeGuide();
+}
+
+function nextGuideStep () {
+  if (!guideState.active) return;
+  guideState.index += 1;
+  if (guideState.index >= guideState.steps.length) {
+    finishGuide();
+    return;
+  }
+  renderGuideStep();
+}
+
+function queueAutoGuide (delay = 500) {
+  clearTimeout(guideAutoTimer);
+  guideAutoTimer = setTimeout(() => {
+    if (guideState.active || !isGuideEnabled()) return;
+    const config = getCurrentGuideConfig();
+    if (!config.steps.length) return;
+    if (localStorage.getItem(config.doneKey) === '1') return;
+    startCurrentGuide();
+  }, delay);
+}
+
+function refreshGuideLayout () {
+  if (guideState.active) renderGuideStep();
+}
+
 function toast (msg, type = 'red') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -495,6 +740,7 @@ function showLobby (lobbyState, pid, code, host) {
   const pickerWrap = document.getElementById('mesa-picker-wrap');
   if (pickerWrap) pickerWrap.style.display = host ? 'block' : 'none';
   updateLobbyState(lobbyState);
+  queueAutoGuide(650);
 }
 
 function updateLobbyState (lobbyState) {
@@ -609,8 +855,12 @@ function escHtml (str) {
 
 function init () {
   loadSavedName();
+  syncGuidePreferenceUi();
+  window.addEventListener('resize', refreshGuideLayout);
+  window.addEventListener('scroll', refreshGuideLayout, { passive: true });
   setupSocketEvents();
   WS.connect();
+  queueAutoGuide(700);
 }
 
 /* Exponer globales que usa el HTML */
@@ -630,5 +880,11 @@ window.openNamesModal      = openNamesModal;
 window.closeNamesModal     = closeNamesModal;
 window.closeNamesModalOutside = closeNamesModalOutside;
 window.shuffleNames        = shuffleNames;
+window.openGuideSettings   = openGuideSettings;
+window.closeGuideSettings  = closeGuideSettings;
+window.toggleGuideAuto     = toggleGuideAuto;
+window.startGuideFromSettings = startGuideFromSettings;
+window.closeGuide          = closeGuide;
+window.nextGuideStep       = nextGuideStep;
 
 document.addEventListener('DOMContentLoaded', init);

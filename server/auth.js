@@ -155,6 +155,10 @@ router.post('/me/skin', async (req, res) => {
     if (SKINS_EXCLUSIVOS[skin]) {
       const r = await pool.query('SELECT rol, badge FROM usuarios WHERE id = $1', [payload.id]);
       const u = r.rows[0];
+      if (u?.rol === 'owner') {
+        await pool.query('UPDATE usuarios SET skin = $1 WHERE id = $2', [skin, payload.id]);
+        return res.json({ ok: true, skin });
+      }
       const permitidos = SKINS_EXCLUSIVOS[skin];
       if (!permitidos.includes(u?.rol) && !permitidos.includes(u?.badge))
         return res.status(403).json({ error: 'No tienes acceso a este skin.' });

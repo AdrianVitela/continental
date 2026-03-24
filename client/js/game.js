@@ -293,6 +293,12 @@ function updateGuideTip() {
     const examples = document.getElementById('guide-tip-examples');
     if (!tip || !badge || !title || !text || !examples) return;
 
+    if (!isGuideEnabled()) {
+        tip.classList.remove('show');
+        examples.innerHTML = '';
+        return;
+    }
+
     const ctx = getGuideActionContext();
     if (!ctx) {
         tip.classList.remove('show');

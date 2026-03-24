@@ -635,6 +635,22 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   box-sizing: border-box;
 }
 
+.discard-zone.drag-over {
+  border-color: rgba(46,204,113,.42);
+  background: rgba(46,204,113,.06);
+}
+
+.discard-zone .insert-ghost {
+  width: 4px;
+  min-width: 4px;
+  height: calc(var(--ch) + 2px);
+  background: #2ecc71;
+  border-radius: 3px;
+  pointer-events: none;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(46,204,113,.45);
+}
+
 /* ===================================================
    FILA 2: CONSTRUCCIÓN
    Los slots se centran y crecen juntos en ancho.

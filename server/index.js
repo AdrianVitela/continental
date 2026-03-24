@@ -254,6 +254,17 @@ wss.on('connection', (ws, req) => {
           break;
         }
 
+        case 'close_room': {
+          const room = rooms.get(ctx.roomCode);
+          if (!room) return send(ws, { type: 'error', msg: 'Sala no encontrada.' });
+          if (room.players[0]?.id !== ctx.playerId)
+            return send(ws, { type: 'error', msg: 'Solo el host puede cerrar la mesa.' });
+
+          room.forceClose('Mesa cerrada por el host para iniciar una nueva partida.');
+          rooms.delete(ctx.roomCode);
+          break;
+        }
+
         default: {
           const room = rooms.get(ctx.roomCode);
           if (!room || !ctx.playerId)

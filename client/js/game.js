@@ -1202,7 +1202,7 @@ async function applyEvent(event, data, prev) {
         case 'fin_ronda':
             await handleFinRonda(data); break;
         case 'fin_juego':
-            showModalJuego(data.jugadores); break;
+            await handleFinJuego(data); break;
         case 'esperando_siguiente_ronda':
             break;
     }
@@ -1610,6 +1610,30 @@ async function handleFinRonda(data) {
             await showConteoCartas(data.manosFinales, data.ganadorIdx);
         }
         showModalRonda(data.ganadorIdx, data.puntos);
+    }, delay);
+}
+
+async function handleFinJuego(data) {
+    hideNextRoundWait();
+    document.getElementById('modal-ronda')?.classList.remove('show');
+
+    setTimeout(() => {
+        G.jugadores.forEach((j, i) => {
+            const pts = data.puntos?.[i];
+            if (!pts) return;
+            const el = i === myIdx
+                ? document.getElementById('my-name')
+                : document.querySelector(`.opp[data-idx="${i}"] .opp-name`);
+            if (el) Anim.floatScore(el, pts.pts_r, pts.pts_r === 0);
+        });
+    }, 300);
+
+    const delay = data.manosFinales?.some(m => m.mano?.length > 0) ? 800 : 900;
+    setTimeout(async () => {
+        if (data.manosFinales?.some(m => m.mano?.length > 0)) {
+            await showConteoCartas(data.manosFinales, data.ganadorIdx);
+        }
+        showModalJuego(data.jugadores);
     }, delay);
 }
 
@@ -2225,6 +2249,7 @@ function selCard(id) {
 
 function ackRonda() {
     if (ackSent) return;
+    if (G?.ronda >= 7 || G?.estado === 'fin_juego') return;
     ackSent = true;
     document.getElementById('modal-ronda').classList.remove('show');
     const connected = getConnectedPlayers();
@@ -2986,9 +3011,22 @@ function showModalRonda(ganadorIdx, puntos) {
 
 function showModalJuego(jugadores) {
     clearActiveGameSession();
+    hideNextRoundWait();
+    document.getElementById('modal-ronda')?.classList.remove('show');
     SFX.play('victoria');
     showConfetti();
     showPodio(jugadores);
+}
+
+function startNewGameFromPodium() {
+    clearActiveGameSession();
+    const isHost = G?.jugadores?.[0]?.id === MY_ID;
+    if (isHost && WS?.ws?.readyState === WebSocket.OPEN) {
+        WS.send({ type: 'close_room' });
+        setTimeout(() => { location.href = '/'; }, 500);
+        return;
+    }
+    location.href = '/';
 }
 
 function showConfetti() {
@@ -3050,7 +3088,7 @@ function showPodio(jugadores) {
     // Botón nueva partida
     const btnWrap = document.createElement('div');
     btnWrap.style.cssText = 'margin-top:8px;opacity:0;transition:opacity .5s ease .8s';
-    btnWrap.innerHTML = `<button onclick="location.href='/'" style="
+    btnWrap.innerHTML = `<button onclick="startNewGameFromPodium()" style="
         background:linear-gradient(135deg,var(--gold),#b8920a);
         color:#0b1e12; border:none; border-radius:12px;
         padding:14px 32px; font-size:1rem; font-weight:700;

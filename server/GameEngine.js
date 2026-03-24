@@ -982,9 +982,7 @@ class GameEngine {
             }
         });
         this.addLog(`🏆 ${this.jugadores[ganadorIdx].nombre} gana ronda ${this.ronda}!`);
-        this.estado = 'fin_ronda';
-        this.lastAction = Date.now();
-        return this._ok('fin_ronda', {
+        const roundSummary = {
             ganadorIdx,
             puntos: this.jugadores.map(j => ({ pts_r: j.pts_r, pts_t: j.pts_t })),
             // Cartas en mano de cada jugador para animación de conteo
@@ -1000,7 +998,20 @@ class GameEngine {
                 })),
             })),
             ...extra
-        });
+        };
+
+        this.lastAction = Date.now();
+        if (this.ronda >= 7) {
+            this.estado = 'fin_juego';
+            return this._ok('fin_juego', {
+                ...roundSummary,
+                jugadores: this.jugadores.map(j => ({ nombre: j.nombre, pts_t: j.pts_t })),
+                finalRound: true,
+            });
+        }
+
+        this.estado = 'fin_ronda';
+        return this._ok('fin_ronda', roundSummary);
     }
 
     finalizarRonda() {

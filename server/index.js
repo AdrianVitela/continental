@@ -19,10 +19,8 @@ app.use(express.static(path.join(__dirname, '../client')));
 // Rutas auth, feedback y admin
 const authRouter     = require('./auth');
 const feedbackRouter = require('./feedback');
-const adminRouter    = require('./admin');
 app.use('/api', authRouter);
 app.use('/api', feedbackRouter);
-app.use('/api', adminRouter);
 
 app.get('/',         (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
 app.get('/login',    (_, res) => res.sendFile(path.join(__dirname, '../client/login.html')));
@@ -33,6 +31,9 @@ app.get('/admin',    (_, res) => res.sendFile(path.join(__dirname, '../client/ad
 const rooms   = new Map();
 const clients = new Map();
 let socketSeq = 0;
+
+const createAdminRouter = require('./admin');
+app.use('/api', createAdminRouter({ rooms }));
 
 function logWs(...args) {
   console.log('[WS]', ...args);

@@ -1165,6 +1165,11 @@ function setupSocketEvents() {
             }
         }
     });
+    WS.on('room_closed', ({ msg }) => {
+        clearActiveGameSession();
+        toast(msg || 'La mesa fue cerrada por administración.', 'red');
+        setTimeout(() => { location.href = '/'; }, 900);
+    });
 }
 
 // ═══════════════════════════════════════════════════

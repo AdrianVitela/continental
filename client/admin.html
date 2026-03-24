@@ -211,6 +211,35 @@
     .btn-save:hover { opacity: .85; }
     .btn-save:disabled { opacity: .4; cursor: not-allowed; }
 
+    .btn-danger {
+      background: linear-gradient(135deg, #d85a4f, #a92e2e);
+      color: #fff7ef;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 12px;
+      font-size: .78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s;
+      font-family: inherit;
+    }
+    .btn-danger:hover { opacity: .88; }
+    .btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+
+    .btn-ghost {
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 7px;
+      padding: 7px 12px;
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: inherit;
+    }
+    .btn-ghost:hover { border-color: rgba(200,160,69,.35); color: var(--gold); }
+
     .save-ok { color: #2ecc71; font-size: .75rem; margin-left: 4px; }
 
     .loading {
@@ -220,9 +249,108 @@
       font-size: .9rem;
     }
 
+    .room-list {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+    }
+    .room-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .room-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .room-code {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.45rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+    .room-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .room-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(0,0,0,.22);
+      color: var(--text-dim);
+    }
+    .room-pill.playing { border-color: rgba(200,160,69,.28); color: var(--gold); }
+    .room-pill.lobby { border-color: rgba(84,199,139,.24); color: #8ce4b5; }
+    .room-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+    }
+    .room-field {
+      background: rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.05);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .room-field-label {
+      font-size: .64rem;
+      text-transform: uppercase;
+      letter-spacing: 1.4px;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+    .room-field-value {
+      font-size: .85rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .room-players {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .room-player {
+      font-size: .72rem;
+      color: var(--text-dim);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: rgba(255,255,255,.03);
+    }
+    .room-player.offline {
+      opacity: .65;
+      text-decoration: line-through;
+    }
+    .room-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
     @media (max-width: 600px) {
       thead th:nth-child(3),
       td:nth-child(3) { display: none; }
+
+      .room-actions {
+        justify-content: stretch;
+      }
+
+      .room-actions button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -232,7 +360,7 @@
     <div class="admin-header">
       <div>
         <h1 class="admin-title">👑 Panel Admin</h1>
-        <div class="admin-subtitle">Continental — Gestión de usuarios</div>
+        <div class="admin-subtitle">Continental — Gestión de usuarios y mesas</div>
       </div>
       <button class="btn-back" onclick="window.location.href='/'">← Volver al lobby</button>
     </div>
@@ -241,7 +369,18 @@
     <div class="stats-row" id="stats-row">
       <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Usuarios</div></div>
       <div class="stat-card"><div class="stat-num" id="stat-badges">—</div><div class="stat-label">Con badge</div></div>
+      <div class="stat-card"><div class="stat-num" id="stat-rooms">—</div><div class="stat-label">Mesas activas</div></div>
       <div class="stat-card"><div class="stat-num" id="stat-hoy">—</div><div class="stat-label">Hoy</div></div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h3>Mesas activas</h3>
+        <button class="btn-ghost" onclick="cargarMesas()">Actualizar</button>
+      </div>
+      <div id="mesas-wrap">
+        <div class="loading">Cargando mesas...</div>
+      </div>
     </div>
 
     <!-- Tabla usuarios -->
@@ -268,32 +407,141 @@
 
     let todosUsuarios = [];
     let badges = {};
+    let mesas = [];
 
     async function cargarDatos() {
       try {
-        const [uRes, bRes] = await Promise.all([
+        const [uRes, bRes, mRes] = await Promise.all([
           fetch('/api/admin/usuarios', { headers: { Authorization: `Bearer ${token}` } }),
           fetch('/api/admin/badges',   { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/admin/mesas',    { headers: { Authorization: `Bearer ${token}` } }),
         ]);
         const uData = await uRes.json();
         const bData = await bRes.json();
+        const mData = await mRes.json();
 
         if (!uRes.ok) { window.location.href = '/'; return; }
+        if (!mRes.ok) throw new Error(mData.error || 'No se pudieron cargar las mesas.');
 
         todosUsuarios = uData.usuarios;
         badges        = bData.badges;
+        mesas         = mData.mesas || [];
 
         // Stats
         const hoy = new Date().toDateString();
         document.getElementById('stat-total').textContent  = todosUsuarios.length;
         document.getElementById('stat-badges').textContent = todosUsuarios.filter(u => u.badge).length;
+        document.getElementById('stat-rooms').textContent  = mesas.length;
         document.getElementById('stat-hoy').textContent    = todosUsuarios.filter(u =>
           new Date(u.created_at).toDateString() === hoy).length;
 
+        renderMesas(mesas);
         renderTabla(todosUsuarios);
       } catch (err) {
+        document.getElementById('mesas-wrap').innerHTML =
+          '<div class="loading">Error al cargar mesas.</div>';
         document.getElementById('tabla-wrap').innerHTML =
           '<div class="loading">Error al cargar datos.</div>';
+      }
+    }
+
+    function formatFecha(fecha) {
+      if (!fecha) return '—';
+      return new Date(fecha).toLocaleString('es-MX', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function renderMesas(items) {
+      if (!items.length) {
+        document.getElementById('mesas-wrap').innerHTML =
+          '<div class="loading">No hay mesas activas.</div>';
+        return;
+      }
+
+      const cards = items.map(mesa => `
+        <div class="room-card" id="room-card-${mesa.code}">
+          <div class="room-top">
+            <div>
+              <div class="room-code">${mesa.code}</div>
+              <div class="room-meta">
+                <span class="room-pill ${mesa.status}">${mesa.status}</span>
+                <span class="room-pill">${mesa.mode}</span>
+                <span class="room-pill">${mesa.connectedCount}/${mesa.playerCount} conectados</span>
+              </div>
+            </div>
+            <div class="room-actions">
+              <button class="btn-danger" onclick="cerrarMesa('${mesa.code}')" id="kill-${mesa.code}">Matar mesa</button>
+            </div>
+          </div>
+          <div class="room-grid">
+            <div class="room-field"><div class="room-field-label">Host</div><div class="room-field-value">${mesa.host}</div></div>
+            <div class="room-field"><div class="room-field-label">Creada</div><div class="room-field-value">${formatFecha(mesa.createdAt)}</div></div>
+            <div class="room-field"><div class="room-field-label">Ronda</div><div class="room-field-value">${mesa.ronda || '—'}</div></div>
+            <div class="room-field"><div class="room-field-label">Turno</div><div class="room-field-value">${mesa.turnoJugador || '—'}</div></div>
+          </div>
+          <div class="room-players">
+            ${mesa.players.map(player => `<span class="room-player ${player.conectado ? '' : 'offline'}">${player.nombre}${player.conectado ? '' : ' · off'}</span>`).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('mesas-wrap').innerHTML = `<div class="room-list">${cards}</div>`;
+    }
+
+    async function cargarMesas() {
+      const wrap = document.getElementById('mesas-wrap');
+      wrap.innerHTML = '<div class="loading">Actualizando mesas...</div>';
+
+      try {
+        const res = await fetch('/api/admin/mesas', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las mesas.');
+
+        mesas = data.mesas || [];
+        document.getElementById('stat-rooms').textContent = mesas.length;
+        renderMesas(mesas);
+      } catch (err) {
+        wrap.innerHTML = '<div class="loading">Error al cargar mesas.</div>';
+        alert(err.message || 'Error al cargar mesas.');
+      }
+    }
+
+    async function cerrarMesa(code) {
+      const ok = window.confirm(`Vas a cerrar la mesa ${code}. Todos los jugadores serán expulsados. ¿Continuar?`);
+      if (!ok) return;
+
+      const btn = document.getElementById(`kill-${code}`);
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Cerrando...';
+      }
+
+      try {
+        const res = await fetch(`/api/admin/mesas/${encodeURIComponent(code)}/cerrar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cerrar la mesa.');
+
+        mesas = mesas.filter(mesa => mesa.code !== code);
+        document.getElementById('stat-rooms').textContent = mesas.length;
+        renderMesas(mesas);
+      } catch (err) {
+        alert(err.message || 'No se pudo cerrar la mesa.');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Matar mesa';
+        }
       }
     }
 

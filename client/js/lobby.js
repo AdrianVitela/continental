@@ -887,6 +887,16 @@ function setupSocketEvents () {
     if (msg === 'Sala no encontrada.') clearActiveLobbySession();
     toast(msg);
   });
+
+  WS.on('room_closed', ({ msg }) => {
+    setLobbyActionPending(false);
+    clearActiveLobbySession();
+    clearActiveGameSession();
+    toast(msg || 'La mesa fue cerrada por administración.');
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 900);
+  });
 }
 
 /* ================================================================

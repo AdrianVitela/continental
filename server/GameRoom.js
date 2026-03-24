@@ -244,6 +244,28 @@ class GameRoom {
     if (p) this._send(p, msg);
   }
 
+  forceClose(reason = 'Mesa cerrada por administración.') {
+    this.players.forEach(player => {
+      if (!player.ws) return;
+      this._send(player, { type: 'room_closed', code: this.code, msg: reason });
+      try {
+        if (player.ws.readyState === 1 || player.ws.readyState === 0) {
+          player.ws.close(4001, reason.slice(0, 120));
+        }
+      } catch (_) {}
+      player.ws = null;
+      player.conectado = false;
+    });
+
+    if (this.engine) {
+      this.engine.jugadores.forEach(player => {
+        player.conectado = false;
+      });
+    }
+
+    this._clearTurnTimer();
+  }
+
   _startTurnTimer() {
     if (this.mode !== 'async') return;
     this._clearTurnTimer();

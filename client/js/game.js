@@ -27,6 +27,7 @@ const REQ = {
 };
 
 const VN = { 'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13 };
+const ACTIVE_GAME_KEY = 'continental_active_game';
 const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
 const GUIDE_DONE_GAME_KEY = 'continental_guide_done_game';
 
@@ -310,6 +311,24 @@ function updateGuideTip() {
     text.textContent = ctx.text || '';
     examples.innerHTML = buildGuideTipExamples(ctx.examples || []);
     tip.classList.add('show');
+}
+
+function saveActiveGameSession(extra = {}) {
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+    const color = extra.color || sessionStorage.getItem('tableColor') || params.get('color') || 'green';
+    localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({
+        code: ROOM,
+        playerId: MY_ID,
+        userId: usuario?.id || null,
+        nombre: usuario?.nombre || localStorage.getItem('nombre_' + MY_ID) || 'Jugador',
+        color,
+        ronda: G?.ronda || null,
+        savedAt: Date.now(),
+    }));
+}
+
+function clearActiveGameSession() {
+    localStorage.removeItem(ACTIVE_GAME_KEY);
 }
 
 function isGuideEnabled() {
@@ -956,6 +975,7 @@ const _animatedBajadas = new Set(); // IDs de cartas ya animadas en mesa
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
     localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
+    saveActiveGameSession();
     syncGuidePreferenceUi();
     window.addEventListener('resize', refreshGuideLayout);
     setupSocketEvents();
@@ -1063,6 +1083,7 @@ function setupSocketEvents() {
         G = state;
         myIdx = G.jugadores.findIndex(j => j.id === MY_ID);
         if (tableColor) applyTableTheme(tableColor);
+        saveActiveGameSession({ color: tableColor || undefined });
 
         if (event === 'esperando_siguiente_ronda') {
             const readyPlayerIds = Array.isArray(data?.readyPlayerIds) ? data.readyPlayerIds : [];
@@ -1115,6 +1136,12 @@ function setupSocketEvents() {
     WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
     WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));
     WS.on('error', ({ msg }) => {
+        if (msg === 'Sala no encontrada.') {
+            clearActiveGameSession();
+            toast(msg, 'red');
+            setTimeout(() => { location.href = '/'; }, 900);
+            return;
+        }
         toast(msg, 'red');
         const esBajada = msg && (
             msg.includes('BAJADA EN FALSO') ||
@@ -2953,6 +2980,7 @@ function showModalRonda(ganadorIdx, puntos) {
 }
 
 function showModalJuego(jugadores) {
+    clearActiveGameSession();
     SFX.play('victoria');
     showConfetti();
     showPodio(jugadores);

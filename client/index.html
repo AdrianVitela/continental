@@ -905,6 +905,7 @@
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('usuario');
+            localStorage.removeItem('continental_active_game');
             window.location.href = '/login';
         }
     </script>

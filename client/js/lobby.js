@@ -14,6 +14,7 @@ const CODE_RE  = /^[A-Z0-9]+$/;
 const COOKIE_KEY  = 'continental_nombre';
 const COOKIE_DAYS = 365;
 const ACTIVE_LOBBY_KEY = 'continental_active_lobby';
+const ACTIVE_GAME_KEY = 'continental_active_game';
 const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
 const GUIDE_DONE_LOBBY_SETUP_KEY = 'continental_guide_done_lobby_setup';
 const GUIDE_DONE_LOBBY_ROOM_KEY = 'continental_guide_done_lobby_room';
@@ -196,6 +197,51 @@ function getActiveLobbySession () {
 
 function clearActiveLobbySession () {
   sessionStorage.removeItem(ACTIVE_LOBBY_KEY);
+}
+
+function getActiveGameSession () {
+  try {
+    const active = JSON.parse(localStorage.getItem(ACTIVE_GAME_KEY) || 'null');
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+    if (!active?.code || !active?.playerId) return null;
+    if (active.userId && usuario?.id && active.userId !== usuario.id) return null;
+    return active;
+  } catch (_) {
+    return null;
+  }
+}
+
+function clearActiveGameSession () {
+  localStorage.removeItem(ACTIVE_GAME_KEY);
+}
+
+function renderActiveGameCard () {
+  const card = document.getElementById('resume-game-card');
+  const roomEl = document.getElementById('resume-game-room');
+  const detailEl = document.getElementById('resume-game-detail');
+  if (!card || !roomEl || !detailEl) return;
+
+  const active = getActiveGameSession();
+  if (!active) {
+    card.classList.remove('show');
+    return;
+  }
+
+  roomEl.textContent = `Sala ${active.code}`;
+  detailEl.textContent = `Tu mesa sigue activa${active.ronda ? ` · ronda ${active.ronda}` : ''}. Puedes volver a entrar con tu mismo asiento.`;
+  card.classList.add('show');
+}
+
+function resumeActiveGame () {
+  const active = getActiveGameSession();
+  if (!active?.code || !active?.playerId) {
+    clearActiveGameSession();
+    renderActiveGameCard();
+    toast('No hay una mesa activa para reconectar.');
+    return;
+  }
+  const color = active.color || sessionStorage.getItem('tableColor') || 'green';
+  window.location.href = `/game?code=${active.code}&pid=${active.playerId}&color=${color}`;
 }
 
 function rejoinActiveLobbyIfNeeded () {
@@ -856,6 +902,7 @@ function escHtml (str) {
 function init () {
   loadSavedName();
   syncGuidePreferenceUi();
+  renderActiveGameCard();
   window.addEventListener('resize', refreshGuideLayout);
   window.addEventListener('scroll', refreshGuideLayout, { passive: true });
   setupSocketEvents();
@@ -886,5 +933,6 @@ window.toggleGuideAuto     = toggleGuideAuto;
 window.startGuideFromSettings = startGuideFromSettings;
 window.closeGuide          = closeGuide;
 window.nextGuideStep       = nextGuideStep;
+window.resumeActiveGame    = resumeActiveGame;
 
 document.addEventListener('DOMContentLoaded', init);

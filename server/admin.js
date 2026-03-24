@@ -48,7 +48,13 @@ function serializeRoom(room) {
   };
 }
 
-function createAdminRouter({ rooms }) {
+function sendSocketMessage(ws, msg) {
+  try {
+    if (ws?.readyState === 1) ws.send(JSON.stringify(msg));
+  } catch (_) {}
+}
+
+function createAdminRouter({ rooms, clients }) {
   const router = express.Router();
 
   // ── GET /api/admin/usuarios ─────────────────────────────────────
@@ -74,11 +80,39 @@ function createAdminRouter({ rooms }) {
       if (badge !== null && badge !== undefined && !BADGES[badge])
         return res.status(400).json({ error: 'Badge inválido.' });
 
-      await pool.query(
-        'UPDATE usuarios SET badge = $1 WHERE id = $2',
+      const update = await pool.query(
+        `UPDATE usuarios
+            SET badge = $1
+          WHERE id = $2
+        RETURNING id, nombre, badge, rol, skin`,
         [badge || null, usuarioId]
       );
-      res.json({ ok: true });
+      const usuario = update.rows[0];
+      if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+      Array.from(rooms.values()).forEach(room => {
+        room.refreshPlayerProfile(usuario.nombre, {
+          badge: usuario.badge || null,
+          skin: usuario.skin || 'clasico',
+        });
+      });
+
+      for (const [ws, ctx] of clients) {
+        const sameUser = String(ctx?.userId || '') === String(usuario.id) || ctx?.nombre === usuario.nombre;
+        if (!sameUser) continue;
+        sendSocketMessage(ws, {
+          type: 'profile_updated',
+          profile: {
+            id: usuario.id,
+            nombre: usuario.nombre,
+            badge: usuario.badge || null,
+            rol: usuario.rol,
+            skin: usuario.skin || 'clasico',
+          },
+        });
+      }
+
+      res.json({ ok: true, usuario });
     } catch (err) {
       console.error('[admin badge]', err.message);
       res.status(500).json({ error: 'Error interno.' });

@@ -31,7 +31,16 @@ class GameRoom {
       const p = this.players.find(p => p.id === id);
       p.ws = ws;
       p.conectado = true;
-      if (this.engine) this.engine._findPlayer(id).conectado = true;
+      p.badge = badge;
+      p.skin = skin;
+      if (this.engine) {
+        const enginePlayer = this.engine._findPlayer(id);
+        if (enginePlayer) {
+          enginePlayer.conectado = true;
+          enginePlayer.badge = badge;
+          enginePlayer.skin = skin;
+        }
+      }
       this.broadcast({ type: 'player_reconnected', nombre, lobbyState: this.lobbyState() }, id);
       if (this.engine) {
         this._broadcastState('player_connection_changed', { playerId: id, conectado: true });
@@ -48,6 +57,40 @@ class GameRoom {
     this.players.push(player);
     this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);
     return player;
+  }
+
+  refreshPlayerProfile(nombre, { badge = null, skin = 'clasico' } = {}) {
+    let changed = false;
+
+    this.players.forEach(player => {
+      if (player.nombre !== nombre) return;
+      player.badge = badge;
+      player.skin = skin;
+      changed = true;
+    });
+
+    if (this.host?.nombre === nombre) {
+      this.host.badge = badge;
+      this.host.skin = skin;
+    }
+
+    if (this.engine) {
+      this.engine.jugadores.forEach(player => {
+        if (player.nombre !== nombre) return;
+        player.badge = badge;
+        player.skin = skin;
+        changed = true;
+      });
+    }
+
+    if (!changed) return false;
+
+    if (this.engine) {
+      this._broadcastState('profile_updated', { nombre, badge, skin });
+    } else {
+      this.broadcast({ type: 'lobby_state_updated', lobbyState: this.lobbyState() });
+    }
+    return true;
   }
 
   removePlayer(id, closingWs = null) {

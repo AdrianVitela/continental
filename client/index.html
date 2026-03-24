@@ -957,19 +957,22 @@
             if (e.target === this) closeCustomize();
         });
 
+        function refreshAuthUi(user = window.AUTH?.usuario) {
+            if (!user) return;
+            const displayEl = document.getElementById('user-display');
+            const badgeEl = document.getElementById('user-badge');
+            const adminBtn = document.getElementById('btn-admin');
+            if (displayEl) displayEl.textContent = user.nombre || '';
+            if (badgeEl) badgeEl.textContent = user.badge || '';
+            if (adminBtn) adminBtn.style.display = user.rol === 'owner' ? 'inline-block' : 'none';
+        }
+
         // Mostrar info de usuario
         document.addEventListener('DOMContentLoaded', () => {
-            const u = window.AUTH?.usuario;
-            if (u) {
-                document.getElementById('user-display').textContent = u.nombre;
-                const badgeEl = document.getElementById('user-badge');
-                if (u.badge) badgeEl.textContent = u.badge;
-                // Mostrar botón admin solo para owner
-                if (u.rol === 'owner') {
-                    document.getElementById('btn-admin').style.display = 'inline-block';
-                }
-            }
+            refreshAuthUi();
         });
+
+        window.refreshAuthUi = refreshAuthUi;
 
         // Override getNombre para usar el de la cuenta
         window.getAuthNombre = () => window.AUTH?.usuario?.nombre || '';

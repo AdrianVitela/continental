@@ -33,7 +33,7 @@ const clients = new Map();
 let socketSeq = 0;
 
 const createAdminRouter = require('./admin');
-app.use('/api', createAdminRouter({ rooms }));
+app.use('/api', createAdminRouter({ rooms, clients }));
 
 function logWs(...args) {
   console.log('[WS]', ...args);
@@ -118,6 +118,12 @@ wss.on('connection', (ws, req) => {
     try {
       switch (msg.type) {
 
+        case 'identify': {
+          ctx.userId = msg.userId || null;
+          if (msg.nombre) ctx.nombre = String(msg.nombre).trim();
+          break;
+        }
+
         case 'create_room': {
           const { nombre, mode = 'realtime', maxPlayers = 5 } = msg;
           const nameErr = validateNombre(nombre);
@@ -131,6 +137,7 @@ wss.on('connection', (ws, req) => {
           ctx.playerId = playerId;
           ctx.roomCode = code;
           ctx.nombre   = safeNombre;
+          ctx.userId   = msg.userId || null;
 
           let hostBadge = null, hostSkin = 'clasico';
           try {
@@ -177,6 +184,7 @@ wss.on('connection', (ws, req) => {
           const playerId = existingId || randomUUID();
           ctx.roomCode = safeCode;
           ctx.nombre   = safeNombre;
+          ctx.userId   = msg.userId || null;
 
           let joinBadge = null, joinSkin = 'clasico';
           try {

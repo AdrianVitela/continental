@@ -249,6 +249,18 @@
       font-size: .9rem;
     }
 
+    .table-scroll {
+      max-height: min(62vh, 680px);
+      overflow: auto;
+    }
+
+    .table-scroll thead th {
+      position: sticky;
+      top: 0;
+      background: rgba(10,24,15,.96);
+      z-index: 1;
+    }
+
     .room-list {
       display: grid;
       gap: 12px;
@@ -585,18 +597,20 @@
       }).join('');
 
       document.getElementById('tabla-wrap').innerHTML = `
-        <table>
-          <thead>
-            <tr>
-              <th>Usuario</th>
-              <th>Rol</th>
-              <th>Registro</th>
-              <th>Badge actual</th>
-              <th>Asignar badge</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>`;
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Registro</th>
+                <th>Badge actual</th>
+                <th>Asignar badge</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>`;
 
       // Pre-seleccionar badge actual
       usuarios.forEach(u => {
@@ -622,6 +636,8 @@
         });
         const data = await res.json();
         if (!res.ok) { alert(data.error); return; }
+        const updatedUser = data.usuario || { id: usuarioId, badge };
+        todosUsuarios = todosUsuarios.map(u => u.id === usuarioId ? { ...u, ...updatedUser, badge } : u);
 
         // Actualizar badge display en la fila
         const row = document.getElementById(`row-${usuarioId}`);

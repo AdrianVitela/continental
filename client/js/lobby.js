@@ -828,6 +828,10 @@ function updateLobbyState (lobbyState) {
    ================================================================ */
 function setupSocketEvents () {
   WS.on('_connected', () => {
+    const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+    if (usuario?.id) {
+      WS.send({ type: 'identify', userId: usuario.id, nombre: usuario.nombre || '' });
+    }
     rejoinActiveLobbyIfNeeded();
   });
 
@@ -867,6 +871,24 @@ function setupSocketEvents () {
     if (lobbyState) updateLobbyState(lobbyState);
     // Guardar en sessionStorage para que game.html lo lea al cargar
     sessionStorage.setItem('tableColor', color);
+  });
+
+  WS.on('lobby_state_updated', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
+  WS.on('profile_updated', ({ profile }) => {
+    if (!profile) return;
+    try {
+      const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+      if (!usuario) return;
+      if (String(usuario.id) !== String(profile.id) && usuario.nombre !== profile.nombre) return;
+      const updated = { ...usuario, ...profile, skin: profile.skin || usuario.skin || 'clasico' };
+      localStorage.setItem('usuario', JSON.stringify(updated));
+      window.AUTH = { ...(window.AUTH || {}), usuario: updated };
+      if (typeof window.refreshAuthUi === 'function') window.refreshAuthUi(updated);
+      toast('Tu perfil se actualizó.', 'green');
+    } catch (_) {}
   });
 
   WS.on('state_update', ({ event, tableColor }) => {

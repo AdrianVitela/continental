@@ -2010,6 +2010,40 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
 // Muestra el contexto: "5♦ 6♦ 7♦ 8♦ → ¿Joker como 4♦ o 9♦?"
 // ─────────────────────────────────────────────────────────────────────────────
 function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada) {
+    const renderMiniCarta = ({ valor, palo, comodin = false, resaltada = false }) => {
+        if (comodin) {
+            return `
+                <div style="
+                    width:42px;height:58px;border-radius:10px;
+                    border:1px solid rgba(200,160,69,.45);
+                    background:linear-gradient(180deg,#4d2a80 0%,#2b153f 100%);
+                    box-shadow:${resaltada ? '0 10px 22px rgba(200,160,69,.22)' : '0 8px 18px rgba(0,0,0,.22)'};
+                    display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    color:#ffe066;font-weight:800;font-size:1rem;
+                ">🃏<span style="font-size:.48rem;letter-spacing:.08em">JOKER</span></div>
+            `;
+        }
+
+        const isRed = palo === '♥' || palo === '♦';
+        const ink = isRed ? '#d84c4c' : '#f4f1ea';
+        return `
+            <div style="
+                width:42px;height:58px;border-radius:10px;
+                border:1px solid ${resaltada ? 'rgba(200,160,69,.55)' : 'rgba(255,255,255,.08)'};
+                background:linear-gradient(180deg,#fbfaf6 0%,#efe8db 100%);
+                box-shadow:${resaltada ? '0 10px 22px rgba(200,160,69,.22)' : '0 8px 18px rgba(0,0,0,.22)'};
+                color:${isRed ? '#d84c4c' : '#1d2430'};
+                position:relative;overflow:hidden;
+                display:flex;align-items:center;justify-content:center;
+                font-family:'Cormorant Garamond',serif;
+            ">
+                <div style="position:absolute;top:4px;left:5px;font-size:.72rem;line-height:.82; font-weight:700; text-align:left;">${valor}<br>${palo}</div>
+                <div style="font-size:1.22rem;font-weight:700;color:${ink};transform:translateY(2px)">${palo}</div>
+                <div style="position:absolute;right:5px;bottom:4px;font-size:.72rem;line-height:.82; font-weight:700; text-align:right; transform:rotate(180deg)">${valor}<br>${palo}</div>
+            </div>
+        `;
+    };
+
     // Calcular qué valor sería en cada posición para mostrarlo al usuario
     const VN_MAP = { A:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, K:13 };
     const VN_REV = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
@@ -2030,6 +2064,8 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 
     const lblBaja = valBaja >= 1 ? `${VN_REV[valBaja] || valBaja}${palo}` : null;
     const lblAlta = valAlta <= 14 ? `${VN_REV[valAlta] || valAlta}${palo}` : null;
+    const cartaBaja = valBaja >= 1 ? { valor: VN_REV[valBaja] || String(valBaja), palo } : null;
+    const cartaAlta = valAlta <= 14 ? { valor: VN_REV[valAlta] || String(valAlta), palo } : null;
 
     // Quitar modal anterior si existe
     const prev = document.getElementById('joker-pos-modal');
@@ -2043,11 +2079,9 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
         background: rgba(0,0,0,.7);
     `;
 
-    const secuenciaHtml = jugada.cartas.map(c => {
-        if (c.comodin) return `<span style="background:#4a2080;color:#ffe066;padding:2px 5px;border-radius:4px;font-size:.75rem">🃏</span>`;
-        const isRed = c.palo === '♥' || c.palo === '♦';
-        return `<span style="color:${isRed ? '#e05050' : '#e8e8e8'};font-size:.75rem">${c.valor}${c.palo}</span>`;
-    }).join('<span style="color:#aaa;margin:0 2px">·</span>');
+    const secuenciaHtml = jugada.cartas.map(c => renderMiniCarta(c)).join(`
+        <div style="display:flex;align-items:center;color:rgba(255,255,255,.32);font-size:1rem;margin:0 -1px">+</div>
+    `);
 
     modal.innerHTML = `
         <div style="
@@ -2061,17 +2095,21 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
             box-shadow: 0 8px 32px rgba(0,0,0,.6);
         ">
             <div style="font-size:.72rem;color:#aaa;margin-bottom:6px">¿Dónde va el 🃏 Joker?</div>
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;align-items:center">
                 ${secuenciaHtml}
             </div>
-            <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:stretch">
                 ${lblBaja ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')"
-                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
-                    ⬅ Baja<br><small style="font-size:.7rem;color:#aaa">${lblBaja}</small>
+                    style="background:linear-gradient(180deg,#132217 0%,#101a12 100%);border:1px solid rgba(46,204,113,.45);color:#d7f7e4;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.8rem;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:104px;box-shadow:0 12px 24px rgba(0,0,0,.24)">
+                    <span style="font-size:.78rem;font-weight:700;letter-spacing:.03em">⬅ Baja</span>
+                    ${renderMiniCarta({ ...cartaBaja, resaltada: true })}
+                    <small style="font-size:.68rem;color:#8fd9af">${lblBaja}</small>
                 </button>` : ''}
                 ${lblAlta ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')"
-                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
-                    Alta ➡<br><small style="font-size:.7rem;color:#aaa">${lblAlta}</small>
+                    style="background:linear-gradient(180deg,#132217 0%,#101a12 100%);border:1px solid rgba(46,204,113,.45);color:#d7f7e4;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.8rem;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:104px;box-shadow:0 12px 24px rgba(0,0,0,.24)">
+                    <span style="font-size:.78rem;font-weight:700;letter-spacing:.03em">Alta ➡</span>
+                    ${renderMiniCarta({ ...cartaAlta, resaltada: true })}
+                    <small style="font-size:.68rem;color:#8fd9af">${lblAlta}</small>
                 </button>` : ''}
                 ${!lblBaja && !lblAlta ? `<span style="color:#aaa;font-size:.75rem">Solo hay una posición posible</span>` : ''}
             </div>

@@ -320,6 +320,7 @@ function setGuideEnabled(enabled) {
     if (enabled) localStorage.setItem(GUIDE_ENABLED_KEY, '1');
     else localStorage.removeItem(GUIDE_ENABLED_KEY);
     syncGuidePreferenceUi();
+    updateGuideTip();
 }
 
 function syncGuidePreferenceUi() {

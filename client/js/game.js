@@ -1108,6 +1108,9 @@ function setupSocketEvents() {
         _firstLoad = false;
 
         if (isNewRound) hideNextRoundWait();
+        if (event === 'nueva_ronda' && data?.reinicio) {
+            toast('⚠️ Se agotó dos veces la baraja. La ronda se reinició.', 'yellow');
+        }
 
         // Animar reparto si inicia ronda nueva o si esta es la primera
         // reconexión al entrar a game.html y aún no se animó la ronda actual.
@@ -2991,11 +2994,16 @@ function cSm(c) {
 function showModalRonda(ganadorIdx, puntos) {
     const modal = document.getElementById('modal-ronda');
     if (!modal) return;
-    document.getElementById('mr-title').textContent = `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`;
-    document.getElementById('mr-msg').textContent = G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!';
+    const hayGanador = Number.isInteger(ganadorIdx) && ganadorIdx >= 0;
+    document.getElementById('mr-title').textContent = hayGanador
+        ? `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`
+        : `📋 Ronda ${G.ronda} cerrada por agotamiento de mazo`;
+    document.getElementById('mr-msg').textContent = hayGanador
+        ? (G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!')
+        : (G.ronda < 7 ? `Todos cuentan sus cartas. Siguiente: ronda ${G.ronda + 1}.` : 'Todos cuentan sus cartas. Fin del juego.');
     document.getElementById('mr-scores').innerHTML = G.jugadores.map((j, i) => `
-        <div class="srow ${i === ganadorIdx ? 'winner' : ''}">
-            <span>${j.nombre}${i === ganadorIdx ? ' 🏆' : ''}</span>
+        <div class="srow ${hayGanador && i === ganadorIdx ? 'winner' : ''}">
+            <span>${j.nombre}${hayGanador && i === ganadorIdx ? ' 🏆' : ''}</span>
             <span class="srow-pts">+${puntos?.[i]?.pts_r ?? 0} · Total: ${j.pts_t}</span>
         </div>
     `).join('');

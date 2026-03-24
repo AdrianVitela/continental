@@ -219,18 +219,17 @@ class GameRoom {
     this._resetTurnTimer();
     this._save();
 
+    if (this.engine._pendingReinicio) {
+      this.engine._pendingReinicio = false;
+      this._broadcastState('nueva_ronda', { ronda: this.engine.ronda, reinicio: true });
+      return result;
+    }
+
     if (result.broadcast !== false) {
       this._broadcastState(result.event, result.data);
     } else {
       const p = this.players.find(p => p.id === playerId);
       this._send(p, { type: 'state_update', event: result.event, state: this.engine.stateFor(playerId) });
-    }
-
-    // Si el engine marcó un reinicio de ronda pendiente (mazo agotado dos veces),
-    // broadcastearlo como nueva ronda
-    if (this.engine._pendingReinicio) {
-      this.engine._pendingReinicio = false;
-      this._broadcastState('nueva_ronda', { ronda: this.engine.ronda, reinicio: true });
     }
 
     return result;

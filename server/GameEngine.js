@@ -485,6 +485,9 @@ class GameEngine {
         // true mientras el mazo reciclado (del fondo) esté activo.
         // Cuando este mazo también se agota → reinicio de ronda.
         this.mazoReciclado = false;
+        // Cuenta cuántas veces esta misma ronda ya se agotó dos veces.
+        // La primera reinicia la ronda; la segunda fuerza conteo y avance.
+        this.agotamientosDoblesRonda = 0;
         // ──────────────────────────────────────────────
 
         this.estado = 'esperando_robo';
@@ -517,14 +520,30 @@ class GameEngine {
     //   Funciona igual que siempre; se reporta en el log.
     // ─────────────────────────────────────────────────
     chkMazo() {
-        if (this.mazo.length > 0) return; // hay cartas, no hacer nada
+        if (this.mazo.length > 0) return { reinicio: false, reciclado: false }; // hay cartas, no hacer nada
 
         // ── El mazo ya fue reciclado una vez y se agotó de nuevo ──
         // No importa si el fondo tiene cartas: reiniciar la ronda.
-        if (this.mazoReciclado) {
-            this.addLog('⚠️ Mazo agotado por segunda vez — la ronda se reinicia sin ganador.');
-            this._reiniciarRonda();
-            return;
+        if (this.mazoReciclado) { 
+            this.agotamientosDoblesRonda += 1;
+
+            if (this.agotamientosDoblesRonda === 1) {
+                this.addLog('⚠️ Mazo agotado por segunda vez — la ronda se reinicia sin ganador.');
+                this._reiniciarRonda();
+                return { reinicio: true, reciclado: false };
+            }
+
+            this.addLog('⚠️ Mazo agotado por segunda vez otra vez — se cuentan las cartas y avanza la ronda.');
+            return {
+                reinicio: false,
+                reciclado: false,
+                finRonda: true,
+                result: this._finRonda(null, {
+                    tipo: 'agotamiento_doble',
+                    sinGanador: true,
+                    motivo: 'agotamiento_doble_repetido',
+                }),
+            };
         }
 
         // ── Primera vez que se agota el mazo ──
@@ -545,12 +564,13 @@ class GameEngine {
             // Absolutamente no hay cartas — reiniciar directamente
             this.addLog('⚠️ Sin cartas disponibles — la ronda se reinicia sin ganador.');
             this._reiniciarRonda();
-            return;
+            return { reinicio: true, reciclado: false };
         }
 
         this.mazo = shuffle(reciclables);
         this.mazoReciclado = true;
         this.addLog(`♻️ Mazo agotado — se reciclaron ${this.mazo.length} cartas del fondo como nuevo mazo.`);
+        return { reinicio: false, reciclado: true };
     }
 
     // ─────────────────────────────────────────────────
@@ -569,17 +589,18 @@ class GameEngine {
             j.puedeBajar = true;
         });
         // Repartir de nuevo (repartir() ya construye mazo fresco y limpia fondoDescartado)
-        this.repartir();
+        this.repartir({ resetAgotamientosDobles: false });
         // Notificar via _broadcastReinicio (el caller — GameRoom — debe manejar el broadcast)
         this._pendingReinicio = true;
     }
 
-    repartir() {
+    repartir({ resetAgotamientosDobles = true } = {}) {
         const numJugadores = this.jugadores.length;
         this.mazo = mkMazo(numJugadores);
         this.fondo = [];
         this.fondoDescartado = [];   // limpiar al inicio de cada ronda
         this.mazoReciclado = false;  // resetear flag de reciclado
+        if (resetAgotamientosDobles) this.agotamientosDoblesRonda = 0;
 
         this.jugadores.forEach(j => {
             j.mano = [];
@@ -616,7 +637,9 @@ class GameEngine {
     acTomarMazo(playerId) {
         const err = this._checkTurn(playerId, 'esperando_robo');
         if (err) return err;
-        this.chkMazo();
+        const mazoStatus = this.chkMazo();
+        if (mazoStatus?.finRonda) return mazoStatus.result;
+        if (mazoStatus?.reinicio) return this._ok('reinicio_ronda', {}, false);
         const carta = this.mazo.pop();
         this.jActivo.mano.push(carta);
         this.addLog(`🎴 ${this.jActivo.nombre} robó del mazo.`);
@@ -646,7 +669,9 @@ class GameEngine {
         const jc = this.jugadores[this.castigo_idx];
         if (acepta) {
             const cartaFondo = this.fondo.pop();
-            this.chkMazo();
+            const mazoStatus = this.chkMazo();
+            if (mazoStatus?.finRonda) return mazoStatus.result;
+            if (mazoStatus?.reinicio) return this._ok('reinicio_ronda', {}, false);
             const cartaMazo = this.mazo.pop();
             jc.mano.push(cartaFondo, cartaMazo);
             this.addLog(`⚡ ${jc.nombre} se castigó.`);
@@ -970,8 +995,9 @@ class GameEngine {
     }
 
     _finRonda(ganadorIdx, extra = {}) {
+        const hayGanador = Number.isInteger(ganadorIdx) && ganadorIdx >= 0 && ganadorIdx < this.jugadores.length;
         this.jugadores.forEach((j, i) => {
-            if (i === ganadorIdx) {
+            if (hayGanador && i === ganadorIdx) {
                 j.pts_r = 0;
             } else {
                 j.pts_r = j.mano.reduce((s, c) => {
@@ -981,15 +1007,20 @@ class GameEngine {
                 j.pts_t += j.pts_r;
             }
         });
-        this.addLog(`🏆 ${this.jugadores[ganadorIdx].nombre} gana ronda ${this.ronda}!`);
+        if (hayGanador) {
+            this.addLog(`🏆 ${this.jugadores[ganadorIdx].nombre} gana ronda ${this.ronda}!`);
+        } else {
+            this.addLog(`📋 Ronda ${this.ronda} cerrada sin ganador — se cuentan todas las manos.`);
+        }
         const roundSummary = {
             ganadorIdx,
+            sinGanador: !hayGanador,
             puntos: this.jugadores.map(j => ({ pts_r: j.pts_r, pts_t: j.pts_t })),
             // Cartas en mano de cada jugador para animación de conteo
             manosFinales: this.jugadores.map((j, i) => ({
                 jugadorIdx: i,
                 nombre: j.nombre,
-                mano: i === ganadorIdx ? [] : j.mano.map(c => ({
+                mano: (hayGanador && i === ganadorIdx) ? [] : j.mano.map(c => ({
                     id: c.id,
                     valor: c.valor,
                     palo: c.palo || null,

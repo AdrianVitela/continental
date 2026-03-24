@@ -45,6 +45,267 @@ let guideState = { active: false, steps: [], index: 0, doneKey: null };
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function isRedSuit(suit) {
+    return suit === '♥' || suit === '♦';
+}
+
+function renderGuideMiniCards(cards) {
+    return cards.map(card => {
+        if (card.joker) {
+            return '<span class="guide-mini-card joker">🃏</span>';
+        }
+        const suit = card.suit || '';
+        const cls = isRedSuit(suit) ? ' red' : '';
+        return `<span class="guide-mini-card${cls}">${escapeHtml(card.rank)}${escapeHtml(suit)}</span>`;
+    }).join('');
+}
+
+function buildGuideExamples(examples) {
+    if (!Array.isArray(examples) || !examples.length) return '';
+    return examples.map(example => `
+        <div class="guide-example">
+            <div class="guide-example-label">${escapeHtml(example.label)}</div>
+            <div class="guide-mini-cards">${renderGuideMiniCards(example.cards || [])}</div>
+            ${example.caption ? `<div class="guide-example-caption">${escapeHtml(example.caption)}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function buildGuideTipExamples(examples) {
+    if (!Array.isArray(examples) || !examples.length) return '';
+    return examples.map(example => `
+        <div class="guide-tip-example">
+            <div class="guide-tip-example-label">${escapeHtml(example.label)}</div>
+            <div class="guide-mini-cards">${renderGuideMiniCards(example.cards || [])}</div>
+        </div>
+    `).join('');
+}
+
+function getRoundRequirementText(ronda) {
+    const req = REQ[ronda] || { t: 0, c: 0 };
+    const parts = [];
+    if (req.t) parts.push(`${req.t} tercia${req.t > 1 ? 's' : ''}`);
+    if (req.c) parts.push(`${req.c} corrida${req.c > 1 ? 's' : ''}`);
+    if (ronda === 7) parts.push('sin sobrantes al bajarte');
+    return parts.join(' + ');
+}
+
+function getRoundExampleData(ronda) {
+    const needsRun = (REQ[ronda]?.c || 0) > 0;
+    const needsSet = (REQ[ronda]?.t || 0) > 0;
+    const examples = [];
+    if (needsSet) {
+        examples.push({
+            label: 'Tercia de ejemplo',
+            cards: [
+                { rank: '7', suit: '♣' },
+                { rank: '7', suit: '♥' },
+                { rank: '7', suit: '♠' },
+            ],
+            caption: 'Mismo valor. El palo no importa en una tercia.',
+        });
+    }
+    if (needsRun) {
+        examples.push({
+            label: 'Corrida de ejemplo',
+            cards: [
+                { rank: '4', suit: '♥' },
+                { rank: '5', suit: '♥' },
+                { rank: '6', suit: '♥' },
+                { rank: '7', suit: '♥' },
+            ],
+            caption: 'Mismo palo y en secuencia. No mezcles corazones con tréboles.',
+        });
+    }
+    if (!examples.length) {
+        examples.push({
+            label: 'Comodín de ejemplo',
+            cards: [
+                { rank: '9', suit: '♠' },
+                { joker: true },
+                { rank: '9', suit: '♦' },
+            ],
+            caption: 'El joker solo ilustra una sustitución posible. El server sigue validando la jugada real.',
+        });
+    }
+    return examples;
+}
+
+function getGuideActionContext() {
+    if (!G || myIdx < 0) return null;
+    const me = G.jugadores[myIdx];
+    if (!me) return null;
+
+    const requirement = getRoundRequirementText(G.ronda);
+    const corridaExample = {
+        label: 'Corrida válida',
+        cards: [
+            { rank: '4', suit: '♥' },
+            { rank: '5', suit: '♥' },
+            { rank: '6', suit: '♥' },
+            { rank: '7', suit: '♥' },
+        ],
+    };
+    const terciaExample = {
+        label: 'Tercia válida',
+        cards: [
+            { rank: 'Q', suit: '♣' },
+            { rank: 'Q', suit: '♦' },
+            { rank: 'Q', suit: '♠' },
+        ],
+    };
+    const intercambios = detectarIntercambiosPosibles();
+
+    if (!isMyTurn()) {
+        if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx) {
+            return {
+                badge: 'Castigo',
+                title: 'Tienes prioridad de castigo',
+                text: 'Puedes aceptar la carta del fondo y además recibir una carta extra del mazo. Decide antes de que siga el turno.',
+            };
+        }
+        return {
+            badge: 'Observa',
+            title: `Turno de ${G.jugadores[G.turno]?.nombre || 'otro jugador'}`,
+            text: `Mientras esperas, recuerda el requisito de esta ronda: ${requirement}.`,
+            examples: getRoundExampleData(G.ronda).slice(0, 1),
+        };
+    }
+
+    if (G.estado === 'esperando_robo') {
+        return {
+            badge: 'Paso 1',
+            title: me.bajado ? 'Ya estás bajado: roba del mazo' : 'Primero debes robar',
+            text: me.bajado
+                ? 'Después de bajarte ya no puedes tomar del fondo. En este estado solo robas del mazo.'
+                : 'Antes de hacer cualquier otra acción debes tomar del fondo o robar del mazo. Si te bajas después, recuerda que las corridas deben ser del mismo palo.',
+            examples: (REQ[G.ronda]?.c || 0) > 0 ? [corridaExample] : [terciaExample],
+        };
+    }
+
+    if (G.estado === 'fase_castigo') {
+        return {
+            badge: 'Castigo',
+            title: G.castigo_idx === myIdx ? 'Decide si te castigas' : 'Esperando decisión de castigo',
+            text: G.castigo_idx === myIdx
+                ? 'Si aceptas el castigo tomas la carta del fondo y una extra del mazo. Úsalo cuando esa carta te mejore la jugada.'
+                : `Debes esperar a que ${G.jugadores[G.castigo_idx]?.nombre || 'el jugador'} decida.`,
+        };
+    }
+
+    if (!me.bajado && G.estado === 'esperando_accion') {
+        if (me.penalizacion?.activa) {
+            return {
+                badge: 'Penalización',
+                title: 'Aún no puedes bajarte',
+                text: `Tienes ${me.penalizacion.turnosRestantes} turno(s) bloqueado(s) para bajar. Aun así puedes preparar la construcción para el siguiente turno.`,
+                examples: getRoundExampleData(G.ronda),
+            };
+        }
+        if (slotsListosParaBajar()) {
+            return {
+                badge: 'Listo',
+                title: 'Ya puedes bajarte',
+                text: `Cumples el requisito de la ronda ${G.ronda}: ${requirement}. Pulsa Bajarme para confirmar tus jugadas.`,
+                examples: getRoundExampleData(G.ronda),
+            };
+        }
+        if (intercambios.length > 0) {
+            const ic = intercambios[0];
+            return {
+                badge: 'Joker',
+                title: 'Puedes reclamar un joker',
+                text: `Ya robaste y tienes la carta exacta ${ic.cartaValor}${ic.cartaPalo || ''}. Puedes intercambiarla por el joker y completar tu bajada.`,
+                examples: [{
+                    label: 'Intercambio de ejemplo',
+                    cards: [
+                        { rank: ic.cartaValor, suit: ic.cartaPalo || '' },
+                        { joker: true },
+                        { rank: ic.cartaValor, suit: ic.cartaPalo || '' },
+                    ],
+                }],
+            };
+        }
+        return {
+            badge: 'Construcción',
+            title: `Aún te falta completar: ${requirement}`,
+            text: (REQ[G.ronda]?.c || 0) > 0
+                ? 'Arma las corridas con cartas consecutivas del mismo palo. Luego completa las tercias que falten.'
+                : 'Agrupa cartas del mismo valor en los slots. Cuando todo quede completo podrás bajarte.',
+            examples: getRoundExampleData(G.ronda),
+        };
+    }
+
+    if (me.bajado && G.estado === 'esperando_accion') {
+        if (intercambios.length > 0) {
+            const ic = intercambios[0];
+            return {
+                badge: 'Joker',
+                title: 'Puedes intercambiar un joker ahora',
+                text: `Como ya estás bajado, si colocas ${ic.cartaValor}${ic.cartaPalo || ''} en la jugada correcta recibes el joker para acomodarlo en otra jugada.`,
+            };
+        }
+        return {
+            badge: 'Mesa',
+            title: 'Ya estás bajado: ahora acomoda o paga',
+            text: 'Selecciona una carta de tus sobrantes para acomodarla en las jugadas de la mesa o déjala lista para pagar al fondo.',
+        };
+    }
+
+    if (G.estado === 'esperando_pago') {
+        return {
+            badge: 'Paso final',
+            title: 'Debes pagar una carta al fondo',
+            text: me.bajado
+                ? 'Antes de cerrar tu turno todavía puedes acomodar o intercambiar un joker si aplica. Cuando termines, paga una carta al fondo.'
+                : 'Después de tu acción principal debes escoger una carta y pagarla al fondo para terminar el turno.',
+            examples: [
+                {
+                    label: 'Carta que sale al fondo',
+                    cards: [{ rank: '9', suit: '♣' }],
+                },
+            ],
+        };
+    }
+
+    return {
+        badge: 'Guía',
+        title: `Ronda ${G.ronda}`,
+        text: `Requisito actual: ${requirement}.`,
+        examples: getRoundExampleData(G.ronda),
+    };
+}
+
+function updateGuideTip() {
+    const tip = document.getElementById('guide-tip');
+    const badge = document.getElementById('guide-tip-badge');
+    const title = document.getElementById('guide-tip-title');
+    const text = document.getElementById('guide-tip-text');
+    const examples = document.getElementById('guide-tip-examples');
+    if (!tip || !badge || !title || !text || !examples) return;
+
+    const ctx = getGuideActionContext();
+    if (!ctx) {
+        tip.classList.remove('show');
+        return;
+    }
+
+    badge.textContent = ctx.badge || 'Guía';
+    title.textContent = ctx.title || '';
+    text.textContent = ctx.text || '';
+    examples.innerHTML = buildGuideTipExamples(ctx.examples || []);
+    tip.classList.add('show');
+}
+
 function isGuideEnabled() {
     return localStorage.getItem(GUIDE_ENABLED_KEY) === '1';
 }
@@ -104,6 +365,8 @@ function buildGameGuideSteps() {
                 selector: '.topbar',
                 title: 'Estado de la ronda',
                 text: 'Aquí ves el número de ronda, el requisito actual, la conexión y el marcador acumulado de todos.',
+                contextTitle: 'Qué mirar aquí',
+                contextBody: 'La ronda define exactamente cuántas tercias y corridas debes completar antes de bajarte.',
             },
             {
                 selector: '#mazo-wrap',
@@ -114,11 +377,20 @@ function buildGameGuideSteps() {
                 selector: '#fondo-wrap',
                 title: 'Fondo',
                 text: 'El fondo muestra la carta visible. Solo puedes tomarla antes de bajarte en esa ronda.',
+                contextTitle: 'Regla importante',
+                contextBody: 'Si ya estás bajado, en tu siguiente robo solo podrás tomar del mazo.',
             },
             {
                 selector: '#building-row',
                 title: 'Construcción',
                 text: 'Aquí armas tus tercias o corridas antes de bajarte. Puedes reordenar y preparar la jugada sin enviarla todavía.',
+                dynamic: () => ({
+                    contextTitle: `Ronda ${G?.ronda || '—'}: ${getRoundRequirementText(G?.ronda || 1)}`,
+                    contextBody: (REQ[G?.ronda || 1]?.c || 0) > 0
+                        ? 'Las corridas siempre deben ser consecutivas y del mismo palo. Los ejemplos de abajo son solo ilustrativos.'
+                        : 'En esta ronda te conviene fijarte en el valor de las cartas para completar tercias.',
+                    examples: getRoundExampleData(G?.ronda || 1),
+                }),
             },
             {
                 selector: '#discard-zone',
@@ -129,11 +401,21 @@ function buildGameGuideSteps() {
                 selector: '.action-bar',
                 title: 'Instrucciones y acciones',
                 text: 'Esta barra te dice exactamente qué toca hacer y te muestra los botones válidos según el estado del turno.',
+                dynamic: () => {
+                    const ctx = getGuideActionContext();
+                    return ctx ? {
+                        contextTitle: ctx.title,
+                        contextBody: ctx.text,
+                        examples: ctx.examples || [],
+                    } : null;
+                },
             },
             {
                 selector: '#table-bajadas',
                 title: 'Mesa de jugadas',
                 text: 'Aquí aparecen las bajadas de todos. Después de bajarte puedes pagar cartas o acomodar comodines sobre estas jugadas.',
+                contextTitle: 'Sobre los jokers',
+                contextBody: 'Solo puedes reclamar un joker si tienes la carta exacta que representa y estás en un estado válido para intercambiar.',
             },
         ],
     };
@@ -187,6 +469,12 @@ function renderGuideStep() {
         const text = document.getElementById('guide-text');
         const progress = document.getElementById('guide-progress');
         const nextBtn = document.getElementById('guide-next-btn');
+        const ctxWrap = document.getElementById('guide-context-copy');
+        const ctxTitle = document.getElementById('guide-context-title');
+        const ctxBody = document.getElementById('guide-context-body');
+        const examples = document.getElementById('guide-examples');
+        const dynamicData = typeof step.dynamic === 'function' ? step.dynamic() : null;
+        const extra = dynamicData || step;
 
         focus.style.left = `${Math.max(8, rect.left - 8)}px`;
         focus.style.top = `${Math.max(8, rect.top - 8)}px`;
@@ -197,6 +485,21 @@ function renderGuideStep() {
         text.textContent = step.text;
         progress.textContent = `Paso ${guideState.index + 1} de ${guideState.steps.length}`;
         nextBtn.textContent = guideState.index === guideState.steps.length - 1 ? 'Terminar' : 'Siguiente';
+
+        if (ctxWrap && ctxTitle && ctxBody) {
+            if (extra?.contextTitle || extra?.contextBody) {
+                ctxWrap.style.display = 'block';
+                ctxTitle.textContent = extra.contextTitle || 'Detalle';
+                ctxBody.textContent = extra.contextBody || '';
+            } else {
+                ctxWrap.style.display = 'none';
+                ctxTitle.textContent = '';
+                ctxBody.textContent = '';
+            }
+        }
+        if (examples) {
+            examples.innerHTML = buildGuideExamples(extra?.examples || []);
+        }
         positionGuideCard(rect);
     });
 }
@@ -2423,6 +2726,7 @@ function renderActions() {
     if (intercambioMode) {
         if (instr) instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
         add('❌ Cancelar Intercambio', 'abtn-red', cancelIntercambio);
+        updateGuideTip();
         return;
     }
 
@@ -2473,6 +2777,7 @@ function renderActions() {
             add('✅ Sí, castigarme', 'abtn-green', () => acCastigo(true));
             add('❌ No', 'abtn-red', () => acCastigo(false));
         }
+        updateGuideTip();
         return;
     }
 
@@ -2581,6 +2886,8 @@ function renderActions() {
             }
             break;
     }
+
+    updateGuideTip();
 
 }
 

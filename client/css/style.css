@@ -240,6 +240,45 @@ body::before {
   animation: rainbowFoilShift 1.2s linear infinite;
 }
 
+@media (hover: none) and (pointer: coarse), (max-width: 900px) {
+  .cback.skin-arcoiris,
+  .cback-xs.skin-arcoiris {
+    background-size: 900% 900%;
+    animation-duration: 14s;
+  }
+
+  .cback.skin-arcoiris::before {
+    inset: -16%;
+    background-size: 160px 160px, 190px 190px;
+    filter: saturate(1.02) blur(.05px);
+    opacity: .24;
+    animation-duration: 2.4s;
+  }
+
+  .cback-xs.skin-arcoiris::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cback.skin-arcoiris,
+  .cback-xs.skin-arcoiris,
+  .cback.skin-arcoiris::before,
+  .cback-xs.skin-arcoiris::before {
+    animation: none;
+  }
+
+  .cback.skin-arcoiris,
+  .cback-xs.skin-arcoiris {
+    background-size: 100% 100%;
+  }
+
+  .cback.skin-arcoiris::before,
+  .cback-xs.skin-arcoiris::before {
+    opacity: .18;
+  }
+}
+
 .card-sm {
   width: var(--cw-sm);
   height: var(--ch-sm);

@@ -152,23 +152,47 @@ body::before {
 .skin-dorado    { --skin-bg: linear-gradient(135deg, #7a5c00, #3d2e00, #c8a045, #3d2e00); --skin-border: rgba(200,160,69,.6); --skin-inner: rgba(255,220,100,.3); --skin-glow: 0 0 12px rgba(200,160,69,.5); }
 .skin-neon      { --skin-bg: linear-gradient(135deg, #001a33, #003366); --skin-border: rgba(0,200,255,.5);  --skin-inner: rgba(0,200,255,.25); --skin-glow: 0 0 14px rgba(0,200,255,.6), 0 0 4px rgba(0,200,255,.9); }
 .skin-imperial  { --skin-bg: linear-gradient(135deg, #3f0018, #160008, #8f0f3b, #160008); --skin-border: rgba(255,133,183,.48); --skin-inner: rgba(255,168,206,.18); --skin-glow: 0 0 14px rgba(201,39,104,.25); }
+.skin-arcoiris  { --skin-bg: linear-gradient(135deg, #ff4d6d 0%, #ff9f1c 16%, #ffe66d 32%, #2ec4b6 48%, #4d96ff 64%, #8b5cf6 82%, #ff4d6d 100%); --skin-border: rgba(255,255,255,.62); --skin-inner: rgba(255,255,255,.22); --skin-glow: 0 0 16px rgba(255,255,255,.22); }
 .skin-amatista  { --skin-bg: linear-gradient(135deg, #35105e, #170728, #7e39c6, #170728); --skin-border: rgba(186,132,255,.52); --skin-inner: rgba(205,165,255,.2); --skin-glow: 0 0 14px rgba(146,82,255,.25); }
 .skin-cobalto   { --skin-bg: linear-gradient(135deg, #0a1e46, #071024, #1453c2, #071024); --skin-border: rgba(88,151,255,.5); --skin-inner: rgba(129,180,255,.2); --skin-glow: 0 0 14px rgba(36,104,232,.22); }
 .skin-marfil    { --skin-bg: linear-gradient(135deg, #8a7b63, #4a4134, #e6d8bc, #4a4134); --skin-border: rgba(240,225,194,.52); --skin-inner: rgba(255,244,223,.22); --skin-glow: 0 0 12px rgba(230,216,188,.24); }
+
+@keyframes rainbowShift {
+  0% {
+    background-position: 0% 50%;
+    filter: saturate(1) brightness(1);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: saturate(1.14) brightness(1.05);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: saturate(1) brightness(1);
+  }
+}
 
 .cback {
   width: var(--cw);
   height: var(--ch);
   border-radius: var(--r);
   background: var(--skin-bg, linear-gradient(135deg, #1a3a80, #0d2050));
+  background-size: 100% 100%;
   border: 1px solid var(--skin-border, rgba(255,255,255,.18));
   box-shadow: var(--sh-card), var(--skin-glow, none);
-  box-shadow: var(--sh-card);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.cback.skin-arcoiris,
+.cback-xs.skin-arcoiris {
+  background-size: 240% 240%;
+  animation: rainbowShift 6s linear infinite;
 }
 
 .cback::after {
@@ -177,6 +201,18 @@ body::before {
   height: 80%;
   border: 1.5px solid var(--skin-inner, rgba(255,255,255,.12));
   border-radius: 4px;
+}
+
+.cback.skin-arcoiris::before,
+.cback-xs.skin-arcoiris::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(125deg, rgba(255,255,255,.05) 18%, rgba(255,255,255,.24) 50%, rgba(255,255,255,.05) 82%);
+  mix-blend-mode: screen;
+  opacity: .45;
+  pointer-events: none;
 }
 
 .card-sm {

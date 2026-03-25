@@ -133,6 +133,7 @@ const SKINS_EXCLUSIVOS = {
   'dorado': ['owner'],
   'neon':   ['owner', 'vip', 'beta_tester'],
   'imperial': ['owner'],
+  'arcoiris': ['owner'],
   'amatista': ['vip'],
   'cobalto': ['beta_tester'],
   'marfil': ['early_adopter'],

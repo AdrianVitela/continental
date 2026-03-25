@@ -169,6 +169,9 @@ router.post('/me/skin', async (req, res) => {
 
   } catch (err) {
     console.error('[skin]', err.message);
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token inválido o expirado.' });
+    }
     res.status(500).json({ error: 'Error interno.' });
   }
 });

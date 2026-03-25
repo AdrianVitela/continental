@@ -930,8 +930,17 @@
 
         async function selectSkin(skinId) {
             const token = localStorage.getItem('token');
+            const prevSkin = currentSkin;
             currentSkin = skinId;
             renderSkinGrid();
+
+            if (!token) {
+                currentSkin = prevSkin;
+                renderSkinGrid();
+                document.getElementById('customize-error').textContent = 'Tu sesión expiró. Vuelve a iniciar sesión.';
+                document.getElementById('customize-error').style.display = 'block';
+                return;
+            }
 
             try {
                 const res  = await fetch('/api/me/skin', {
@@ -941,6 +950,17 @@
                 });
                 const data = await res.json();
                 if (!res.ok) {
+                    currentSkin = prevSkin;
+                    renderSkinGrid();
+                    if (res.status === 401) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('usuario');
+                        localStorage.removeItem('mySkin');
+                        document.getElementById('customize-error').textContent = 'Tu sesión expiró. Vuelve a iniciar sesión.';
+                        document.getElementById('customize-error').style.display = 'block';
+                        setTimeout(() => { window.location.href = '/login'; }, 900);
+                        return;
+                    }
                     document.getElementById('customize-error').textContent = data.error;
                     document.getElementById('customize-error').style.display = 'block';
                     return;
@@ -950,11 +970,14 @@
                 u.skin = skinId;
                 localStorage.setItem('usuario', JSON.stringify(u));
                 localStorage.setItem('mySkin', skinId);
+                if (window.AUTH?.usuario) window.AUTH.usuario.skin = skinId;
 
                 document.getElementById('customize-ok').textContent = '✓ Skin guardado';
                 document.getElementById('customize-ok').style.display = 'block';
                 setTimeout(() => { document.getElementById('customize-ok').style.display = 'none'; }, 1500);
             } catch {
+                currentSkin = prevSkin;
+                renderSkinGrid();
                 document.getElementById('customize-error').textContent = 'Error de conexión.';
                 document.getElementById('customize-error').style.display = 'block';
             }

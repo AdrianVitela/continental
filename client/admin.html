@@ -9,8 +9,10 @@
   <style>
     body {
       min-height: 100vh;
+      height: 100vh;
       background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
       padding: 24px 16px;
+      overflow: hidden;
     }
 
     .admin-wrap {
@@ -20,6 +22,26 @@
       flex-direction: column;
       gap: 20px;
       animation: fadeDown .6s var(--eout) both;
+      max-height: calc(100vh - 48px);
+      overflow: auto;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(200,160,69,.45) rgba(255,255,255,.06);
+    }
+
+    .admin-wrap::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    .admin-wrap::-webkit-scrollbar-track {
+      background: rgba(255,255,255,.05);
+      border-radius: 999px;
+    }
+
+    .admin-wrap::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(200,160,69,.58), rgba(160,122,24,.42));
+      border-radius: 999px;
+      border: 2px solid rgba(0,0,0,.16);
     }
 
     .admin-header {
@@ -383,6 +405,15 @@
     }
 
     @media (max-width: 600px) {
+      body {
+        padding: 16px 12px;
+      }
+
+      .admin-wrap {
+        max-height: calc(100vh - 32px);
+        padding-right: 2px;
+      }
+
       thead th:nth-child(3),
       td:nth-child(3) { display: none; }
 

@@ -1059,12 +1059,13 @@ class GameEngine {
         return this._ok('nueva_ronda', { ronda: this.ronda });
     }
 
-    stateFor(playerId) {
+    stateFor(playerId, options = {}) {
         const base = this.publicState();
         base.jugadores = this.jugadores.map(j => {
             if (j.id === playerId) return { ...j };
             return { ...j, mano: j.mano.map(() => ({ hidden: true })) };
         });
+        if (!options.includeLog) base.log = [];
         return base;
     }
 

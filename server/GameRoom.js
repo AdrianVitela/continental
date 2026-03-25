@@ -23,16 +23,17 @@ class GameRoom {
     this.host       = host;
     this._turnTimer = null;
 
-    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico');
+    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico', host.rol || 'jugador');
   }
 
-  addPlayer(id, nombre, ws, badge = null, skin = 'clasico') {
+  addPlayer(id, nombre, ws, badge = null, skin = 'clasico', rol = 'jugador') {
     if (this.players.find(p => p.id === id)) {
       const p = this.players.find(p => p.id === id);
       p.ws = ws;
       p.conectado = true;
       p.badge = badge;
       p.skin = skin;
+      p.rol = rol;
       if (this.engine) {
         const enginePlayer = this.engine._findPlayer(id);
         if (enginePlayer) {
@@ -53,7 +54,7 @@ class GameRoom {
     }
     if (this.players.length >= this.maxPlayers) return null;
     if (this.status !== 'lobby') return null;
-    const player = { id, nombre, badge, skin, ws, conectado: true };
+    const player = { id, nombre, badge, skin, rol, ws, conectado: true };
     this.players.push(player);
     this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);
     return player;
@@ -229,7 +230,11 @@ class GameRoom {
       this._broadcastState(result.event, result.data);
     } else {
       const p = this.players.find(p => p.id === playerId);
-      this._send(p, { type: 'state_update', event: result.event, state: this.engine.stateFor(playerId) });
+      this._send(p, {
+        type: 'state_update',
+        event: result.event,
+        state: this.engine.stateFor(playerId, { includeLog: p?.rol === 'owner' })
+      });
     }
 
     return result;
@@ -262,7 +267,7 @@ class GameRoom {
   _broadcastState(event, data = {}) {
     this.players.forEach(p => {
       if (!p.ws || !p.conectado) return;
-      const state = this.engine ? this.engine.stateFor(p.id) : null;
+      const state = this.engine ? this.engine.stateFor(p.id, { includeLog: p.rol === 'owner' }) : null;
       this._send(p, { type: 'state_update', event, data, state, tableColor: this.tableColor || 'green' });
     });
   }
@@ -342,7 +347,7 @@ class GameRoom {
       code: this.code,
       mode: this.mode,
       status: this.status,
-      players: this.players.map(({ id, nombre, badge, skin }) => ({ id, nombre, badge: badge || null, skin: skin || 'clasico' })),
+      players: this.players.map(({ id, nombre, badge, skin, rol }) => ({ id, nombre, badge: badge || null, skin: skin || 'clasico', rol: rol || 'jugador' })),
       engineState: this.engine ? JSON.stringify(this.engine) : null,
       savedAt: Date.now(),
     };

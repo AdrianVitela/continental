@@ -123,6 +123,113 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   color: var(--gold);
 }
 
+.owner-console-btn {
+  position: fixed;
+  left: 12px;
+  bottom: 34px;
+  z-index: 9998;
+  border: 1px solid rgba(200,160,69,.28);
+  background: rgba(6,14,10,.82);
+  color: var(--gold-hi);
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: .72rem;
+  letter-spacing: .04em;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  box-shadow: 0 12px 24px rgba(0,0,0,.26);
+}
+
+.owner-console-btn:hover {
+  border-color: rgba(200,160,69,.5);
+  color: var(--gold);
+}
+
+.owner-console-panel {
+  position: fixed;
+  left: 12px;
+  bottom: 68px;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(40vh, 360px);
+  display: none;
+  flex-direction: column;
+  z-index: 9998;
+  border-radius: 14px;
+  border: 1px solid rgba(200,160,69,.25);
+  background: linear-gradient(180deg, rgba(10,20,14,.97), rgba(4,10,7,.98));
+  box-shadow: 0 22px 48px rgba(0,0,0,.42);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.owner-console-panel.show {
+  display: flex;
+}
+
+.owner-console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.owner-console-title {
+  font-size: .74rem;
+  color: var(--gold);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.owner-console-close {
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: .88rem;
+}
+
+.owner-console-list {
+  padding: 10px 12px 12px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200,160,69,.45) rgba(255,255,255,.06);
+}
+
+.owner-console-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.owner-console-list::-webkit-scrollbar-track {
+  background: rgba(255,255,255,.05);
+}
+
+.owner-console-list::-webkit-scrollbar-thumb {
+  background: rgba(200,160,69,.38);
+  border-radius: 999px;
+}
+
+.owner-console-entry {
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.03);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: .74rem;
+  line-height: 1.42;
+  color: #dfe7da;
+  word-break: break-word;
+}
+
+.owner-console-empty {
+  color: var(--text-muted);
+  font-size: .74rem;
+  padding: 8px 2px;
+}
+
 .guide-settings-overlay,
 .guide-overlay {
   display: none;
@@ -1298,6 +1405,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 @media (max-width: 767px) {
   .topbar { height: auto; min-height: 40px; padding: 4px 10px; flex-wrap: wrap; }
   .guide-topbar-btn { order: 20; width: 100%; margin-left: 0; justify-content: center; }
+  .owner-console-panel { max-height: min(34vh, 280px); }
   .tb-title { font-size: 0.92rem; }
   .opp { min-width: 62px; padding: 4px 7px; }
   .opp-name { font-size: 0.6rem; }
@@ -1328,6 +1436,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 /* ── Móviles ≤ 414px ── */
 @media (max-width: 414px) {
   .topbar { padding: 3px 8px; gap: 6px; }
+  .owner-console-btn { left: 10px; bottom: 36px; font-size: .68rem; padding: 6px 11px; }
+  .owner-console-panel { left: 10px; width: min(320px, calc(100vw - 20px)); }
   .slot-hint { display: none; }
   .abtn { padding: 5px 9px; font-size: 0.65rem; white-space: nowrap; }
   .action-btns { justify-content: center; }
@@ -1959,6 +2069,14 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
 })();
 </script>
+  <button id="owner-console-btn" class="owner-console-btn" style="display:none" onclick="toggleOwnerConsole()">🖥 Consola</button>
+  <div id="owner-console-panel" class="owner-console-panel">
+    <div class="owner-console-head">
+      <div class="owner-console-title">Logs de la mesa</div>
+      <button class="owner-console-close" onclick="closeOwnerConsole()">✕</button>
+    </div>
+    <div id="owner-console-list" class="owner-console-list"></div>
+  </div>
   <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 <script>
 (function() {

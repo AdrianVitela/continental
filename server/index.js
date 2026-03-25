@@ -152,20 +152,21 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          let hostBadge = null, hostSkin = 'clasico';
+          let hostBadge = null, hostSkin = 'clasico', hostRole = 'jugador';
           try {
             const query = msg.userId
-              ? 'SELECT badge, skin FROM usuarios WHERE id = $1'
-              : 'SELECT badge, skin FROM usuarios WHERE nombre = $1';
+              ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
+              : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             hostBadge = r.rows[0]?.badge || null;
             hostSkin  = r.rows[0]?.skin  || 'clasico';
+            hostRole  = r.rows[0]?.rol   || 'jugador';
           } catch (e) { console.error('[badge] create_room error:', e.message); }
 
           const room = new GameRoom({
             code,
-            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, ws },
+            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
           });
@@ -199,18 +200,19 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          let joinBadge = null, joinSkin = 'clasico';
+          let joinBadge = null, joinSkin = 'clasico', joinRole = 'jugador';
           try {
             const query = msg.userId
-              ? 'SELECT badge, skin FROM usuarios WHERE id = $1'
-              : 'SELECT badge, skin FROM usuarios WHERE nombre = $1';
+              ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
+              : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
             const param = msg.userId || safeNombre;
             const r = await pool.query(query, [param]);
             joinBadge = r.rows[0]?.badge || null;
             joinSkin  = r.rows[0]?.skin  || 'clasico';
+            joinRole  = r.rows[0]?.rol   || 'jugador';
           } catch (e) { console.error('[badge] join_room error:', e.message); }
 
-          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin);
+          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           ctx.playerId = player.id;
@@ -226,7 +228,11 @@ wss.on('connection', (ws, req) => {
           send(ws, { type: 'room_joined', code: safeCode, playerId: player.id, lobbyState: room.lobbyState() });
 
           if (room.engine && wasReconnecting) {
-            send(ws, { type: 'state_update', event: 'reconnect', state: room.engine.stateFor(player.id) });
+            send(ws, {
+              type: 'state_update',
+              event: 'reconnect',
+              state: room.engine.stateFor(player.id, { includeLog: player.rol === 'owner' })
+            });
           }
           break;
         }

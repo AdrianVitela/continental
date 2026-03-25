@@ -30,6 +30,8 @@ const VN = { 'A':1, '2':2, '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10'
 const ACTIVE_GAME_KEY = 'continental_active_game';
 const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
 const GUIDE_DONE_GAME_KEY = 'continental_guide_done_game';
+const SESSION_USER = JSON.parse(localStorage.getItem('usuario') || 'null');
+const IS_OWNER = SESSION_USER?.rol === 'owner';
 
 let G = null;
 let myIdx = -1;
@@ -2408,10 +2410,47 @@ function render() {
     renderPlayerInfo(me);
     renderHand();
     renderActions();
+    renderOwnerConsole();
     restoreAnimatedBajadas();
     applyMySkin();
     _lastRenderedTurn = G.turno;
     _turnJustChanged = false;
+}
+
+function renderOwnerConsole() {
+    const button = document.getElementById('owner-console-btn');
+    const panel = document.getElementById('owner-console-panel');
+    const list = document.getElementById('owner-console-list');
+    if (!button || !panel || !list) return;
+
+    if (!IS_OWNER) {
+        button.style.display = 'none';
+        panel.classList.remove('show');
+        return;
+    }
+
+    button.style.display = 'inline-flex';
+    const logs = Array.isArray(G?.log) ? G.log : [];
+
+    if (!logs.length) {
+        list.innerHTML = '<div class="owner-console-empty">Sin logs recientes para mostrar.</div>';
+        return;
+    }
+
+    list.innerHTML = logs.map(line => `
+        <div class="owner-console-entry">${escapeHtml(line)}</div>
+    `).join('');
+}
+
+function toggleOwnerConsole() {
+    if (!IS_OWNER) return;
+    const panel = document.getElementById('owner-console-panel');
+    if (!panel) return;
+    panel.classList.toggle('show');
+}
+
+function closeOwnerConsole() {
+    document.getElementById('owner-console-panel')?.classList.remove('show');
 }
 
 
@@ -3233,5 +3272,7 @@ window.toggleGuideAuto = toggleGuideAuto;
 window.startGuideFromSettings = startGuideFromSettings;
 window.closeGuide = closeGuide;
 window.nextGuideStep = nextGuideStep;
+window.toggleOwnerConsole = toggleOwnerConsole;
+window.closeOwnerConsole = closeOwnerConsole;
 
 document.addEventListener('DOMContentLoaded', init);

@@ -159,12 +159,12 @@ body::before {
 
 @keyframes rainbowFoilShift {
   0% {
-    transform: translate3d(-22%, -18%, 0) rotate(0deg);
-    opacity: .42;
+    background-position: 0 0, 0 0;
+    opacity: .44;
   }
   100% {
-    transform: translate3d(22%, 18%, 0) rotate(0deg);
-    opacity: .55;
+    background-position: 240px 240px, 180px 180px;
+    opacity: .52;
   }
 }
 
@@ -197,7 +197,7 @@ body::before {
 .cback-xs.skin-arcoiris::before {
   content: '';
   position: absolute;
-  inset: -32%;
+  inset: -18%;
   border-radius: inherit;
   background:
     linear-gradient(125deg,
@@ -213,11 +213,13 @@ body::before {
       rgba(255,255,255,0) 32%,
       rgba(255,255,255,.22) 50%,
       rgba(255,255,255,0) 68%);
+  background-repeat: repeat;
+  background-size: 240px 240px, 180px 180px;
   mix-blend-mode: screen;
   filter: saturate(1.18) blur(.2px);
   opacity: .46;
   pointer-events: none;
-  animation: rainbowFoilShift 1.7s linear infinite;
+  animation: rainbowFoilShift 1.35s linear infinite;
 }
 
 .card-sm {

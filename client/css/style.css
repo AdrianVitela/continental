@@ -162,13 +162,9 @@ body::before {
     background-position: 0% 50%;
     filter: saturate(1) brightness(1);
   }
-  50% {
-    background-position: 100% 50%;
-    filter: saturate(1.14) brightness(1.05);
-  }
   100% {
-    background-position: 0% 50%;
-    filter: saturate(1) brightness(1);
+    background-position: 200% 50%;
+    filter: saturate(1.18) brightness(1.06);
   }
 }
 
@@ -191,8 +187,8 @@ body::before {
 
 .cback.skin-arcoiris,
 .cback-xs.skin-arcoiris {
-  background-size: 240% 240%;
-  animation: rainbowShift 6s linear infinite;
+  background-size: 260% 260%;
+  animation: rainbowShift 2.8s linear infinite;
 }
 
 .cback::after {

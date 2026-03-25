@@ -32,6 +32,19 @@ const rooms   = new Map();
 const clients = new Map();
 let socketSeq = 0;
 
+async function ensureDatabaseSchema() {
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS skin VARCHAR(50) DEFAULT 'clasico'
+  `);
+
+  await pool.query(`
+    UPDATE usuarios
+    SET skin = 'clasico'
+    WHERE skin IS NULL OR skin = ''
+  `);
+}
+
 const createAdminRouter = require('./admin');
 app.use('/api', createAdminRouter({ rooms, clients }));
 
@@ -324,4 +337,11 @@ function send(ws, msg) {
 
 app.get('/health', (_, res) => res.json({ ok: true, rooms: rooms.size, clients: clients.size }));
 
-srv.listen(PORT, () => console.log(`🃏 Continental server on port ${PORT}`));
+ensureDatabaseSchema()
+  .then(() => {
+    srv.listen(PORT, () => console.log(`🃏 Continental server on port ${PORT}`));
+  })
+  .catch(err => {
+    console.error('❌ Error preparando la base de datos:', err.message);
+    process.exit(1);
+  });

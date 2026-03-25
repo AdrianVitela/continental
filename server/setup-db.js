@@ -12,6 +12,7 @@ async function crearTablas() {
       password    VARCHAR(255) NOT NULL,
       badge       VARCHAR(50)  DEFAULT NULL,
       rol         VARCHAR(20)  DEFAULT 'jugador',
+      skin        VARCHAR(50)  DEFAULT 'clasico',
       created_at  TIMESTAMP    DEFAULT NOW()
     );
 
@@ -23,6 +24,17 @@ async function crearTablas() {
       rating      SMALLINT CHECK (rating BETWEEN 1 AND 5),
       created_at  TIMESTAMP DEFAULT NOW()
     );
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS skin VARCHAR(50) DEFAULT 'clasico'
+  `);
+
+  await pool.query(`
+    UPDATE usuarios
+    SET skin = 'clasico'
+    WHERE skin IS NULL OR skin = ''
   `);
 
   console.log('✅ Tablas creadas correctamente');

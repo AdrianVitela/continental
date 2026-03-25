@@ -43,6 +43,7 @@ let selectedComodinInfo = null;
 let hideHandDuringDeal = true;
 let _lastRenderedTurn = null;
 let _turnJustChanged = false;
+let _pendingTurnAlert = false;
 let guideAutoTimer = null;
 let guideState = { active: false, steps: [], index: 0, doneKey: null };
 
@@ -898,9 +899,26 @@ const SFX = (() => {
         if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
         return ctx;
     }
+    async function unlock() {
+        try {
+            const ac = getCtx();
+            if (ac.state === 'suspended') await ac.resume();
+            return ac.state === 'running';
+        } catch (e) {
+            return false;
+        }
+    }
+    function canPlay() {
+        try {
+            return getCtx().state === 'running';
+        } catch (e) {
+            return false;
+        }
+    }
     function play(type) {
         try {
             const ac = getCtx();
+            if (ac.state === 'suspended') return false;
             const g  = ac.createGain();
             g.connect(ac.destination);
 
@@ -965,10 +983,28 @@ const SFX = (() => {
                     o.start(ac.currentTime + t);
                     o.stop(ac.currentTime + t + 0.2);
                 });
+
+            } else if (type === 'turno') {
+                [
+                    { t: 0, freq: 784, gain: 0.12, dur: 0.12 },
+                    { t: 0.14, freq: 1046, gain: 0.14, dur: 0.16 },
+                ].forEach(note => {
+                    const o = ac.createOscillator();
+                    const gn = ac.createGain();
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(note.freq, ac.currentTime + note.t);
+                    gn.gain.setValueAtTime(note.gain, ac.currentTime + note.t);
+                    gn.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + note.t + note.dur);
+                    o.connect(gn); gn.connect(ac.destination);
+                    o.start(ac.currentTime + note.t);
+                    o.stop(ac.currentTime + note.t + note.dur);
+                });
             }
+            return true;
         } catch(e) {}
+        return false;
     }
-    return { play };
+    return { play, unlock, canPlay };
 })();
 
 let _firstLoad = true;
@@ -978,10 +1014,57 @@ function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
     localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
     saveActiveGameSession();
+    setupAudioUnlock();
     syncGuidePreferenceUi();
     window.addEventListener('resize', refreshGuideLayout);
     setupSocketEvents();
     WS.connect();
+}
+
+function isActionRequiredForPlayer(state, playerIdx) {
+    if (!state || playerIdx < 0) return false;
+    if (state.estado === 'fase_castigo') return state.castigo_idx === playerIdx;
+    return state.turno === playerIdx && ['esperando_robo', 'esperando_accion', 'esperando_pago'].includes(state.estado);
+}
+
+function maybePlayTurnAlert(prevState, options = {}) {
+    const { skip = false } = options;
+    if (skip || !G || myIdx < 0) return;
+
+    const prevIdx = prevState?.jugadores?.findIndex(j => j.id === MY_ID) ?? myIdx;
+    const actionBefore = isActionRequiredForPlayer(prevState, prevIdx);
+    const actionNow = isActionRequiredForPlayer(G, myIdx);
+
+    if (!actionNow) {
+        _pendingTurnAlert = false;
+        return;
+    }
+    if (!prevState || actionBefore) return;
+
+    if (!SFX.play('turno')) {
+        _pendingTurnAlert = true;
+    }
+}
+
+function setupAudioUnlock() {
+    const events = ['pointerdown', 'touchstart', 'keydown'];
+    const onUnlock = async () => {
+        const unlocked = await SFX.unlock();
+        if (!unlocked) return;
+
+        events.forEach(eventName => {
+            window.removeEventListener(eventName, onUnlock, true);
+        });
+
+        if (_pendingTurnAlert && isActionRequiredForPlayer(G, myIdx)) {
+            _pendingTurnAlert = false;
+            SFX.play('turno');
+        }
+    };
+
+    events.forEach(eventName => {
+        window.addEventListener(eventName, onUnlock, { passive: true, capture: true });
+    });
 }
 
 function clearPendingCastigo(reason = '') {
@@ -1107,6 +1190,7 @@ function setupSocketEvents() {
         const isNewRound = event === 'game_started' || event === 'nueva_ronda';
         const isReconnect = event === 'reconnect';
         const isInitialReconnect = _firstLoad && isReconnect;
+        maybePlayTurnAlert(prev, { skip: _firstLoad || isReconnect });
         _firstLoad = false;
 
         if (isNewRound) hideNextRoundWait();

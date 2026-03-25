@@ -205,14 +205,18 @@ body::before {
   border-radius: 4px;
 }
 
-.cback.skin-arcoiris,
-.cback-xs.skin-arcoiris {
-  background-size: 1800% 1800%;
-  animation: rainbowBaseFlow 8s ease infinite;
+.cback.skin-arcoiris {
+  background-size: 1200% 1200%;
+  animation: rainbowBaseFlow 10s linear infinite;
 }
 
-.cback.skin-arcoiris::before,
-.cback-xs.skin-arcoiris::before {
+.cback-xs.skin-arcoiris {
+  background-size: 240% 240%;
+  background-position: 45% 55%;
+  animation: none;
+}
+
+.cback.skin-arcoiris::before {
   content: '';
   position: absolute;
   inset: -28%;
@@ -240,11 +244,20 @@ body::before {
   animation: rainbowFoilShift 1.2s linear infinite;
 }
 
+.cback-xs.skin-arcoiris::before {
+  display: none;
+}
+
 @media (hover: none) and (pointer: coarse), (max-width: 900px) {
   .cback.skin-arcoiris,
   .cback-xs.skin-arcoiris {
     background-size: 900% 900%;
     animation-duration: 14s;
+  }
+
+  .cback-xs.skin-arcoiris {
+    background-size: 220% 220%;
+    animation: none;
   }
 
   .cback.skin-arcoiris::before {

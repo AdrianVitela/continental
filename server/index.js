@@ -13,6 +13,7 @@ const srv  = http.createServer(app);
 const wss  = new WebSocketServer({ server: srv });
 
 app.use(express.static(path.join(__dirname, '../client')));
+app.use('/imagenes', express.static(path.join(__dirname, '../imagenes')));
 app.get('/',        (_, res) => res.sendFile(path.join(__dirname, '../client/index.html')));
 app.get('/game',    (_, res) => res.sendFile(path.join(__dirname, '../client/game.html')));
 app.get('/pesca',   (_, res) => res.sendFile(path.join(__dirname, '../client/pesca.html')));

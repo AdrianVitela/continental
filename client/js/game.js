@@ -1446,9 +1446,20 @@ function cFull(c, withId = true) {
 
 function cSm(c) {
     if (!c) return '';
-    if (c.comodin) return `<div class="card-sm joker-sm">🃏</div>`;
+    if (c.comodin) {
+        return `<div class="card-sm joker-sm">🃏</div>`;
+    }
+    
+    // Para miniaturas en bajadas de otros jugadores, usamos imagen pequeña
+    const design = getCurrentDesign();
+    const imgUrl = getCardImageURL(c, design);
     const sc = SUIT_CLS[c.palo] || '';
-    return `<div class="card-sm natural ${sc}">${c.valor}<br>${c.palo}</div>`;
+    
+    // Devolver miniatura con imagen (fallback a texto si no carga)
+    return `<div class="card-sm natural ${sc}" style="background: transparent; padding: 0; overflow: hidden; position: relative;">
+                <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" 
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='${c.valor}<br>${c.palo}'; this.parentElement.classList.add('${sc}'); this.parentElement.style.background='linear-gradient(160deg, #fffbf2, #f5ead8)';">
+            </div>`;
 }
 
 // ================================================================

@@ -15,14 +15,14 @@
   --text-muted: #5a4e3a;
   --ink: #111;
   --sh-card: 0 4px 14px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --cw: 64px;      /* antes 48px - más grande */
-  --ch: 90px;      /* antes 68px - más grande */
-  --cw-sm: 38px;   /* antes 30px - miniaturas más grandes */
-  --ch-sm: 54px;   /* antes 42px */
-  --r: 6px;        /* antes 4px - bordes un poco más redondeados */
+  --cw: 76px;
+  --ch: 108px;
+  --cw-sm: 44px;
+  --ch-sm: 64px;
+  --r: 8px;
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --eout: cubic-bezier(0.22, 1, 0.36, 1);
-  --hand-gap: 4px;
+  --hand-gap: 6px;
   --hand-padding: 4px 10px;
 }
 
@@ -71,6 +71,7 @@ body::before {
   cursor: grab;
   will-change: transform;
   transition: box-shadow 0.15s, transform 0.15s;
+  overflow: hidden;
 }
 
 .card:active {
@@ -530,9 +531,11 @@ input[type=text]:focus {
 
 .discard-zone {
   display: flex;
-  gap: 3px;
-  align-items: center;        /* centrado vertical */
-  justify-content: center;    /* centrado horizontal */
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  min-height: calc(var(--ch) + 16px);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: var(--gold-dim) transparent;
@@ -544,13 +547,94 @@ input[type=text]:focus {
 
 .row-label {
   display: flex;
-  justify-content: center;    /* centrado horizontal */
+  justify-content: center;
   align-items: center;
-  gap: 8px;                   /* espacio entre icono y descripción */
+  gap: 8px;
 }
 
 .row-desc {
   text-transform: none;
+}
+
+/* ============================================
+   BUILDING SLOTS
+   ============================================ */
+
+.building-slot {
+  flex: 1 1 auto;
+  min-width: calc(var(--cw) * 3 + 24px);
+  max-width: calc(var(--cw) * 8 + 60px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(0,0,0,.2);
+  border: 2px solid rgba(200,160,69,.2);
+  border-radius: 6px;
+  padding: 8px;
+  transition: border-color 0.2s, background 0.2s;
+  overflow: visible;
+}
+
+.building-slot-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2px;
+  overflow: visible;
+  min-height: calc(var(--ch) + 8px);
+  width: 100%;
+}
+
+/* ============================================
+   DECK AREA
+   ============================================ */
+
+.deck-area-container {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  width: 120px;
+}
+
+/* ============================================
+   CBACK XS (oponentes)
+   ============================================ */
+
+.cback-xs {
+  width: calc(var(--cw-sm) * 0.65);
+  height: calc(var(--ch-sm) * 0.65);
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1a3a80, #0d2050);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   BAJADA PILE
+   ============================================ */
+
+.bajada-pile {
+  background: rgba(0,0,0,.22);
+  border: 2px solid rgba(255,255,255,.07);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  transition: border-color 0.15s;
+}
+
+.bajada-pile-cards {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 /* ============================================
@@ -560,25 +644,45 @@ input[type=text]:focus {
 /* Tablets grandes / laptops pequeñas */
 @media (max-width: 1200px) {
   :root {
-    --cw: 44px;
-    --ch: 64px;
-    --cw-sm: 28px;
-    --ch-sm: 38px;
+    --cw: 64px;
+    --ch: 92px;
+    --cw-sm: 38px;
+    --ch-sm: 54px;
   }
 }
 
 /* Tablets horizontales */
 @media (max-width: 991px) {
   :root {
-    --cw: 40px;
-    --ch: 58px;
-    --cw-sm: 26px;
-    --ch-sm: 36px;
+    --cw: 56px;
+    --ch: 80px;
+    --cw-sm: 34px;
+    --ch-sm: 48px;
   }
 }
 
 /* Tablets verticales */
 @media (max-width: 767px) {
+  :root {
+    --cw: 48px;
+    --ch: 68px;
+    --cw-sm: 30px;
+    --ch-sm: 42px;
+  }
+}
+
+/* Móviles */
+@media (max-width: 575px) {
+  :root {
+    --cw: 42px;
+    --ch: 60px;
+    --cw-sm: 26px;
+    --ch-sm: 36px;
+  }
+}
+
+/* Móviles pequeños */
+@media (max-width: 414px) {
   :root {
     --cw: 36px;
     --ch: 52px;
@@ -587,23 +691,13 @@ input[type=text]:focus {
   }
 }
 
-/* Móviles */
-@media (max-width: 575px) {
+/* Landscape móviles */
+@media (orientation: landscape) and (max-height: 500px) {
   :root {
-    --cw: 32px;
-    --ch: 46px;
-    --cw-sm: 22px;
-    --ch-sm: 30px;
-  }
-}
-
-/* Móviles pequeños */
-@media (max-width: 414px) {
-  :root {
-    --cw: 28px;
-    --ch: 40px;
-    --cw-sm: 20px;
-    --ch-sm: 28px;
+    --cw: 44px;
+    --ch: 64px;
+    --cw-sm: 28px;
+    --ch-sm: 40px;
   }
 }
 
@@ -624,11 +718,8 @@ input[type=text]:focus {
 .card img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: var(--r);
-    pointer-events: none; /* para que los eventos vayan al contenedor */
-}
-
-.card {
-    overflow: hidden;
+    pointer-events: none;
+    background: #fffbf2;
 }

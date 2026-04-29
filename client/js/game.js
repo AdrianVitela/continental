@@ -986,17 +986,26 @@ function renderMazo() {
 
 function renderFondo(me) {
     const fw = document.getElementById('fondo-wrap');
+    fw.innerHTML = '';
     if (G.fondo_top) {
-        fw.innerHTML = cFull(G.fondo_top, false);
+        const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
+        
+        // Para el fondo, usamos cFull que ya tiene imágenes
+        const fondoHTML = cFull(G.fondo_top, true);
+        fw.innerHTML = fondoHTML;
+        
         const fc = fw.querySelector('.card');
         if (fc) {
-            const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
             if (!canTake) {
                 fc.classList.add('disabled');
             } else {
-                fc.onclick = acFondo;
-                fc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }));
-                fc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }), { passive: false });
+                // Remover eventos anteriores y agregar nuevos
+                const newFc = fc.cloneNode(true);
+                fw.innerHTML = '';
+                fw.appendChild(newFc);
+                newFc.onclick = acFondo;
+                newFc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, newFc, { onTakeFondo: idx => acFondoDrag(idx) }));
+                newFc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, newFc, { onTakeFondo: idx => acFondoDrag(idx) }), { passive: false });
             }
         }
     } else {
@@ -1428,36 +1437,41 @@ function renderActions() {
 
 function cFull(c, withId = true) {
     if (!c) return '';
+    
+    const design = getCurrentDesign();
+    const imgUrl = getCardImageURL(c, design);
+    
+    // Para comodines, mostrar diseño especial
     if (c.comodin) {
         return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
-            <div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>
+            <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);" 
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'card-face joker-f\'><span class=\'cv\'>🃏</span><span class=\'cs\' style=\'font-size:.55rem\'>JOKER</span></div>';">
         </div>`;
     }
+    
     const sc = SUIT_CLS[c.palo] || '';
     return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
-        <div class="card-face ${sc}">
-            <div class="corner tl">${c.valor}<br>${c.palo}</div>
-            <div class="cv">${c.palo}</div>
-            <div class="cs">${c.valor}</div>
-            <div class="corner br">${c.valor}<br>${c.palo}</div>
-        </div>
+        <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);" 
+             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'card-face ${sc}\'><div class=\'corner tl\'>${c.valor}<br>${c.palo}</div><div class=\'cv\'>${c.palo}</div><div class=\'cs\'>${c.valor}</div><div class=\'corner br\'>${c.valor}<br>${c.palo}</div></div>';">
     </div>`;
 }
 
 function cSm(c) {
     if (!c) return '';
-    if (c.comodin) {
-        return `<div class="card-sm joker-sm">🃏</div>`;
-    }
     
-    // Para miniaturas en bajadas de otros jugadores, usamos imagen pequeña
     const design = getCurrentDesign();
     const imgUrl = getCardImageURL(c, design);
     const sc = SUIT_CLS[c.palo] || '';
     
-    // Devolver miniatura con imagen (fallback a texto si no carga)
-    return `<div class="card-sm natural ${sc}" style="background: transparent; padding: 0; overflow: hidden; position: relative;">
-                <img src="${imgUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 4px;" 
+    if (c.comodin) {
+        return `<div class="card-sm joker-sm" style="background: transparent; padding: 0; overflow: hidden;">
+                    <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='🃏'; this.parentElement.classList.add('joker-sm'); this.parentElement.style.background='linear-gradient(160deg, #1a0a4a, #2d1060)';">
+                </div>`;
+    }
+    
+    return `<div class="card-sm natural ${sc}" style="background: transparent; padding: 0; overflow: hidden;">
+                <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
                      onerror="this.style.display='none'; this.parentElement.innerHTML='${c.valor}<br>${c.palo}'; this.parentElement.classList.add('${sc}'); this.parentElement.style.background='linear-gradient(160deg, #fffbf2, #f5ead8)';">
             </div>`;
 }

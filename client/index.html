@@ -172,6 +172,15 @@
         .pc-btn:hover { background: rgba(200,160,69,.25); }
         .pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
 
+        /* ===== SELECTOR DE DISEÑO DE CARTAS ===== */
+        .design-row { margin-top: 8px; }
+        .design-row .mode-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
         #unirse-code {
             text-transform: uppercase;
             letter-spacing: 5px;
@@ -377,6 +386,19 @@
                         <button class="pc-btn" onclick="chgMax(-1)">−</button>
                         <span class="pc-val" id="max-val">4</span>
                         <button class="pc-btn" onclick="chgMax(1)">+</button>
+                    </div>
+                </div>
+
+                <!-- Selector de diseño de cartas -->
+                <div class="field-group design-row">
+                    <label>🎴 Estilo de cartas</label>
+                    <div class="mode-row">
+                        <div class="mode-btn" data-design="mexico" onclick="setDesign('mexico')">
+                            🇲🇽 México
+                        </div>
+                        <div class="mode-btn" data-design="usa" onclick="setDesign('usa')">
+                            🇺🇸 Estados Unidos
+                        </div>
                     </div>
                 </div>
 

@@ -37,9 +37,74 @@ let selectedComodinInfo = null;
 
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
-// ═══════════════════════════════════════════════════
+// ================================================================
+// FUNCIONES PARA IMÁGENES DE CARTAS (DISEÑO MÉXICO / USA)
+// ================================================================
+
+// Obtener diseño actual del localStorage
+function getCurrentDesign() {
+    return localStorage.getItem('cardDesign') || 'mexico';
+}
+
+// Construye la ruta de la imagen para una carta dada
+function getCardImageURL(card, design = null) {
+    if (!design) design = getCurrentDesign();
+    
+    // Para comodines, usar la carpeta Joker
+    if (card.comodin) {
+        if (design === 'mexico') {
+            // México: Joker_1.png, Joker_1_1.png, Joker_2.png, Joker_2_2.png
+            // Usar Joker_1.png por defecto
+            return 'imagenes/Mexico/Joker/Joker_1.png';
+        } else {
+            // USA: j1.png, j2.png, j3.png, j4.png
+            return 'imagenes/Estados Unidos/Joker/j1.png';
+        }
+    }
+    
+    let base = design === 'mexico' ? 'imagenes/Mexico/' : 'imagenes/Estados Unidos/';
+    let folder = '';
+    let filename = '';
+    
+    // Determinar carpeta por palo
+    switch (card.palo) {
+        case '♥': folder = 'corazones'; break;
+        case '♦': folder = 'diamantes'; break;
+        case '♠': folder = 'picas'; break;
+        case '♣': folder = 'treboles'; break;
+        default: folder = 'corazones';
+    }
+    
+    // Determinar nombre de archivo
+    const valor = card.valor;
+    if (valor === 'A') filename = 'As.png';
+    else if (valor === 'J') filename = 'J.png';
+    else if (valor === 'Q') filename = 'Q.png';
+    else if (valor === 'K') filename = 'K.png';
+    else filename = `${valor}.png`;
+    
+    let url = `${base}${folder}/${filename}`;
+    // Reemplazar espacios por %20 para evitar problemas
+    return url.replace(/ /g, '%20');
+}
+
+// Genera el HTML interno de texto (diseño genérico) para una carta
+function getTextCardHTML(card) {
+    if (card.comodin) {
+        return `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+    }
+    const sc = SUIT_CLS[card.palo] || '';
+    return `<div class="card-face ${sc}">
+                <div class="corner tl">${card.valor}<br>${card.palo}</div>
+                <div class="cv">${card.palo}</div>
+                <div class="cs">${card.valor}</div>
+                <div class="corner br">${card.valor}<br>${card.palo}</div>
+            </div>`;
+}
+
+// ================================================================
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function slotTerciaValido(cards) {
     if (cards.length < 3) return false;
@@ -123,26 +188,12 @@ function slotCorridaCasiCompleta(cards) {
     return false;
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // DETECCIÓN AUTOMÁTICA DE INTERCAMBIOS POSIBLES
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 const _intercambiosCache = new Map();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// detectarIntercambiosPosibles()
-//
-// CASO A — Jugador NO bajado (esperando_accion):
-//   La carta debe permitir bajarse después del intercambio.
-//   Validación: misma lógica que antes.
-//
-// CASO B — Jugador YA bajado (esperando_accion o esperando_pago):
-//   Solo necesita que la carta encaje en el joker (mismo valor/palo).
-//   No hay validación de "puede bajarse" — ya está bajado.
-//   El joker recibido podrá acomodarse en otra jugada de la mesa.
-//   Se valida también que el joker PUEDA acomodarse en alguna jugada
-//   disponible para que el intercambio tenga utilidad.
-// ─────────────────────────────────────────────────────────────────────────────
 function detectarIntercambiosPosibles() {
     if (!G || myIdx < 0) return [];
     if (!isMyTurn()) return [];
@@ -153,7 +204,6 @@ function detectarIntercambiosPosibles() {
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
     if (!estadosValidos.includes(G.estado)) return [];
 
-    // Pre-bajada solo en esperando_accion
     if (!me.bajado && G.estado !== 'esperando_accion') return [];
 
     const intercambios = [];
@@ -162,8 +212,6 @@ function detectarIntercambiosPosibles() {
 
     G.jugadores.forEach((jOrigen, ji) => {
         if (!jOrigen.bajado) return;
-        // Post-bajada: también puede intercambiar en sus PROPIAS jugadas
-        // Pre-bajada: solo en jugadas de otros (el joker recibido va a slots)
         if (!me.bajado && ji === myIdx) return;
 
         jOrigen.jugadas?.forEach((jug, jugi) => {
@@ -177,31 +225,19 @@ function detectarIntercambiosPosibles() {
                 if (carta.comodin) return;
                 if (!me.bajado && cartasEnSlots.has(carta.id)) return;
 
-                // ¿Esta carta encaja en el joker?
                 const encaja = jug.tipo === 'tercia'
                     ? carta.valor === valorNecesario
                     : carta.valor === valorNecesario && carta.palo === paloNecesario;
 
                 if (!encaja) return;
 
-                // ══════════════════════════════════════════════
-                // CASO B: Ya bajado — validación simplificada
-                // Solo verifica que el joker recibido pueda ser
-                // útil: que haya al menos una jugada en la mesa
-                // donde se pueda acomodar.
-                // ══════════════════════════════════════════════
                 if (me.bajado) {
-                    // El joker recibido puede acomodarse en cualquier jugada bajada
-                    // que no tenga ya un joker (una jugada = máx 1 joker según reglas)
                     const jokerEsUtil = G.jugadores.some((jDest, jdi) => {
                         if (!jDest.bajado) return false;
                         return jDest.jugadas?.some((jugDest, jugiDest) => {
-                            // No en la misma jugada de donde viene
                             if (jdi === ji && jugiDest === jugi) return false;
-                            // La jugada destino no debe tener ya un joker
                             if (jugDest.cartas.some(c => c.comodin)) return false;
-                            // El joker puede ir al final de una corrida o completar una tercia
-                            return true; // el server valida la posición exacta
+                            return true;
                         });
                     });
 
@@ -222,10 +258,6 @@ function detectarIntercambiosPosibles() {
                     return;
                 }
 
-                // ══════════════════════════════════════════════
-                // CASO A: No bajado — validación completa
-                // (lógica original sin cambios)
-                // ══════════════════════════════════════════════
                 const defs = getSlotDefsRonda(G.ronda);
                 const jugadasSimuladas = [];
                 let comodinUsadoEnSlot = false;
@@ -339,9 +371,9 @@ function slotsListosParaBajar() {
     return false;
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // INICIALIZACIÓN Y SOCKET
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
@@ -395,9 +427,9 @@ function setupSocketEvents() {
     });
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // EVENTOS / ANIMACIONES
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 async function applyEvent(event, data, prev) {
     if (!event || !data) return;
@@ -485,9 +517,9 @@ function handleFinRonda(data) {
     }, 300);
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // ACCIONES DEL JUGADOR
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function isMyTurn() { return myIdx === G?.turno; }
 function isPayable() { return isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G?.estado); }
@@ -552,11 +584,6 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
     const me = G?.jugadores?.[myIdx];
     const jugada = G?.jugadores?.[destJugadorIdx]?.jugadas?.[destJugadaIdx];
 
-    // Solo preguntar alta/baja cuando:
-    //   1. El jugador YA está bajado (está acomodando sobrantes)
-    //   2. La jugada destino es una corrida
-    //   3. No tiene posición elegida todavía
-    // Buscar si la carta es joker en la mano (puede venir de intercambio reciente)
     if (me?.bajado && jugada?.tipo === 'corrida' && posicion === null) {
         const carta = me?.mano?.find(c => c.id === cartaId);
         if (carta?.comodin) {
@@ -579,21 +606,13 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
     cancelIntercambio();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// mostrarSelectorPosicionJoker
-// Muestra un mini-modal inline en las bajadas preguntando si el joker
-// va como carta ALTA (final de la corrida) o BAJA (inicio de la corrida).
-// Muestra el contexto: "5♦ 6♦ 7♦ 8♦ → ¿Joker como 4♦ o 9♦?"
-// ─────────────────────────────────────────────────────────────────────────────
 function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada) {
-    // Calcular qué valor sería en cada posición para mostrarlo al usuario
     const VN_MAP = { A:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, K:13 };
     const VN_REV = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
     const normales = jugada.cartas.filter(c => !c.comodin);
     const palo = normales[0]?.palo || '';
     const vals = normales.map(c => VN_MAP[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
 
-    // Detectar si hay As como 14
     const tieneAs = vals.includes(1);
     const tieneAltas = vals.some(v => v >= 11);
     const useA14 = tieneAs && tieneAltas && !vals.includes(2);
@@ -607,7 +626,6 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
     const lblBaja = valBaja >= 1 ? `${VN_REV[valBaja] || valBaja}${palo}` : null;
     const lblAlta = valAlta <= 14 ? `${VN_REV[valAlta] || valAlta}${palo}` : null;
 
-    // Quitar modal anterior si existe
     const prev = document.getElementById('joker-pos-modal');
     if (prev) prev.remove();
 
@@ -660,7 +678,6 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 
     document.body.appendChild(modal);
 
-    // Si solo hay una opción, elegirla automáticamente sin preguntar
     if (!lblBaja && lblAlta) {
         modal.remove();
         acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'alta');
@@ -673,19 +690,12 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 window._confirmarPosJoker = function(cartaId, destJugadorIdx, destJugadaIdx, posicion) {
     const modal = document.getElementById('joker-pos-modal');
     if (modal) modal.remove();
-    // cartaId viene del atributo HTML como string — convertir al tipo original
-    // Los ids del engine son números, intentar parsear
     const id = isNaN(cartaId) ? cartaId : Number(cartaId);
     const ji = Number(destJugadorIdx);
     const jugi = Number(destJugadaIdx);
     acAcomodar(id, ji, jugi, posicion);
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// acIntercambiarComodin
-// Ahora válido en esperando_accion (pre-bajada) Y esperando_pago (post-bajada).
-// Post-bajada no manda jugadasEnSlots porque ya no tiene slots activos.
-// ─────────────────────────────────────────────────────────────────────────────
 function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
     if (!isMyTurn()) { toast('No es tu turno.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
@@ -694,7 +704,6 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
     const me = G.jugadores[myIdx];
     const jugadasEnSlots = [];
 
-    // Solo manda slots si NO está bajado (pre-bajada)
     if (!me?.bajado) {
         const defs = getSlotDefsRonda(G.ronda);
         for (const def of defs) {
@@ -708,16 +717,11 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
     cancelIntercambio();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// activarModoIntercambio — permite intercambio manual (clic en joker)
-// Ahora también funciona post-bajada en esperando_pago.
-// ─────────────────────────────────────────────────────────────────────────────
 function activarModoIntercambio(jugadorIdx, jugadaIdx, comodinId) {
     if (!isMyTurn()) { toast('No es tu turno para intercambiar.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
     if (!estadosValidos.includes(G.estado)) { toast('No puedes intercambiar en este momento.'); return; }
 
-    // Removemos la restricción de "me.bajado" — post-bajada también es válido
     if (!selId) { toast('Primero selecciona una carta de tu mano para intercambiar.'); return; }
     const me = G.jugadores[myIdx];
     const cartaSeleccionada = me?.mano?.find(c => c.id === selId);
@@ -743,12 +747,6 @@ function ejecutarIntercambioDesdeKey(key) {
     ejecutarIntercambioDirecto(intercambio);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ejecutarIntercambioDirecto
-// Ahora maneja los dos casos:
-//   esCasoBajado=false → pre-bajada, manda jugadasEnSlots para validación
-//   esCasoBajado=true  → post-bajada, no manda slots, el server solo valida encaje
-// ─────────────────────────────────────────────────────────────────────────────
 function ejecutarIntercambioDirecto(intercambio) {
     if (!isMyTurn()) { toast('No es tu turno.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
@@ -758,7 +756,6 @@ function ejecutarIntercambioDirecto(intercambio) {
     const carta = `${intercambio.cartaValor}${intercambio.cartaPalo}`;
 
     if (intercambio.esCasoBajado) {
-        // Post-bajada: intercambio simple, sin slots
         toast(`🔄 Intercambiando ${carta} por el Joker…`, 'green');
         WS.send({
             type: 'intercambiar_comodin',
@@ -768,7 +765,6 @@ function ejecutarIntercambioDirecto(intercambio) {
             jugadasEnSlots: [],
         });
     } else {
-        // Pre-bajada: incluye slots para validación
         const defs = getSlotDefsRonda(G.ronda);
         const jugadasEnSlots = [];
         for (const def of defs) {
@@ -833,9 +829,9 @@ function ackRonda() {
     WS.send({ type: 'ack_fin_ronda' });
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // RENDERIZADO
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function render() {
     if (!G || myIdx < 0) return;
@@ -878,11 +874,6 @@ function renderOpponents() {
     });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// renderTableBajadas
-// Ahora muestra jokers intercambiables también cuando el jugador YA está bajado
-// (esperando_accion o esperando_pago), usando la misma función de detección.
-// ─────────────────────────────────────────────────────────────────────────────
 function renderTableBajadas() {
     const bajEl = document.getElementById('table-bajadas');
     bajEl.innerHTML = '';
@@ -898,9 +889,6 @@ function renderTableBajadas() {
             pile.dataset.pi = ji;
             pile.dataset.ji = jugi;
 
-            // ── Detectar intercambios posibles ──
-            // Antes: solo si !me.bajado && esperando_accion
-            // Ahora: también si me.bajado && (esperando_accion || esperando_pago)
             const _me = G.jugadores[myIdx];
             const puedeIntercambiar = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
             const intercambiosPosibles = puedeIntercambiar ? detectarIntercambiosPosibles() : [];
@@ -914,7 +902,6 @@ function renderTableBajadas() {
                     );
                     if (intercPosible) {
                         const icKey = `${ji}-${jugi}-${c.id}`;
-                        // Tooltip diferente según si ya está bajado o no
                         const tipTxt = intercPosible.esCasoBajado
                             ? `🔄 Poner ${intercPosible.cartaValor}${intercPosible.cartaPalo} aquí → recibes el Joker para acomodar`
                             : `🔄 Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker`;
@@ -941,7 +928,6 @@ function renderTableBajadas() {
             if (!intercambioMode && _me?.bajado) {
                 pile.onclick = () => {
                     if (!selId || !isMyTurn()) return;
-                    // null como posicion: si es joker en corrida, preguntará automáticamente
                     acAcomodar(selId, ji, jugi, null);
                 };
             }
@@ -985,9 +971,9 @@ function renderPlayerInfo(me) {
     document.getElementById('turn-tag').textContent = isMyTurn() ? '' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // SLOTS DE CONSTRUCCIÓN
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function renderBuildingRow() {
     if (!G || myIdx < 0) return;
@@ -1049,19 +1035,28 @@ function createCardElement(c, fromSlot = null) {
     if (fromSlot !== null) el.dataset.slot = fromSlot;
     el.draggable = false;
 
-    if (c.comodin) {
-        el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
-    } else {
-        const sc = SUIT_CLS[c.palo] || '';
-        el.innerHTML = `
-            <div class="card-face ${sc}">
-                <div class="corner tl">${c.valor}<br>${c.palo}</div>
-                <div class="cv">${c.palo}</div>
-                <div class="cs">${c.valor}</div>
-                <div class="corner br">${c.valor}<br>${c.palo}</div>
-            </div>`;
-    }
+    // Intentar cargar imagen del diseño seleccionado
+    const imgUrl = getCardImageURL(c);
+    const img = document.createElement('img');
+    img.src = imgUrl;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    img.style.borderRadius = 'var(--r)';
+    
+    // Fallback a diseño de texto si la imagen no existe
+    img.onerror = () => {
+        el.innerHTML = getTextCardHTML(c);
+        attachDragAndClickEvents(el, c, fromSlot);
+    };
+    
+    el.appendChild(img);
+    attachDragAndClickEvents(el, c, fromSlot);
+    
+    return el;
+}
 
+function attachDragAndClickEvents(el, c, fromSlot) {
     el.addEventListener('click', e => { e.stopPropagation(); selCard(c.id); });
 
     const dragCallbacks = {
@@ -1078,8 +1073,6 @@ function createCardElement(c, fromSlot = null) {
 
     el.addEventListener('mousedown', e => { if (e.button !== 0) return; DragDrop.startHandDrag(e, el, c.id, dragCallbacks); });
     el.addEventListener('touchstart', e => DragDrop.startHandDrag(e, el, c.id, dragCallbacks), { passive: false });
-
-    return el;
 }
 
 function handleBuildingDrop(cartaId, slotIndex, slotType, insertIdx) {
@@ -1197,9 +1190,9 @@ function handleReorderWithinSlot(cartaId, slotIndex, insertIdx) {
     renderActions();
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // RENDER ACTIONS
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function renderActions() {
     if (!G || myIdx < 0) return;
@@ -1256,11 +1249,8 @@ function renderActions() {
         if (!selId) return false;
         const carta = me?.mano?.find(c => c.id === selId);
         if (!carta || carta.comodin) return false;
-        // Buscar jugadas bajadas con joker donde esta carta encaje
         return G.jugadores.some((j, ji) => {
             if (!j.bajado) return false;
-            // Post-bajada: puede intercambiar en sus propias jugadas también
-            // Pre-bajada: solo en jugadas de otros
             if (!me?.bajado && ji === myIdx) return false;
             return j.jugadas?.some(jug => jug.cartas.some(c => c.comodin));
         });
@@ -1306,7 +1296,6 @@ function renderActions() {
         case 'esperando_accion': {
             const listoParaBajar = slotsListosParaBajar();
             if (!me?.bajado) {
-                // ── Pre-bajada ──
                 if (me?.penalizacion?.activa) {
                     if (instr) instr.textContent = `⚠️ Penalización activa: ${me.penalizacion.turnosRestantes} turno(s) sin bajar.`;
                 } else if (listoParaBajar) {
@@ -1332,14 +1321,12 @@ function renderActions() {
                     });
                 }
             } else {
-                // ── Post-bajada, esperando_accion ──
                 if (instr) instr.textContent = selId
                     ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
                     : 'Selecciona una carta para acomodar o intercambiar.';
                 add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
                 if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
 
-                // ── Intercambio post-bajada: detectar y mostrar botón ──
                 const intercambiosPosibles = detectarIntercambiosPosibles();
                 if (intercambiosPosibles.length > 0) {
                     const ic = intercambiosPosibles[0];
@@ -1361,14 +1348,12 @@ function renderActions() {
                 if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
             } else {
-                // ── Post-bajada, esperando_pago ──
                 if (instr) instr.textContent = selId
                     ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
                     : 'Selecciona una carta para acomodar, intercambiar o pagar.';
                 add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
                 if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
 
-                // ── Intercambio post-bajada en esperando_pago ──
                 const intercambiosPosibles = detectarIntercambiosPosibles();
                 if (intercambiosPosibles.length > 0) {
                     const ic = intercambiosPosibles[0];
@@ -1389,9 +1374,9 @@ function renderActions() {
     if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || '';
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // HELPERS CARTAS
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function cFull(c, withId = true) {
     if (!c) return '';
@@ -1418,9 +1403,9 @@ function cSm(c) {
     return `<div class="card-sm natural ${sc}">${c.valor}<br>${c.palo}</div>`;
 }
 
-// ═══════════════════════════════════════════════════
+// ================================================================
 // MODALES
-// ═══════════════════════════════════════════════════
+// ================================================================
 
 function showModalRonda(ganadorIdx, puntos) {
     const modal = document.getElementById('modal-ronda');

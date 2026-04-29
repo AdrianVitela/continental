@@ -150,7 +150,7 @@ function validateCode(v, hintId) {
 }
 
 /* ================================================================
-   TABS / MODO / JUGADORES
+   TABS / MODO / JUGADORES / DESIGN
    ================================================================ */
 function switchTab(t) {
   document.querySelectorAll('.tab').forEach((el, i) =>
@@ -170,6 +170,17 @@ function chgMax(d) {
   maxPlayers = Math.max(2, Math.min(8, maxPlayers + d));
   const el = document.getElementById('max-val');
   if (el) el.textContent = maxPlayers;
+}
+
+// Función para cambiar el diseño de cartas
+function setDesign(design) {
+    localStorage.setItem('cardDesign', design);
+    // Actualizar estilo visual de los botones
+    document.querySelectorAll('[data-design]').forEach(btn => {
+        if (btn.dataset.design === design) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+    toast(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`, 'green');
 }
 
 /* ================================================================
@@ -348,6 +359,7 @@ function escHtml(str) {
 window.switchTab              = switchTab;
 window.setMode                = setMode;
 window.chgMax                 = chgMax;
+window.setDesign              = setDesign;
 window.copyCode               = copyCode;
 window.crearSala              = crearSala;
 window.unirse                 = unirse;
@@ -366,4 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSavedName();
   setupSocketEvents();
   WS.connect();
+  
+  // Inicializar el diseño guardado
+  const savedDesign = localStorage.getItem('cardDesign');
+  if (savedDesign) setDesign(savedDesign);
+  else setDesign('mexico');
 });

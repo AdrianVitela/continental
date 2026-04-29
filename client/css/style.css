@@ -15,11 +15,11 @@
   --text-muted: #5a4e3a;
   --ink: #111;
   --sh-card: 0 4px 14px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --cw: 48px;
-  --ch: 68px;
-  --cw-sm: 30px;
-  --ch-sm: 42px;
-  --r: 4px;
+  --cw: 64px;      /* antes 48px - más grande */
+  --ch: 90px;      /* antes 68px - más grande */
+  --cw-sm: 38px;   /* antes 30px - miniaturas más grandes */
+  --ch-sm: 54px;   /* antes 42px */
+  --r: 6px;        /* antes 4px - bordes un poco más redondeados */
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --eout: cubic-bezier(0.22, 1, 0.36, 1);
   --hand-gap: 4px;

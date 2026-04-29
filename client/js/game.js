@@ -38,6 +38,37 @@ let selectedComodinInfo = null;
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
 // ================================================================
+// NOTIFICACIONES MODERNAS
+// ================================================================
+
+// Reemplazar la función toast original por el nuevo sistema de notificaciones
+function toastModern(msg, type = 'info') {
+    if (typeof Notify !== 'undefined') {
+        // Mapear tipos legacy a nuevos
+        let newType = 'info';
+        if (type === 'red') newType = 'danger';
+        else if (type === 'green') newType = 'success';
+        else if (type === 'yellow') newType = 'warning';
+        Notify.show(msg, newType);
+    } else {
+        // Fallback al toast original si notifications.js no cargó
+        const t = document.getElementById('toast');
+        if (t) {
+            t.textContent = msg;
+            t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
+                                 type === 'yellow' ? 'rgba(200,160,69,.9)' :
+                                 'rgba(180,50,50,.9)';
+            t.style.display = 'block';
+            clearTimeout(t._t);
+            t._t = setTimeout(() => t.style.display = 'none', 2600);
+        }
+    }
+}
+
+// Sobrescribir la función toast global
+window.toast = toastModern;
+
+// ================================================================
 // FUNCIONES PARA IMÁGENES DE CARTAS (DISEÑO MÉXICO / USA)
 // ================================================================
 
@@ -440,10 +471,10 @@ function setupSocketEvents() {
         applyEvent(event, data, prev);
         render();
     });
-    WS.on('player_reconnected', ({ nombre }) => toast(`${nombre} se reconectó`, 'green'));
-    WS.on('player_disconnected', ({ nombre }) => toast(`${nombre} se desconectó`));
+    WS.on('player_reconnected', ({ nombre }) => Notify?.success(`${nombre} se reconectó`));
+    WS.on('player_disconnected', ({ nombre }) => Notify?.warning(`${nombre} se desconectó`));
     WS.on('error', ({ msg }) => {
-        toast(msg, 'red');
+        Notify?.danger(msg);
         const esBajada = msg && (
             msg.includes('BAJADA EN FALSO') ||
             msg.includes('Tercia') ||
@@ -461,7 +492,7 @@ function setupSocketEvents() {
                     });
                 });
                 buildingCards.clear();
-                if (msg.includes('BAJADA EN FALSO')) toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
+                if (msg.includes('BAJADA EN FALSO')) Notify?.danger('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.');
                 render();
             }
         }
@@ -538,9 +569,9 @@ async function handleBajar(data) {
 
 async function handleIntercambiarComodin(data) {
     if (data.jugadorIdx === myIdx) {
-        toast('Intercambiaste una carta por un comodín', 'green');
+        Notify?.success('Intercambiaste una carta por un comodín');
     } else if (data.origenJugadorIdx === myIdx) {
-        toast('Te intercambiaron un comodín de tus jugadas', 'yellow');
+        Notify?.warning('Te intercambiaron un comodín de tus jugadas');
     }
 }
 
@@ -573,7 +604,7 @@ function acMazo() {
 
 function acFondo() {
     if (!isMyTurn() || G.estado !== 'esperando_robo') return;
-    if (G.jugadores[myIdx]?.bajado) { toast('Ya te bajaste.'); return; }
+    if (G.jugadores[myIdx]?.bajado) { Notify?.warning('Ya te bajaste.'); return; }
     cancelIntercambio();
     WS.send({ type: 'tomar_fondo' });
 }
@@ -590,7 +621,7 @@ function acCastigo(acepta) {
 }
 
 function acBajar() {
-    if (!slotsListosParaBajar()) { toast('❌ Completa las jugadas requeridas en los slots antes de bajarte'); return; }
+    if (!slotsListosParaBajar()) { Notify?.danger('Completa las jugadas requeridas en los slots antes de bajarte'); return; }
     const defs = getSlotDefsRonda(G.ronda);
     const jugadas = [];
     for (const def of defs) {
@@ -600,14 +631,14 @@ function acBajar() {
         if (cartasReales.length === 0) continue;
         jugadas.push({ tipo: def.type, cartas: cartasReales });
     }
-    if (jugadas.length === 0) { toast('❌ No hay cartas en los slots de construcción'); return; }
+    if (jugadas.length === 0) { Notify?.warning('No hay cartas en los slots de construcción'); return; }
     WS.send({ type: 'bajar', jugadas });
     cancelIntercambio();
 }
 
 function acPagar(cartaId) {
     const id = cartaId || selId;
-    if (!id) { toast('Selecciona una carta para pagar.'); return; }
+    if (!id) { Notify?.warning('Selecciona una carta para pagar.'); return; }
     buildingCards.forEach((cards, slotIndex) => {
         const index = cards.findIndex(c => c.id === id);
         if (index > -1) {
@@ -738,9 +769,9 @@ window._confirmarPosJoker = function(cartaId, destJugadorIdx, destJugadaIdx, pos
 };
 
 function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
-    if (!isMyTurn()) { toast('No es tu turno.'); return; }
+    if (!isMyTurn()) { Notify?.warning('No es tu turno.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
-    if (!estadosValidos.includes(G.estado)) { toast('No puedes intercambiar en este momento.'); return; }
+    if (!estadosValidos.includes(G.estado)) { Notify?.warning('No puedes intercambiar en este momento.'); return; }
 
     const me = G.jugadores[myIdx];
     const jugadasEnSlots = [];
@@ -759,19 +790,19 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
 }
 
 function activarModoIntercambio(jugadorIdx, jugadaIdx, comodinId) {
-    if (!isMyTurn()) { toast('No es tu turno para intercambiar.'); return; }
+    if (!isMyTurn()) { Notify?.warning('No es tu turno para intercambiar.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
-    if (!estadosValidos.includes(G.estado)) { toast('No puedes intercambiar en este momento.'); return; }
+    if (!estadosValidos.includes(G.estado)) { Notify?.warning('No puedes intercambiar en este momento.'); return; }
 
-    if (!selId) { toast('Primero selecciona una carta de tu mano para intercambiar.'); return; }
+    if (!selId) { Notify?.warning('Primero selecciona una carta de tu mano para intercambiar.'); return; }
     const me = G.jugadores[myIdx];
     const cartaSeleccionada = me?.mano?.find(c => c.id === selId);
-    if (!cartaSeleccionada) { toast('Error: carta no encontrada.'); return; }
-    if (cartaSeleccionada.comodin) { toast('No puedes intercambiar un comodín por otro comodín.'); return; }
+    if (!cartaSeleccionada) { Notify?.danger('Error: carta no encontrada.'); return; }
+    if (cartaSeleccionada.comodin) { Notify?.warning('No puedes intercambiar un comodín por otro comodín.'); return; }
 
     intercambioMode = true;
     selectedComodinInfo = { jugadorIdx, jugadaIdx, comodinId };
-    toast(`Intercambiarás ${cartaSeleccionada.valor}${cartaSeleccionada.palo || ''} por el comodín`, 'green');
+    Notify?.info(`Intercambiarás ${cartaSeleccionada.valor}${cartaSeleccionada.palo || ''} por el comodín`);
     render();
 }
 
@@ -784,20 +815,20 @@ function cancelIntercambio() {
 
 function ejecutarIntercambioDesdeKey(key) {
     const intercambio = _intercambiosCache.get(key);
-    if (!intercambio) { toast('Intercambio no disponible, vuelve a intentar.'); return; }
+    if (!intercambio) { Notify?.warning('Intercambio no disponible, vuelve a intentar.'); return; }
     ejecutarIntercambioDirecto(intercambio);
 }
 
 function ejecutarIntercambioDirecto(intercambio) {
-    if (!isMyTurn()) { toast('No es tu turno.'); return; }
+    if (!isMyTurn()) { Notify?.warning('No es tu turno.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
-    if (!estadosValidos.includes(G.estado)) { toast('Solo puedes intercambiar después de robar.'); return; }
+    if (!estadosValidos.includes(G.estado)) { Notify?.warning('Solo puedes intercambiar después de robar.'); return; }
 
     const me = G.jugadores[myIdx];
     const carta = `${intercambio.cartaValor}${intercambio.cartaPalo}`;
 
     if (intercambio.esCasoBajado) {
-        toast(`🔄 Intercambiando ${carta} por el Joker…`, 'green');
+        Notify?.info(`🔄 Intercambiando ${carta} por el Joker…`);
         WS.send({
             type: 'intercambiar_comodin',
             cartaId: intercambio.cartaId,
@@ -812,8 +843,8 @@ function ejecutarIntercambioDirecto(intercambio) {
             const cards = buildingCards.get(def.index) || [];
             if (cards.length > 0) jugadasEnSlots.push({ tipo: def.type, cartas: cards.filter(Boolean) });
         }
-        if (jugadasEnSlots.length === 0) { toast('Arma tus jugadas en los slots antes de intercambiar.', 'red'); return; }
-        toast(`🔄 Intercambiando ${carta} por el Joker…`, 'green');
+        if (jugadasEnSlots.length === 0) { Notify?.danger('Arma tus jugadas en los slots antes de intercambiar.'); return; }
+        Notify?.info(`🔄 Intercambiando ${carta} por el Joker…`);
         WS.send({
             type: 'intercambiar_comodin',
             cartaId: intercambio.cartaId,
@@ -839,7 +870,7 @@ function acReorder(draggedId, beforeId) {
     buildingCards.forEach((cards, slotIndex) => {
         if (cards.some(c => c.id === draggedId)) slotOrigen = slotIndex;
     });
-    if (slotOrigen !== null) { toast('No puedes reordenar cartas que están en construcción'); return; }
+    if (slotOrigen !== null) { Notify?.warning('No puedes reordenar cartas que están en construcción'); return; }
     const fromIdx = me.mano.findIndex(c => c.id === draggedId);
     if (fromIdx < 0) return;
     let toIdx = beforeId;
@@ -1134,12 +1165,12 @@ function attachDragAndClickEvents(el, c, fromSlot) {
 
 function handleBuildingDrop(cartaId, slotIndex, slotType, insertIdx) {
     const me = G.jugadores[myIdx];
-    if (!me || me.bajado) { toast('Ya estás bajado, no puedes construir más jugadas'); return; }
+    if (!me || me.bajado) { Notify?.warning('Ya estás bajado, no puedes construir más jugadas'); return; }
     const cartaIndex = me.mano.findIndex(c => c.id === cartaId);
-    if (cartaIndex === -1) { toast('Carta no encontrada en la mano'); return; }
+    if (cartaIndex === -1) { Notify?.danger('Carta no encontrada en la mano'); return; }
     let cartaEnOtroSlot = false;
     buildingCards.forEach(cards => { if (cards.some(c => c.id === cartaId)) cartaEnOtroSlot = true; });
-    if (cartaEnOtroSlot) { toast('Esta carta ya está en otra jugada'); return; }
+    if (cartaEnOtroSlot) { Notify?.warning('Esta carta ya está en otra jugada'); return; }
     const [cartaMovida] = me.mano.splice(cartaIndex, 1);
     if (!buildingCards.has(slotIndex)) buildingCards.set(slotIndex, []);
     const slotCards = buildingCards.get(slotIndex);
@@ -1152,7 +1183,7 @@ function handleBuildingDrop(cartaId, slotIndex, slotType, insertIdx) {
     renderHand();
     renderActions();
     selId = null;
-    toast(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`, 'green');
+    Notify?.success(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`);
 }
 
 function updateSlotUI(slotIndex, cards) {
@@ -1178,7 +1209,7 @@ function updateSlotUI(slotIndex, cards) {
 
 function handleRemoveFromSlot(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
-    if (!me || me.bajado) { toast('Ya estás bajado, no puedes modificar jugadas'); return; }
+    if (!me || me.bajado) { Notify?.warning('Ya estás bajado, no puedes modificar jugadas'); return; }
     const slotCards = buildingCards.get(slotIndex);
     if (!slotCards) return;
     const index = slotCards.findIndex(c => c.id === cartaId);
@@ -1188,13 +1219,13 @@ function handleRemoveFromSlot(cartaId, slotIndex) {
         updateSlotUI(slotIndex, slotCards);
         renderHand();
         renderActions();
-        toast('Carta removida de la jugada', 'green');
+        Notify?.success('Carta removida de la jugada');
     }
 }
 
 function handleReturnToHand(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
-    if (!me || me.bajado) { toast('Ya estás bajado, no puedes modificar jugadas', 'red'); return; }
+    if (!me || me.bajado) { Notify?.danger('Ya estás bajado, no puedes modificar jugadas'); return; }
     slotIndex = String(slotIndex);
     const slotCards = buildingCards.get(slotIndex);
     if (!slotCards) return;
@@ -1206,12 +1237,12 @@ function handleReturnToHand(cartaId, slotIndex) {
     if (!yaEnMano) me.mano.push(cartaDevuelta);
     renderHand();
     renderActions();
-    toast(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`, 'green');
+    Notify?.info(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`);
 }
 
 function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType, insertIdx) {
     const me = G.jugadores[myIdx];
-    if (!me || me.bajado) { toast('Ya estás bajado, no puedes modificar jugadas'); return; }
+    if (!me || me.bajado) { Notify?.warning('Ya estás bajado, no puedes modificar jugadas'); return; }
     fromSlotIndex = String(fromSlotIndex);
     toSlotIndex = String(toSlotIndex);
     const fromSlotCards = buildingCards.get(fromSlotIndex);
@@ -1373,7 +1404,7 @@ function renderActions() {
                     if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte!`;
                 } else if (selId && hasComodinesIntercambiables()) {
                     add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                        toast('Haz clic en un comodín de las jugadas de otros jugadores', 'green');
+                        Notify?.info('Haz clic en un comodín de las jugadas de otros jugadores');
                         intercambioMode = true;
                         render();
                     });
@@ -1392,7 +1423,7 @@ function renderActions() {
                     if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
                 } else if (selId && hasComodinesIntercambiables()) {
                     add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                        toast('Haz clic en un comodín de las jugadas', 'green');
+                        Notify?.info('Haz clic en un comodín de las jugadas');
                         intercambioMode = true;
                         render();
                     });
@@ -1419,7 +1450,7 @@ function renderActions() {
                     if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
                 } else if (selId && hasComodinesIntercambiables()) {
                     add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                        toast('Haz clic en un comodín de las jugadas', 'green');
+                        Notify?.info('Haz clic en un comodín de las jugadas');
                         intercambioMode = true;
                         render();
                     });
@@ -1512,6 +1543,7 @@ function showModalJuego(jugadores) {
     modal.classList.add('show');
 }
 
+// Esta función se mantiene como fallback por si notifications.js no carga
 function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;

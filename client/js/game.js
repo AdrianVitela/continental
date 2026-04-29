@@ -43,49 +43,83 @@ let buildingCards = new Map(); // slotIndex (string) -> array de cartas completa
 
 // Obtener diseño actual del localStorage
 function getCurrentDesign() {
-    return localStorage.getItem('cardDesign') || 'mexico';
+    const design = localStorage.getItem('cardDesign');
+    console.log('🎴 Diseño actual:', design);
+    return design || 'mexico';
 }
 
 // Construye la ruta de la imagen para una carta dada
 function getCardImageURL(card, design = null) {
     if (!design) design = getCurrentDesign();
     
-    // Para comodines, usar la carpeta Joker
+    console.log('🔍 Generando URL para carta:', card.valor, card.palo, 'diseño:', design);
+    
+    // Para comodines
     if (card.comodin) {
+        let url = '';
         if (design === 'mexico') {
-            // México: Joker_1.png, Joker_1_1.png, Joker_2.png, Joker_2_2.png
-            // Usar Joker_1.png por defecto
-            return 'imagenes/Mexico/Joker/Joker_1.png';
+            // Probar con diferentes variaciones de nombres para Joker
+            url = 'imagenes/Mexico/Joker/Joker_1.png';
         } else {
-            // USA: j1.png, j2.png, j3.png, j4.png
-            return 'imagenes/Estados Unidos/Joker/j1.png';
+            url = 'imagenes/Estados Unidos/Joker/j1.png';
         }
+        console.log('  📸 URL comodín:', url);
+        return url;
     }
     
+    // Construir ruta base
     let base = design === 'mexico' ? 'imagenes/Mexico/' : 'imagenes/Estados Unidos/';
     let folder = '';
     let filename = '';
     
-    // Determinar carpeta por palo
+    // Determinar carpeta por palo (usando los símbolos correctos)
     switch (card.palo) {
-        case '♥': folder = 'corazones'; break;
-        case '♦': folder = 'diamantes'; break;
-        case '♠': folder = 'picas'; break;
-        case '♣': folder = 'treboles'; break;
-        default: folder = 'corazones';
+        case '♥': 
+        case '♥️': 
+            folder = 'corazones'; 
+            break;
+        case '♦': 
+        case '♦️': 
+            folder = 'diamantes'; 
+            break;
+        case '♠': 
+        case '♠️': 
+            folder = 'picas'; 
+            break;
+        case '♣': 
+        case '♣️': 
+            folder = 'treboles'; 
+            break;
+        default: 
+            folder = 'corazones';
     }
     
-    // Determinar nombre de archivo
+    // Determinar nombre de archivo (normalizar valores)
     const valor = card.valor;
-    if (valor === 'A') filename = 'As.png';
-    else if (valor === 'J') filename = 'J.png';
-    else if (valor === 'Q') filename = 'Q.png';
-    else if (valor === 'K') filename = 'K.png';
-    else filename = `${valor}.png`;
+    if (valor === 'A' || valor === 'As') {
+        filename = 'As.png';
+    } else if (valor === 'J') {
+        filename = 'J.png';
+    } else if (valor === 'Q' || valor === 'Reina') {
+        filename = 'Q.png';
+    } else if (valor === 'K' || valor === 'Rey') {
+        filename = 'K.png';
+    } else {
+        filename = `${valor}.png`;
+    }
+    
+    // Para México, algunos archivos pueden tener nombres diferentes
+    if (design === 'mexico' && (valor === 'J' || valor === 'Q' || valor === 'K')) {
+        // México podría tener J.png, Q.png, K.png en mayúsculas
+        // No cambiamos nada, usamos mayúsculas
+    }
     
     let url = `${base}${folder}/${filename}`;
     // Reemplazar espacios por %20 para evitar problemas
-    return url.replace(/ /g, '%20');
+    url = url.replace(/ /g, '%20');
+    
+    console.log('  📸 URL carta:', url);
+    return url;
 }
 
 // Genera el HTML interno de texto (diseño genérico) para una carta
@@ -102,6 +136,13 @@ function getTextCardHTML(card) {
             </div>`;
 }
 
+// Función para pre-cargar y verificar si una imagen existe
+function preloadImage(url, callback) {
+    const img = new Image();
+    img.onload = () => callback(true);
+    img.onerror = () => callback(false);
+    img.src = url;
+}
 // ================================================================
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
 // ================================================================
@@ -1035,19 +1076,26 @@ function createCardElement(c, fromSlot = null) {
     if (fromSlot !== null) el.dataset.slot = fromSlot;
     el.draggable = false;
 
-    // Intentar cargar imagen del diseño seleccionado
     const imgUrl = getCardImageURL(c);
+    
+    // Crear imagen
     const img = document.createElement('img');
     img.src = imgUrl;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
     img.style.borderRadius = 'var(--r)';
+    img.style.display = 'block';
     
     // Fallback a diseño de texto si la imagen no existe
     img.onerror = () => {
+        console.warn('❌ No se pudo cargar la imagen:', imgUrl, '- usando diseño de texto');
         el.innerHTML = getTextCardHTML(c);
         attachDragAndClickEvents(el, c, fromSlot);
+    };
+    
+    img.onload = () => {
+        console.log('✅ Imagen cargada correctamente:', imgUrl);
     };
     
     el.appendChild(img);

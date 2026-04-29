@@ -1,6 +1,8 @@
 // client/js/notifications.js
 'use strict';
 
+console.log('🚀 NOTIFICATIONS.JS - INICIO');
+
 const NotificationSystem = (() => {
   let container = null;
   let defaultDuration = 4000;

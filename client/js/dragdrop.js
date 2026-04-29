@@ -14,6 +14,13 @@ const DragDrop = (() => {
     return { x: e.clientX, y: e.clientY };
   }
 
+  function removeGhost() {
+    if (ghost) {
+      if (ghost.g && ghost.g.parentNode) ghost.g.parentNode.removeChild(ghost.g);
+      ghost = null;
+    }
+  }
+
   function mkGhost(el, pt) {
     const rect = el.getBoundingClientRect();
     const g = el.cloneNode(true);
@@ -156,7 +163,7 @@ const DragDrop = (() => {
 
     const onUp = ev => {
       const pt = getPoint(ev);
-      if (ghost) { ghost.g.remove(); ghost = null; }
+      removeGhost();  // Usar removeGhost en lugar de acceso directo
       cleanDropZones();
       el.classList.remove('dragging');
       el.style.visibility = '';
@@ -271,7 +278,7 @@ const DragDrop = (() => {
     };
     const onUp = ev => {
       const pt = getPoint(ev);
-      if (ghost) { ghost.g.remove(); ghost = null; }
+      removeGhost();  // Usar removeGhost en lugar de acceso directo
       cleanDropZones();
       cardEl.style.opacity = '';
       _endFondoDrag(pt, callbacks);
@@ -302,5 +309,25 @@ const DragDrop = (() => {
     dragSource = null;
   }
 
-  return { startHandDrag, startFondoDrag };
+  // ============================================================
+  // NUEVA FUNCIÓN: cancelDrag - para limpiar drags cuando aparecen modales
+  // ============================================================
+  function cancelDrag() {
+    if (ghost) {
+      removeGhost();
+      cleanDropZones();
+      if (originalCardEl) {
+        originalCardEl.classList.remove('dragging');
+        originalCardEl.style.visibility = '';
+        originalCardEl.style.opacity = '';
+      }
+      dragId = null;
+      dragSource = null;
+      draggingFromSlot = false;
+      originalSlotIndex = null;
+      originalCardEl = null;
+    }
+  }
+
+  return { startHandDrag, startFondoDrag, cancelDrag };
 })();

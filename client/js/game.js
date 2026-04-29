@@ -1316,6 +1316,7 @@ function renderActions() {
     if (!myTurn) {
         if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
         if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
+            DragDrop.cancelDrag();
             const top = G.fondo_top;
             cb.style.display = 'block';
             cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}?`;
@@ -1464,6 +1465,7 @@ function cSm(c) {
     const sc = SUIT_CLS[c.palo] || '';
     
     if (c.comodin) {
+        // Mostrar imagen del joker según diseño seleccionado
         return `<div class="card-sm joker-sm" style="background: transparent; padding: 0; overflow: hidden;">
                     <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
                          onerror="this.style.display='none'; this.parentElement.innerHTML='🃏'; this.parentElement.classList.add('joker-sm'); this.parentElement.style.background='linear-gradient(160deg, #1a0a4a, #2d1060)';">
@@ -1481,6 +1483,7 @@ function cSm(c) {
 // ================================================================
 
 function showModalRonda(ganadorIdx, puntos) {
+    DragDrop.cancelDrag();
     const modal = document.getElementById('modal-ronda');
     if (!modal) return;
     document.getElementById('mr-title').textContent = `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`;
@@ -1496,6 +1499,7 @@ function showModalRonda(ganadorIdx, puntos) {
 }
 
 function showModalJuego(jugadores) {
+    DragDrop.cancelDrag();
     const modal = document.getElementById('modal-juego');
     if (!modal) return;
     const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);

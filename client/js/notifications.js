@@ -68,7 +68,6 @@ const NotificationSystem = (() => {
     
     container.appendChild(notification);
     
-    // Auto-remove after duration
     const timeout = setTimeout(() => {
       if (notification.parentNode) {
         notification.classList.add('hiding');
@@ -90,15 +89,179 @@ const NotificationSystem = (() => {
       .replace(/"/g, '&quot;');
   }
 
+  // ============================================================
+  // MODERN DIALOG SYSTEM (reemplaza confirm/alert antipáticos)
+  // ============================================================
+  
+  let activeDialog = null;
+  
+  function showDialog(options) {
+    return new Promise((resolve) => {
+      // Cerrar diálogo existente
+      if (activeDialog) {
+        closeDialog();
+      }
+      
+      const overlay = document.createElement('div');
+      overlay.className = 'modern-dialog-overlay';
+      
+      const iconMap = {
+        warning: '⚠️',
+        danger: '🔴',
+        success: '✅',
+        info: 'ℹ️',
+        question: '❓'
+      };
+      
+      const dialogIcon = options.icon || iconMap[options.type] || '🎴';
+      
+      overlay.innerHTML = `
+        <div class="modern-dialog">
+          <div class="modern-dialog-header">
+            <div class="dialog-icon">${dialogIcon}</div>
+            <h3>${escapeHtml(options.title || 'Atención')}</h3>
+          </div>
+          <div class="modern-dialog-content">
+            ${options.cardPreview ? `
+              <div class="card-preview">
+                ${options.cardPreview}
+              </div>
+            ` : ''}
+            <p>${escapeHtml(options.message || '')}</p>
+          </div>
+          <div class="modern-dialog-buttons">
+            ${options.buttons.map(btn => `
+              <button class="btn-dialog-${btn.type || 'secondary'}" data-value="${btn.value}">
+                ${escapeHtml(btn.label)}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(overlay);
+      activeDialog = overlay;
+      
+      // Pequeño delay para la animación
+      setTimeout(() => overlay.classList.add('show'), 10);
+      
+      const buttons = overlay.querySelectorAll('button');
+      const handleClick = (e) => {
+        const value = e.currentTarget.getAttribute('data-value');
+        closeDialog();
+        resolve(value);
+      };
+      
+      buttons.forEach(btn => btn.addEventListener('click', handleClick));
+      
+      // Cerrar al hacer clic fuera (opcional)
+      if (options.closeOnOverlayClick !== false) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            closeDialog();
+            resolve(options.defaultValue || null);
+          }
+        });
+      }
+    });
+  }
+  
+  function closeDialog() {
+    if (activeDialog) {
+      activeDialog.classList.remove('show');
+      setTimeout(() => {
+        if (activeDialog && activeDialog.parentNode) {
+          activeDialog.parentNode.removeChild(activeDialog);
+        }
+        activeDialog = null;
+      }, 200);
+    }
+  }
+  
+  // Método de confirmación simple
+  function confirm(message, title = 'Confirmar') {
+    return showDialog({
+      title: title,
+      message: message,
+      type: 'question',
+      buttons: [
+        { label: 'Sí', value: true, type: 'primary' },
+        { label: 'No', value: false, type: 'secondary' }
+      ],
+      defaultValue: false
+    });
+  }
+  
+  // Método de alerta (solo OK)
+  function alert(message, title = 'Atención') {
+    return showDialog({
+      title: title,
+      message: message,
+      type: 'info',
+      buttons: [
+        { label: 'Aceptar', value: true, type: 'primary' }
+      ]
+    });
+  }
+  
+  // Diálogo de castigo específico para el juego
+  function showCastigoDialog(card, onYes, onNo) {
+    // Crear preview de la carta
+    let cardPreviewHtml = '';
+    if (card) {
+      const cardValue = card.valor || card.valor;
+      const cardSuit = card.palo || '';
+      cardPreviewHtml = `
+        <div style="text-align:center">
+          <div class="card-sm" style="
+            background: linear-gradient(160deg, #fffbf2, #f5ead8);
+            color: ${cardSuit === '♥' || cardSuit === '♦' ? '#b83030' : '#111'};
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 10px 15px;
+            min-width: 80px;
+          ">
+            ${cardValue}<span style="font-size: 1.4rem">${cardSuit}</span>
+          </div>
+        </div>
+      `;
+    }
+    
+    return showDialog({
+      title: '⚡ Castigo',
+      message: `¿Te castigas? Recibirás la carta ${card?.valor || ''}${card?.palo || ''} del fondo y robarás una extra del mazo.`,
+      cardPreview: cardPreviewHtml,
+      type: 'warning',
+      buttons: [
+        { label: '✅ Sí, castigarme', value: 'yes', type: 'danger' },
+        { label: '❌ No', value: 'no', type: 'secondary' }
+      ]
+    }).then(result => {
+      if (result === 'yes' && onYes) onYes();
+      if (result === 'no' && onNo) onNo();
+    });
+  }
+
   function success(message, duration) { return show(message, 'success', duration); }
   function info(message, duration) { return show(message, 'info', duration); }
   function warning(message, duration) { return show(message, 'warning', duration); }
   function danger(message, duration) { return show(message, 'danger', duration); }
 
-  return { show, success, info, warning, danger };
+  return { 
+    show, success, info, warning, danger,
+    showDialog, confirm, alert, showCastigoDialog, closeDialog
+  };
 })();
 
-// Exponer como Notify (lo que espera game.js)
+// Exponer como Notify
 window.Notify = NotificationSystem;
+
+// También exponer métodos de conveniencia globales
+window.NotifyConfirm = (msg, title) => NotificationSystem.confirm(msg, title);
+window.NotifyAlert = (msg, title) => NotificationSystem.alert(msg, title);
 
 console.log('✅ notifications.js cargado correctamente, Notify disponible:', typeof window.Notify);

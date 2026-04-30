@@ -620,6 +620,20 @@ function acCastigo(acepta) {
     cancelIntercambio();
 }
 
+// Nueva función que usa el diálogo moderno
+function mostrarDialogoCastigo(card) {
+    if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
+        Notify.showCastigoDialog(
+            card,
+            () => acCastigo(true),   // onYes
+            () => acCastigo(false)   // onNo
+        );
+    } else {
+        // Fallback al método anterior
+        acCastigo(confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`));
+    }
+}
+
 function acBajar() {
     if (!slotsListosParaBajar()) { Notify?.danger('Completa las jugadas requeridas en los slots antes de bajarte'); return; }
     const defs = getSlotDefsRonda(G.ronda);
@@ -1294,10 +1308,21 @@ function renderActions() {
     if (cb) cb.style.display = 'none';
     if (btns) btns.innerHTML = '';
 
+    // Función add actualizada con clases modernas
     const add = (txt, cls, fn, dis = false) => {
         if (!btns) return;
         const b = document.createElement('button');
-        b.className = `abtn ${cls}`;
+        
+        // Mapear clases antiguas a modernas
+        let modernClass = cls;
+        if (cls === 'abtn-gold') modernClass = 'action-btn action-btn-primary';
+        else if (cls === 'abtn-outline') modernClass = 'action-btn action-btn-secondary';
+        else if (cls === 'abtn-green') modernClass = 'action-btn action-btn-success';
+        else if (cls === 'abtn-red') modernClass = 'action-btn action-btn-danger';
+        else if (cls === 'abtn-warning') modernClass = 'action-btn action-btn-warning';
+        else if (cls.startsWith('abtn')) modernClass = 'action-btn action-btn-secondary';
+        
+        b.className = modernClass;
         b.textContent = txt;
         b.disabled = dis;
         b.onclick = fn;
@@ -1350,10 +1375,10 @@ function renderActions() {
             DragDrop.cancelDrag();
             const top = G.fondo_top;
             cb.style.display = 'block';
-            cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}?`;
+            cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
             if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-            add('✅ Sí, castigarme', 'abtn-green', () => acCastigo(true));
-            add('❌ No', 'abtn-red', () => acCastigo(false));
+            add('✅ Sí, castigarme', 'action-btn action-btn-danger', () => acCastigo(true));
+            add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
         }
         return;
     }
@@ -1374,8 +1399,8 @@ function renderActions() {
                 cb.style.display = 'block';
                 cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
                 if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-                add('✅ Sí', 'abtn-green', () => acCastigo(true));
-                add('❌ No', 'abtn-red', () => acCastigo(false));
+                add('✅ Sí, castigarme', 'action-btn action-btn-danger', () => acCastigo(true));
+                add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
             } else {
                 if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
             }

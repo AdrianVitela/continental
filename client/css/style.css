@@ -327,8 +327,6 @@ body::before {
 .scoreboard {
   display: flex;
   gap: 10px;
-  /* Centrado absoluto respecto al ancho total de la topbar,
-     independiente de cuánto ocupen los pills a la izquierda */
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -401,7 +399,6 @@ body::before {
   margin-bottom: 16px;
 }
 
-/* Score rows dentro de modales */
 .score-rows {
   display: flex;
   flex-direction: column;
@@ -526,7 +523,7 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   DISCARD ZONE — cartas centradas
+   DISCARD ZONE
    ============================================ */
 
 .discard-zone {
@@ -542,7 +539,7 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   ROW LABELS — centrados
+   ROW LABELS
    ============================================ */
 
 .row-label {
@@ -638,10 +635,9 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   RESPONSIVE — MEDIA QUERIES
+   RESPONSIVE
    ============================================ */
 
-/* Tablets grandes / laptops pequeñas */
 @media (max-width: 1200px) {
   :root {
     --cw: 64px;
@@ -651,7 +647,6 @@ input[type=text]:focus {
   }
 }
 
-/* Tablets horizontales */
 @media (max-width: 991px) {
   :root {
     --cw: 56px;
@@ -661,7 +656,6 @@ input[type=text]:focus {
   }
 }
 
-/* Tablets verticales */
 @media (max-width: 767px) {
   :root {
     --cw: 48px;
@@ -671,7 +665,6 @@ input[type=text]:focus {
   }
 }
 
-/* Móviles */
 @media (max-width: 575px) {
   :root {
     --cw: 42px;
@@ -681,7 +674,6 @@ input[type=text]:focus {
   }
 }
 
-/* Móviles pequeños */
 @media (max-width: 414px) {
   :root {
     --cw: 36px;
@@ -691,7 +683,6 @@ input[type=text]:focus {
   }
 }
 
-/* Landscape móviles */
 @media (orientation: landscape) and (max-height: 500px) {
   :root {
     --cw: 44px;
@@ -701,8 +692,6 @@ input[type=text]:focus {
   }
 }
 
-/* Scoreboard en móviles muy pequeños: volver a flujo normal
-   para evitar que tape los pills */
 @media (max-width: 480px) {
   .scoreboard {
     position: static;
@@ -805,7 +794,6 @@ input[type=text]:focus {
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-/* Tipos de notificaciones */
 .notification.success {
   background-color: rgba(62, 189, 97, 0.2);
   border: 2px solid #3ebd61;
@@ -838,7 +826,6 @@ input[type=text]:focus {
   background-color: #EC4D2B;
 }
 
-/* Animaciones */
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -861,7 +848,6 @@ input[type=text]:focus {
   }
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .notification-container {
     top: 10px;
@@ -872,5 +858,234 @@ input[type=text]:focus {
   .notification {
     min-width: auto;
     width: 100%;
+  }
+}
+
+/* ============================================
+   MODERN DIALOG MODAL (para decisiones como castigo)
+   ============================================ */
+
+.modern-dialog-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modern-dialog-overlay.show {
+  display: flex;
+}
+
+.modern-dialog {
+  background: linear-gradient(145deg, #1a2a1a, #0e1a0e);
+  border-radius: 1.5rem;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0px 20px 40px rgba(0, 0, 0, 0.4), 0px 0px 0px 1px rgba(200, 160, 69, 0.2);
+  animation: dialogPopIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.modern-dialog-header {
+  padding: 1.2rem 1.5rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(200, 160, 69, 0.15);
+}
+
+.modern-dialog-header .dialog-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.modern-dialog-header h3 {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--gold);
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modern-dialog-content {
+  padding: 1.2rem 1.5rem;
+  text-align: center;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modern-dialog-content .card-preview {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0.8rem 0;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(200, 160, 69, 0.3);
+}
+
+.modern-dialog-content .card-preview .card-sm {
+  width: 50px;
+  height: 70px;
+}
+
+.modern-dialog-buttons {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1.5rem 1.5rem;
+}
+
+.modern-dialog-buttons button {
+  flex: 1;
+  padding: 0.85rem 0.5rem;
+  border: none;
+  border-radius: 1rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modern-dialog-buttons button:active {
+  transform: scale(0.97);
+}
+
+.btn-dialog-primary {
+  background: linear-gradient(135deg, #d4a84a, #b87d30);
+  color: #1a0e00;
+  box-shadow: 0 4px 12px rgba(200, 160, 69, 0.3);
+}
+
+.btn-dialog-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(200, 160, 69, 0.4);
+}
+
+.btn-dialog-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-dim);
+}
+
+.btn-dialog-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+.btn-dialog-danger {
+  background: linear-gradient(135deg, #b83030, #8a2020);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(184, 48, 48, 0.3);
+}
+
+.btn-dialog-danger:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #d44040, #a82828);
+}
+
+/* ============================================
+   MODERN ACTION BUTTONS
+   ============================================ */
+
+.action-btn {
+  padding: 10px 24px;
+  border-radius: 40px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.action-btn:active {
+  transform: scale(0.96);
+}
+
+.action-btn-primary {
+  background: linear-gradient(135deg, #d4a84a, #b87d30);
+  color: #1a0e00;
+}
+
+.action-btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(200, 160, 69, 0.4);
+}
+
+.action-btn-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text);
+}
+
+.action-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.action-btn-success {
+  background: linear-gradient(135deg, #2ecc71, #229954);
+  color: #fff;
+}
+
+.action-btn-success:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.3);
+}
+
+.action-btn-danger {
+  background: linear-gradient(135deg, #b83030, #8a2020);
+  color: #fff;
+}
+
+.action-btn-danger:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(184, 48, 48, 0.3);
+}
+
+.action-btn-warning {
+  background: linear-gradient(135deg, #ef9400, #cc7a00);
+  color: #fff;
+}
+
+.action-btn-warning:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(239, 148, 0, 0.3);
+}
+
+.action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  pointer-events: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }

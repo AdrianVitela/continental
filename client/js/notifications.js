@@ -90,14 +90,13 @@ const NotificationSystem = (() => {
   }
 
   // ============================================================
-  // MODERN DIALOG SYSTEM (reemplaza confirm/alert antipáticos)
+  // MODERN DIALOG SYSTEM
   // ============================================================
   
   let activeDialog = null;
   
   function showDialog(options) {
     return new Promise((resolve) => {
-      // Cerrar diálogo existente
       if (activeDialog) {
         closeDialog();
       }
@@ -142,7 +141,6 @@ const NotificationSystem = (() => {
       document.body.appendChild(overlay);
       activeDialog = overlay;
       
-      // Pequeño delay para la animación
       setTimeout(() => overlay.classList.add('show'), 10);
       
       const buttons = overlay.querySelectorAll('button');
@@ -154,7 +152,6 @@ const NotificationSystem = (() => {
       
       buttons.forEach(btn => btn.addEventListener('click', handleClick));
       
-      // Cerrar al hacer clic fuera (opcional)
       if (options.closeOnOverlayClick !== false) {
         overlay.addEventListener('click', (e) => {
           if (e.target === overlay) {
@@ -178,7 +175,6 @@ const NotificationSystem = (() => {
     }
   }
   
-  // Método de confirmación simple
   function confirm(message, title = 'Confirmar') {
     return showDialog({
       title: title,
@@ -192,7 +188,6 @@ const NotificationSystem = (() => {
     });
   }
   
-  // Método de alerta (solo OK)
   function alert(message, title = 'Atención') {
     return showDialog({
       title: title,
@@ -204,13 +199,11 @@ const NotificationSystem = (() => {
     });
   }
   
-  // Diálogo de castigo específico para el juego
   function showCastigoDialog(card, onYes, onNo) {
-    // Crear preview de la carta
     let cardPreviewHtml = '';
     if (card) {
-      const cardValue = card.valor || card.valor;
-      const cardSuit = card.palo || '';
+      const cardValue = card.valor;
+      const cardSuit = card.palo;
       cardPreviewHtml = `
         <div style="text-align:center">
           <div class="card-sm" style="
@@ -257,10 +250,7 @@ const NotificationSystem = (() => {
   };
 })();
 
-// Exponer como Notify
 window.Notify = NotificationSystem;
-
-// También exponer métodos de conveniencia globales
 window.NotifyConfirm = (msg, title) => NotificationSystem.confirm(msg, title);
 window.NotifyAlert = (msg, title) => NotificationSystem.alert(msg, title);
 

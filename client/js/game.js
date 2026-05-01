@@ -38,30 +38,49 @@ let selectedComodinInfo = null;
 let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
 
 // ================================================================
-// NOTIFICACIONES MODERNAS
+// VERIFICAR Y CONFIGURAR NOTIFICACIONES MODERNAS
 // ================================================================
+
+// Asegurar que Notify esté disponible
+if (typeof Notify === 'undefined') {
+    console.warn('⚠️ Notify no disponible, usando sistema de respaldo');
+    window.Notify = {
+        success: (msg) => { console.log('✅', msg); toastLegacy(msg, 'green'); },
+        warning: (msg) => { console.log('⚠️', msg); toastLegacy(msg, 'yellow'); },
+        danger: (msg) => { console.log('🔴', msg); toastLegacy(msg, 'red'); },
+        info: (msg) => { console.log('ℹ️', msg); toastLegacy(msg, 'blue'); },
+        show: (msg, type) => { console.log('📢', msg); toastLegacy(msg, type === 'danger' ? 'red' : 'green'); },
+        showCastigoDialog: (card, onYes, onNo) => {
+            const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
+            if (result) onYes();
+            else onNo();
+        }
+    };
+}
+
+// Función de respaldo (legacy)
+function toastLegacy(msg, type = 'red') {
+    const t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
+                         type === 'yellow' ? 'rgba(200,160,69,.9)' :
+                         'rgba(180,50,50,.9)';
+    t.style.display = 'block';
+    clearTimeout(t._t);
+    t._t = setTimeout(() => t.style.display = 'none', 2600);
+}
 
 // Reemplazar la función toast original por el nuevo sistema de notificaciones
 function toastModern(msg, type = 'info') {
     if (typeof Notify !== 'undefined') {
-        // Mapear tipos legacy a nuevos
         let newType = 'info';
         if (type === 'red') newType = 'danger';
         else if (type === 'green') newType = 'success';
         else if (type === 'yellow') newType = 'warning';
         Notify.show(msg, newType);
     } else {
-        // Fallback al toast original si notifications.js no cargó
-        const t = document.getElementById('toast');
-        if (t) {
-            t.textContent = msg;
-            t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
-                                 type === 'yellow' ? 'rgba(200,160,69,.9)' :
-                                 'rgba(180,50,50,.9)';
-            t.style.display = 'block';
-            clearTimeout(t._t);
-            t._t = setTimeout(() => t.style.display = 'none', 2600);
-        }
+        toastLegacy(msg, type);
     }
 }
 
@@ -89,7 +108,6 @@ function getCardImageURL(card, design = null) {
     if (card.comodin) {
         let url = '';
         if (design === 'mexico') {
-            // Probar con diferentes variaciones de nombres para Joker
             url = 'imagenes/Mexico/Joker/Joker_1.png';
         } else {
             url = 'imagenes/Estados Unidos/Joker/j1.png';
@@ -103,7 +121,7 @@ function getCardImageURL(card, design = null) {
     let folder = '';
     let filename = '';
     
-    // Determinar carpeta por palo (usando los símbolos correctos)
+    // Determinar carpeta por palo
     switch (card.palo) {
         case '♥': 
         case '♥️': 
@@ -125,7 +143,7 @@ function getCardImageURL(card, design = null) {
             folder = 'corazones';
     }
     
-    // Determinar nombre de archivo (normalizar valores)
+    // Determinar nombre de archivo
     const valor = card.valor;
     if (valor === 'A' || valor === 'As') {
         filename = 'As.png';
@@ -139,14 +157,7 @@ function getCardImageURL(card, design = null) {
         filename = `${valor}.png`;
     }
     
-    // Para México, algunos archivos pueden tener nombres diferentes
-    if (design === 'mexico' && (valor === 'J' || valor === 'Q' || valor === 'K')) {
-        // México podría tener J.png, Q.png, K.png en mayúsculas
-        // No cambiamos nada, usamos mayúsculas
-    }
-    
     let url = `${base}${folder}/${filename}`;
-    // Reemplazar espacios por %20 para evitar problemas
     url = url.replace(/ /g, '%20');
     
     console.log('  📸 URL carta:', url);
@@ -167,13 +178,6 @@ function getTextCardHTML(card) {
             </div>`;
 }
 
-// Función para pre-cargar y verificar si una imagen existe
-function preloadImage(url, callback) {
-    const img = new Image();
-    img.onload = () => callback(true);
-    img.onerror = () => callback(false);
-    img.src = url;
-}
 // ================================================================
 // VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
 // ================================================================
@@ -569,9 +573,9 @@ async function handleBajar(data) {
 
 async function handleIntercambiarComodin(data) {
     if (data.jugadorIdx === myIdx) {
-        Notify?.success('Intercambiaste una carta por un comodín');
+        Notify?.success('✨ ¡Intercambio exitoso! Recibiste un comodín');
     } else if (data.origenJugadorIdx === myIdx) {
-        Notify?.warning('Te intercambiaron un comodín de tus jugadas');
+        Notify?.warning('⚠️ Te intercambiaron un comodín de tus jugadas');
     }
 }
 
@@ -625,12 +629,12 @@ function mostrarDialogoCastigo(card) {
     if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
         Notify.showCastigoDialog(
             card,
-            () => acCastigo(true),   // onYes
-            () => acCastigo(false)   // onNo
+            () => acCastigo(true),
+            () => acCastigo(false)
         );
     } else {
-        // Fallback al método anterior
-        acCastigo(confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`));
+        const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
+        acCastigo(result);
     }
 }
 
@@ -1035,7 +1039,6 @@ function renderFondo(me) {
     if (G.fondo_top) {
         const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
         
-        // Para el fondo, usamos cFull que ya tiene imágenes
         const fondoHTML = cFull(G.fondo_top, true);
         fw.innerHTML = fondoHTML;
         
@@ -1044,7 +1047,6 @@ function renderFondo(me) {
             if (!canTake) {
                 fc.classList.add('disabled');
             } else {
-                // Remover eventos anteriores y agregar nuevos
                 const newFc = fc.cloneNode(true);
                 fw.innerHTML = '';
                 fw.appendChild(newFc);
@@ -1132,7 +1134,6 @@ function createCardElement(c, fromSlot = null) {
 
     const imgUrl = getCardImageURL(c);
     
-    // Crear imagen
     const img = document.createElement('img');
     img.src = imgUrl;
     img.style.width = '100%';
@@ -1141,7 +1142,6 @@ function createCardElement(c, fromSlot = null) {
     img.style.borderRadius = 'var(--r)';
     img.style.display = 'block';
     
-    // Fallback a diseño de texto si la imagen no existe
     img.onerror = () => {
         console.warn('❌ No se pudo cargar la imagen:', imgUrl, '- usando diseño de texto');
         el.innerHTML = getTextCardHTML(c);
@@ -1313,13 +1313,14 @@ function renderActions() {
         if (!btns) return;
         const b = document.createElement('button');
         
-        // Mapear clases antiguas a modernas
         let modernClass = cls;
         if (cls === 'abtn-gold') modernClass = 'action-btn action-btn-primary';
         else if (cls === 'abtn-outline') modernClass = 'action-btn action-btn-secondary';
         else if (cls === 'abtn-green') modernClass = 'action-btn action-btn-success';
         else if (cls === 'abtn-red') modernClass = 'action-btn action-btn-danger';
         else if (cls === 'abtn-warning') modernClass = 'action-btn action-btn-warning';
+        else if (cls === 'action-btn action-btn-danger') modernClass = cls;
+        else if (cls === 'action-btn action-btn-secondary') modernClass = cls;
         else if (cls.startsWith('abtn')) modernClass = 'action-btn action-btn-secondary';
         
         b.className = modernClass;
@@ -1498,7 +1499,6 @@ function cFull(c, withId = true) {
     const design = getCurrentDesign();
     const imgUrl = getCardImageURL(c, design);
     
-    // Para comodines, mostrar diseño especial
     if (c.comodin) {
         return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
             <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);" 
@@ -1521,7 +1521,6 @@ function cSm(c) {
     const sc = SUIT_CLS[c.palo] || '';
     
     if (c.comodin) {
-        // Mostrar imagen del joker según diseño seleccionado
         return `<div class="card-sm joker-sm" style="background: transparent; padding: 0; overflow: hidden;">
                     <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
                          onerror="this.style.display='none'; this.parentElement.innerHTML='🃏'; this.parentElement.classList.add('joker-sm'); this.parentElement.style.background='linear-gradient(160deg, #1a0a4a, #2d1060)';">
@@ -1568,7 +1567,6 @@ function showModalJuego(jugadores) {
     modal.classList.add('show');
 }
 
-// Esta función se mantiene como fallback por si notifications.js no carga
 function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;

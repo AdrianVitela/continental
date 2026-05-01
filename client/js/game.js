@@ -573,9 +573,9 @@ function acCastigo(acepta) {
 }
 
 function mostrarDialogoCastigo(card) {
-  console.log('mostrarDialogoCastigo llamado', card);
-  console.log('Notify existe?', typeof Notify);
-  console.log('Notify.showCastigoDialog existe?', Notify && typeof Notify.showCastigoDialog);
+  // Ocultar el banner viejo
+  const cb = document.getElementById('castigo-banner');
+  if (cb) cb.style.display = 'none';
   
   if (Notify && typeof Notify.showCastigoDialog === 'function') {
     Notify.showCastigoDialog(card, 
@@ -585,11 +585,10 @@ function mostrarDialogoCastigo(card) {
         confirmText: 'SÍ, CASTIGARME',
         cancelText: 'NO',
         type: 'info',
-        title: 'Castigo'
+        title: '¿Te castigas?'
       }
     );
   } else {
-    console.warn('Usando confirm fallback');
     const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
     acCastigo(result);
   }
@@ -1270,7 +1269,7 @@ function renderActions() {
     if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
       DragDrop.cancelDrag();
       const top = G.fondo_top;
-      cb.style.display = 'block';
+      cb.style.display = 'none';
       cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
       if (instr) instr.textContent = 'Tienes prioridad de castigo.';
       add('Sí, castigarme', 'warning', mostrarDialogoCastigo(top));
@@ -1294,7 +1293,7 @@ function renderActions() {
       const jc  = G.jugadores[G.castigo_idx];
       const top = G.fondo_top;
       if (G.castigo_idx === myIdx && cb) {
-        cb.style.display = 'block';
+        cb.style.display = 'none';
         cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
         if (instr) instr.textContent = 'Tienes prioridad de castigo.';
         add('Sí, castigarme', 'warning', () => mostrarDialogoCastigo(top));

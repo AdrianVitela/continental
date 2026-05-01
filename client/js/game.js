@@ -1154,199 +1154,209 @@ function handleReorderWithinSlot(cartaId, slotIndex, insertIdx) {
 // ================================================================
 
 function renderActions() {
-    if (!G || myIdx < 0) return;
+  if (!G || myIdx < 0) return;
 
-    const me     = G.jugadores[myIdx];
-    const myTurn = isMyTurn();
-    const btns   = document.getElementById('action-btns');
-    const instr  = document.getElementById('instr');
-    const cb     = document.getElementById('castigo-banner');
+  const me     = G.jugadores[myIdx];
+  const myTurn = isMyTurn();
+  const btns   = document.getElementById('action-btns');
+  const instr  = document.getElementById('instr');
+  const cb     = document.getElementById('castigo-banner');
 
-    if (cb)   cb.style.display = 'none';
-    if (btns) btns.innerHTML   = '';
+  if (cb)   cb.style.display = 'none';
+  if (btns) btns.innerHTML   = '';
 
-    // ── helper para crear botones con el estilo moderno ──
-    const add = (txt, cls, fn, dis = false) => {
-        if (!btns) return;
-        const b = document.createElement('button');
+  // ── helper para crear botones con estilo ALERTA MODERNO ──
+  const add = (txt, alertType, fn, dis = false) => {
+    if (!btns) return;
+    const b = document.createElement('button');
+    
+    // Mapear el tipo a la clase CSS correspondiente
+    let btnClass = '';
+    switch(alertType) {
+      case 'success':
+        btnClass = 'action-alert-success';
+        break;
+      case 'info':
+        btnClass = 'action-alert-info';
+        break;
+      case 'warning':
+        btnClass = 'action-alert-warning';
+        break;
+      case 'danger':
+        btnClass = 'action-alert-danger';
+        break;
+      default:
+        btnClass = 'action-alert-info';
+    }
+    
+    b.className = btnClass;
+    b.textContent = txt;
+    b.disabled    = dis;
+    b.onclick     = fn;
+    btns.appendChild(b);
+  };
 
-        // Mapear clases legacy a las nuevas
-        let modernClass = cls;
-        if      (cls === 'abtn-gold')    modernClass = 'action-btn action-btn-primary';
-        else if (cls === 'abtn-outline') modernClass = 'action-btn action-btn-secondary';
-        else if (cls === 'abtn-green')   modernClass = 'action-btn action-btn-success';
-        else if (cls === 'abtn-red')     modernClass = 'action-btn action-btn-danger';
-        else if (cls === 'abtn-warning') modernClass = 'action-btn action-btn-warning';
-        else if (!cls.startsWith('action-btn')) modernClass = 'action-btn action-btn-secondary';
+  // ── Modo intercambio ──
+  if (intercambioMode) {
+    if (instr) instr.textContent = 'Selecciona una carta de tu mano para intercambiar por el comodín';
+    add('Cancelar intercambio', 'danger', cancelIntercambio);
+    return;
+  }
 
-        b.className = modernClass;
-        b.textContent = txt;
-        b.disabled    = dis;
-        b.onclick     = fn;
-        btns.appendChild(b);
-    };
+  const hasDestForAcomodar = () => {
+    if (!me?.bajado || !selId) return false;
+    const carta = me?.mano?.find(c => c.id === selId);
+    if (!carta) return false;
+    return G.jugadores.some((j, ji) => {
+      if (!j.bajado || ji === myIdx) return false;
+      return j.jugadas?.some(jug => {
+        if (jug.tipo === 'tercia') {
+          if (carta.comodin) return true;
+          const vs = jug.cartas.filter(c => !c.comodin).map(c => c.valor);
+          return vs.length > 0 && carta.valor === vs[0];
+        } else {
+          if (carta.comodin) return true;
+          const nats = jug.cartas.filter(c => !c.comodin);
+          if (!nats.length || carta.palo !== nats[0].palo) return false;
+          const vs = nats.map(c => ({ A:1,J:11,Q:12,K:13 }[c.valor] ?? parseInt(c.valor))).sort((a,b) => a-b);
+          const v  = ({ A:1,J:11,Q:12,K:13 }[carta.valor] ?? parseInt(carta.valor));
+          return v === vs[0] - 1 || v === vs[vs.length-1] + 1;
+        }
+      });
+    });
+  };
 
-    // ── Modo intercambio ──
-    if (intercambioMode) {
-        if (instr) instr.textContent = 'Selecciona una carta de tu mano para intercambiar por el comodín';
-        add('Cancelar intercambio', 'abtn-red', cancelIntercambio);
-        return;
+  const hasComodinesIntercambiables = () => {
+    if (!selId) return false;
+    const carta = me?.mano?.find(c => c.id === selId);
+    if (!carta || carta.comodin) return false;
+    return G.jugadores.some((j, ji) => {
+      if (!j.bajado) return false;
+      if (!me?.bajado && ji === myIdx) return false;
+      return j.jugadas?.some(jug => jug.cartas.some(c => c.comodin));
+    });
+  };
+
+  // ── No es mi turno ──
+  if (!myTurn) {
+    if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+    if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
+      DragDrop.cancelDrag();
+      const top = G.fondo_top;
+      cb.style.display = 'block';
+      cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+      if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+      add('Sí, castigarme', 'warning', () => acCastigo(true));
+      add('No', 'danger', () => acCastigo(false));
+    }
+    return;
+  }
+
+  // ── Estados de juego ──
+  switch (G.estado) {
+
+    case 'esperando_robo':
+      if (instr) instr.textContent = me?.bajado
+        ? `${me.nombre} (bajado) — roba del mazo.`
+        : 'Tu turno — toma del fondo o roba del mazo.';
+      if (!me?.bajado) add('Tomar fondo', 'warning', acFondo, !G.fondo_top);
+      add('Robar mazo', 'info', acMazo);
+      break;
+
+    case 'fase_castigo': {
+      const jc  = G.jugadores[G.castigo_idx];
+      const top = G.fondo_top;
+      if (G.castigo_idx === myIdx && cb) {
+        cb.style.display = 'block';
+        cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+        if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+        add('Sí, castigarme', 'warning', () => mostrarDialogoCastigo(top));
+        add('No', 'danger', () => acCastigo(false));
+      } else {
+        if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+      }
+      break;
     }
 
-    const hasDestForAcomodar = () => {
-        if (!me?.bajado || !selId) return false;
-        const carta = me?.mano?.find(c => c.id === selId);
-        if (!carta) return false;
-        return G.jugadores.some((j, ji) => {
-            if (!j.bajado || ji === myIdx) return false;
-            return j.jugadas?.some(jug => {
-                if (jug.tipo === 'tercia') {
-                    if (carta.comodin) return true;
-                    const vs = jug.cartas.filter(c => !c.comodin).map(c => c.valor);
-                    return vs.length > 0 && carta.valor === vs[0];
-                } else {
-                    if (carta.comodin) return true;
-                    const nats = jug.cartas.filter(c => !c.comodin);
-                    if (!nats.length || carta.palo !== nats[0].palo) return false;
-                    const vs = nats.map(c => ({ A:1,J:11,Q:12,K:13 }[c.valor] ?? parseInt(c.valor))).sort((a,b) => a-b);
-                    const v  = ({ A:1,J:11,Q:12,K:13 }[carta.valor] ?? parseInt(carta.valor));
-                    return v === vs[0] - 1 || v === vs[vs.length-1] + 1;
-                }
-            });
-        });
-    };
-
-    const hasComodinesIntercambiables = () => {
-        if (!selId) return false;
-        const carta = me?.mano?.find(c => c.id === selId);
-        if (!carta || carta.comodin) return false;
-        return G.jugadores.some((j, ji) => {
-            if (!j.bajado) return false;
-            if (!me?.bajado && ji === myIdx) return false;
-            return j.jugadas?.some(jug => jug.cartas.some(c => c.comodin));
-        });
-    };
-
-    // ── No es mi turno ──
-    if (!myTurn) {
-        if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
-        if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
-            DragDrop.cancelDrag();
-            const top = G.fondo_top;
-            cb.style.display = 'block';
-            cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-            if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-            add('Sí, castigarme', 'action-btn action-btn-warning', () => acCastigo(true));
-            add('No',             'action-btn action-btn-secondary', () => acCastigo(false));
+    case 'esperando_accion': {
+      const listoParaBajar = slotsListosParaBajar();
+      if (!me?.bajado) {
+        if (me?.penalizacion?.activa) {
+          if (instr) instr.textContent = `Penalización activa: ${me.penalizacion.turnosRestantes} turno(s) sin bajar.`;
+        } else if (listoParaBajar) {
+          if (instr) instr.textContent = 'Jugadas listas — pulsa Bajarme para confirmar.';
+        } else {
+          if (instr) instr.textContent = selId
+            ? 'Carta seleccionada — págala o arrástrala a un slot.'
+            : 'Arrastra cartas a los slots para armar tus jugadas.';
         }
-        return;
+        add('Bajarme', 'success', acBajar, !listoParaBajar);
+        add('Pagar', 'danger', () => acPagar(selId), !selId);
+
+        const intercambiosPosibles = detectarIntercambiosPosibles();
+        if (intercambiosPosibles.length > 0) {
+          const ic = intercambiosPosibles[0];
+          add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'warning', () => ejecutarIntercambioDirecto(ic));
+          if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte.`;
+        } else if (selId && hasComodinesIntercambiables()) {
+          add('Intercambiar por comodín', 'info', () => {
+            Notify?.info('Haz clic en un comodín de las jugadas de otros jugadores');
+            intercambioMode = true;
+            render();
+          });
+        }
+      } else {
+        if (instr) instr.textContent = selId
+          ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
+          : 'Selecciona una carta para acomodar o intercambiar.';
+        add('Pagar', 'danger', () => acPagar(selId), !selId);
+        if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'success', () => {});
+
+        const intercambiosPosibles = detectarIntercambiosPosibles();
+        if (intercambiosPosibles.length > 0) {
+          const ic = intercambiosPosibles[0];
+          add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'warning', () => ejecutarIntercambioDirecto(ic));
+          if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
+        } else if (selId && hasComodinesIntercambiables()) {
+          add('Intercambiar por comodín', 'info', () => {
+            Notify?.info('Haz clic en un comodín de las jugadas');
+            intercambioMode = true;
+            render();
+          });
+        }
+      }
+      break;
     }
 
-    // ── Estados de juego ──
-    switch (G.estado) {
+    case 'esperando_pago':
+      if (!me?.bajado) {
+        if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
+        add('Pagar', 'danger', () => acPagar(selId), !selId);
+      } else {
+        if (instr) instr.textContent = selId
+          ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
+          : 'Selecciona una carta para acomodar, intercambiar o pagar.';
+        add('Pagar', 'danger', () => acPagar(selId), !selId);
+        if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'success', () => {});
 
-        case 'esperando_robo':
-            if (instr) instr.textContent = me?.bajado
-                ? `${me.nombre} (bajado) — roba del mazo.`
-                : 'Tu turno — toma del fondo o roba del mazo.';
-            if (!me?.bajado) add('Tomar fondo', 'abtn-gold', acFondo, !G.fondo_top);
-            add('Robar mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo);
-            break;
-
-        case 'fase_castigo': {
-            const jc  = G.jugadores[G.castigo_idx];
-            const top = G.fondo_top;
-            if (G.castigo_idx === myIdx && cb) {
-                cb.style.display = 'block';
-                cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-                if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-                add('Sí, castigarme', 'action-btn action-btn-warning',   () => mostrarDialogoCastigo(top));
-                add('No',             'action-btn action-btn-secondary',  () => acCastigo(false));
-            } else {
-                if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
-            }
-            break;
+        const intercambiosPosibles = detectarIntercambiosPosibles();
+        if (intercambiosPosibles.length > 0) {
+          const ic = intercambiosPosibles[0];
+          add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'warning', () => ejecutarIntercambioDirecto(ic));
+          if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
+        } else if (selId && hasComodinesIntercambiables()) {
+          add('Intercambiar por comodín', 'info', () => {
+            Notify?.info('Haz clic en un comodín de las jugadas');
+            intercambioMode = true;
+            render();
+          });
         }
+      }
+      break;
+  }
 
-        case 'esperando_accion': {
-            const listoParaBajar = slotsListosParaBajar();
-            if (!me?.bajado) {
-                if (me?.penalizacion?.activa) {
-                    if (instr) instr.textContent = `Penalización activa: ${me.penalizacion.turnosRestantes} turno(s) sin bajar.`;
-                } else if (listoParaBajar) {
-                    if (instr) instr.textContent = 'Jugadas listas — pulsa Bajarme para confirmar.';
-                } else {
-                    if (instr) instr.textContent = selId
-                        ? 'Carta seleccionada — págala o arrástrala a un slot.'
-                        : 'Arrastra cartas a los slots para armar tus jugadas.';
-                }
-                add('Bajarme', 'abtn-gold',    acBajar,           !listoParaBajar);
-                add('Pagar',   'abtn-outline',  () => acPagar(selId), !selId);
-
-                const intercambiosPosibles = detectarIntercambiosPosibles();
-                if (intercambiosPosibles.length > 0) {
-                    const ic = intercambiosPosibles[0];
-                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte.`;
-                } else if (selId && hasComodinesIntercambiables()) {
-                    add('Intercambiar por comodín', 'abtn-outline', () => {
-                        Notify?.info('Haz clic en un comodín de las jugadas de otros jugadores');
-                        intercambioMode = true;
-                        render();
-                    });
-                }
-            } else {
-                if (instr) instr.textContent = selId
-                    ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
-                    : 'Selecciona una carta para acomodar o intercambiar.';
-                add('Pagar', 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'abtn-green', () => {});
-
-                const intercambiosPosibles = detectarIntercambiosPosibles();
-                if (intercambiosPosibles.length > 0) {
-                    const ic = intercambiosPosibles[0];
-                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
-                } else if (selId && hasComodinesIntercambiables()) {
-                    add('Intercambiar por comodín', 'abtn-outline', () => {
-                        Notify?.info('Haz clic en un comodín de las jugadas');
-                        intercambioMode = true;
-                        render();
-                    });
-                }
-            }
-            break;
-        }
-
-        case 'esperando_pago':
-            if (!me?.bajado) {
-                if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
-                add('Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-            } else {
-                if (instr) instr.textContent = selId
-                    ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
-                    : 'Selecciona una carta para acomodar, intercambiar o pagar.';
-                add('Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'abtn-green', () => {});
-
-                const intercambiosPosibles = detectarIntercambiosPosibles();
-                if (intercambiosPosibles.length > 0) {
-                    const ic = intercambiosPosibles[0];
-                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
-                } else if (selId && hasComodinesIntercambiables()) {
-                    add('Intercambiar por comodín', 'abtn-outline', () => {
-                        Notify?.info('Haz clic en un comodín de las jugadas');
-                        intercambioMode = true;
-                        render();
-                    });
-                }
-            }
-            break;
-    }
-
-    const logLine = document.getElementById('log-line');
-    if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || '';
+  const logLine = document.getElementById('log-line');
+  if (logLine) logLine.textContent = G.log?.[G.log.length - 1] || '';
 }
 
 // ================================================================

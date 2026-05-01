@@ -1133,3 +1133,106 @@ input[type=text]:focus {
   color: var(--text);
   transform: translateY(-2px);
 }
+
+/* ============================================
+   BOTONES CON ESTILO DE ALERTAS MODERNAS
+   ============================================ */
+
+/* Botón tipo alerta - success (verde) */
+.action-alert-success {
+  background-color: rgba(62, 189, 97, 0.2);
+  border: 2px solid #3ebd61;
+  border-radius: 1rem;
+  padding: 0.55rem 1.25rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #2e7d45;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-alert-success:hover {
+  background-color: rgba(62, 189, 97, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(62, 189, 97, 0.2);
+}
+
+/* Botón tipo alerta - info (azul) */
+.action-alert-info {
+  background-color: rgba(0, 108, 227, 0.2);
+  border: 2px solid #006CE3;
+  border-radius: 1rem;
+  padding: 0.55rem 1.25rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #0055b3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-alert-info:hover {
+  background-color: rgba(0, 108, 227, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 108, 227, 0.2);
+}
+
+/* Botón tipo alerta - warning (amarillo/naranja) */
+.action-alert-warning {
+  background-color: rgba(239, 148, 0, 0.2);
+  border: 2px solid #EF9400;
+  border-radius: 1rem;
+  padding: 0.55rem 1.25rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #b87700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-alert-warning:hover {
+  background-color: rgba(239, 148, 0, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 148, 0, 0.2);
+}
+
+/* Botón tipo alerta - danger (rojo) */
+.action-alert-danger {
+  background-color: rgba(236, 77, 43, 0.2);
+  border: 2px solid #EC4D2B;
+  border-radius: 1rem;
+  padding: 0.55rem 1.25rem;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #c13a1a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-alert-danger:hover {
+  background-color: rgba(236, 77, 43, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(236, 77, 43, 0.2);
+}
+
+.action-alert:active {
+  transform: translateY(0);
+}
+
+.action-alert:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}

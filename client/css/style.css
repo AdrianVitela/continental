@@ -229,7 +229,7 @@ body::before {
 }
 
 /* ============================================
-   BUTTONS - Estilos mejorados como en referencia
+   BUTTONS
    ============================================ */
 
 .btn {
@@ -353,6 +353,173 @@ body::before {
 
 .sitem.me .spts {
   color: #fff;
+}
+
+/* ============================================
+   MODAL
+   ============================================ */
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(5px);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal {
+  background: linear-gradient(160deg, #1a3d28, #0d1f14);
+  border: 1px solid rgba(200, 160, 69, 0.22);
+  border-radius: 16px;
+  padding: 24px 28px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  animation: fadeUp 0.4s var(--spring) both;
+}
+
+.modal h2 {
+  font-family: 'Cormorant Garamond', serif;
+  color: var(--gold);
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+
+.modal p {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.score-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.srow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(0,0,0,.2);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.srow.winner {
+  background: rgba(200,160,69,.15);
+  border: 1px solid rgba(200,160,69,.3);
+  color: var(--gold-hi);
+}
+
+.srow-pts {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.srow.winner .srow-pts {
+  color: var(--gold);
+}
+
+.modal-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* ============================================
+   TOAST (fallback)
+   ============================================ */
+
+#toast {
+  position: fixed;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(180, 50, 50, 0.9);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  z-index: 300;
+  display: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  animation: toastIn 0.25s var(--spring);
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.65); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: none; }
+}
+
+.deal-anim {
+  animation: dealIn 0.4s var(--spring) both;
+}
+
+@keyframes dealIn {
+  from {
+    opacity: 0;
+    transform: translateY(-40px) rotate(-5deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================
+   INPUT
+   ============================================ */
+
+input[type=text] {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(200, 160, 69, 0.2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+input[type=text]:focus {
+  border-color: var(--gold);
 }
 
 /* ============================================
@@ -700,7 +867,7 @@ body::before {
 }
 
 /* ============================================
-   MODERN DIALOG MODAL (para decisiones como castigo)
+   MODERN DIALOG MODAL (para castigo)
    ============================================ */
 
 .modern-dialog-overlay {
@@ -736,8 +903,14 @@ body::before {
 }
 
 .modern-dialog-header .dialog-icon {
-  font-size: 2.5rem;
-  margin-bottom: 0.5rem;
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 0.5rem;
+}
+
+.modern-dialog-header .dialog-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .modern-dialog-header h3 {
@@ -829,6 +1002,33 @@ body::before {
   background: linear-gradient(135deg, #d44040, #a82828);
 }
 
+.btn-dialog-warning {
+  background: linear-gradient(135deg, #ef9400, #cc7a00);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(239, 148, 0, 0.3);
+}
+
+.btn-dialog-warning:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ffaa20, #e08800);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dialogPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 /* ============================================
    MODERN ACTION BUTTONS (para el juego)
    ============================================ */
@@ -910,20 +1110,4 @@ body::before {
   cursor: not-allowed;
   transform: none !important;
   pointer-events: none;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes dialogPopIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
 }

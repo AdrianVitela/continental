@@ -1394,19 +1394,20 @@ function renderActions() {
             break;
 
         case 'fase_castigo': {
-            const jc = G.jugadores[G.castigo_idx];
-            const top = G.fondo_top;
-            if (G.castigo_idx === myIdx && cb) {
-                cb.style.display = 'block';
-                cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-                if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-                add('✅ Sí, castigarme', 'action-btn action-btn-danger', () => acCastigo(true));
-                add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
-            } else {
-                if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
-            }
-            break;
-        }
+    const jc = G.jugadores[G.castigo_idx];
+    const top = G.fondo_top;
+    if (G.castigo_idx === myIdx && cb) {
+        cb.style.display = 'block';
+        cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+        if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+        // Usar el diálogo moderno
+        add('✅ Sí, castigarme', 'action-btn action-btn-warning', () => mostrarDialogoCastigo(top));
+        add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
+    } else {
+        if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+    }
+    break;
+}
 
         case 'esperando_accion': {
             const listoParaBajar = slotsListosParaBajar();

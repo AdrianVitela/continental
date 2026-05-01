@@ -568,10 +568,13 @@ function acFondoDrag(insertIdx) {
 }
 
 function acCastigo(acepta) {
-    WS.send({ type: 'castigo', acepta });
-    cancelIntercambio();
+  // Ocultar el banner de castigo
+  const cb = document.getElementById('castigo-banner');
+  if (cb) cb.style.display = 'none';
+  
+  WS.send({ type: 'castigo', acepta });
+  cancelIntercambio();
 }
-
 function mostrarDialogoCastigo(card) {
   // Ocultar el banner viejo
   const cb = document.getElementById('castigo-banner');
@@ -1263,7 +1266,7 @@ function renderActions() {
     });
   };
 
-  // ── No es mi turno ──
+// ── No es mi turno ──
 if (!myTurn) {
   if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
   if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
@@ -1272,8 +1275,13 @@ if (!myTurn) {
     cb.style.display = 'flex';
     cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
     if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-    add('Sí, castigarme', 'warning', () => acCastigo(true));   // ← CORREGIDO
-    add('No', 'danger', () => acCastigo(false));               // ← CORREGIDO
+    add('Sí, castigarme', 'warning', () => acCastigo(true));
+    add('No', 'danger', () => acCastigo(false));
+  } else {
+    // Asegurar que el banner esté oculto cuando no aplica
+    if (cb && cb.style.display !== 'none') {
+      cb.style.display = 'none';
+    }
   }
   return;
 }
@@ -1296,9 +1304,11 @@ if (!myTurn) {
     cb.style.display = 'flex';
     cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
     if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-    add('Sí, castigarme', 'warning', () => acCastigo(true));   // ← CORREGIDO
-    add('No', 'danger', () => acCastigo(false));               // ← CORREGIDO
+    add('Sí, castigarme', 'warning', () => acCastigo(true));
+    add('No', 'danger', () => acCastigo(false));
   } else {
+    // Ocultar banner si el castigo no es para mí
+    if (cb) cb.style.display = 'none';
     if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
   }
   break;

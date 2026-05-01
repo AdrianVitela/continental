@@ -517,7 +517,7 @@
     box-shadow: 0 0 0 2px rgba(200, 160, 69, 0.2);
 }
 
-/* Dropdown de diseño compacto - CON SCROLL */
+/* Dropdown de diseño compacto - CON SCROLL Y HACIA ARRIBA */
 .design-dropdown {
     position: relative;
     width: 100%;
@@ -546,18 +546,18 @@
 
 .design-dropdown-menu {
     position: absolute;
-    top: 100%;
+    bottom: 100%;           /* ← Aparece HACIA ARRIBA */
     left: 0;
     right: 0;
     background: linear-gradient(160deg, #1a3d28, #0d1f14);
     border: 1px solid rgba(200, 160, 69, 0.3);
     border-radius: 10px;
-    margin-top: 5px;
+    margin-bottom: 5px;     /* ← Separación del botón */
     z-index: 100;
     display: none;
-    overflow-y: auto;  /* ← SCROLL VERTICAL */
-    max-height: 200px; /* ← ALTURA MÁXIMA PARA SCROLL */
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    overflow-y: auto;       /* ← SCROLL solo dentro del menú */
+    max-height: 180px;      /* ← Altura máxima con scroll */
+    box-shadow: 0 -8px 20px rgba(0,0,0,0.4);
 }
 
 /* Scrollbar personalizada para el dropdown */
@@ -609,28 +609,6 @@
 
 .design-option span:first-child {
     font-size: 1.2rem;
-}
-
-/* También asegurar que el lobby-wrap tenga scroll si es necesario */
-.lobby-wrap {
-    max-height: 100vh;
-    overflow-y: auto;
-    padding: 20px;
-    scrollbar-width: thin;
-}
-
-.lobby-wrap::-webkit-scrollbar {
-    width: 5px;
-}
-
-.lobby-wrap::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 10px;
-}
-
-.lobby-wrap::-webkit-scrollbar-thumb {
-    background: var(--gold-dim);
-    border-radius: 10px;
 }
     </style>
 </head>

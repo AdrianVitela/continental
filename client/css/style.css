@@ -229,7 +229,7 @@ body::before {
 }
 
 /* ============================================
-   BUTTONS
+   BUTTONS - Estilos mejorados como en referencia
    ============================================ */
 
 .btn {
@@ -321,7 +321,7 @@ body::before {
 }
 
 /* ============================================
-   SCOREBOARD — centrado absolutamente en topbar
+   SCOREBOARD
    ============================================ */
 
 .scoreboard {
@@ -353,173 +353,6 @@ body::before {
 
 .sitem.me .spts {
   color: #fff;
-}
-
-/* ============================================
-   MODAL
-   ============================================ */
-
-.modal-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 200;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(5px);
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-overlay.show {
-  display: flex;
-}
-
-.modal {
-  background: linear-gradient(160deg, #1a3d28, #0d1f14);
-  border: 1px solid rgba(200, 160, 69, 0.22);
-  border-radius: 16px;
-  padding: 24px 28px;
-  max-width: 420px;
-  width: 90%;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
-  animation: fadeUp 0.4s var(--spring) both;
-}
-
-.modal h2 {
-  font-family: 'Cormorant Garamond', serif;
-  color: var(--gold);
-  font-size: 1.3rem;
-  margin-bottom: 8px;
-}
-
-.modal p {
-  color: var(--text-dim);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  margin-bottom: 16px;
-}
-
-.score-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-}
-
-.srow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
-  background: rgba(0,0,0,.2);
-  border-radius: 6px;
-  font-size: 0.8rem;
-}
-
-.srow.winner {
-  background: rgba(200,160,69,.15);
-  border: 1px solid rgba(200,160,69,.3);
-  color: var(--gold-hi);
-}
-
-.srow-pts {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-
-.srow.winner .srow-pts {
-  color: var(--gold);
-}
-
-.modal-btns {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-/* ============================================
-   TOAST
-   ============================================ */
-
-#toast {
-  position: fixed;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(180, 50, 50, 0.9);
-  color: #fff;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.78rem;
-  z-index: 300;
-  display: none;
-  white-space: nowrap;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  animation: toastIn 0.25s var(--spring);
-}
-
-/* ============================================
-   ANIMATIONS
-   ============================================ */
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: none; }
-}
-
-@keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to   { opacity: 1; transform: none; }
-}
-
-@keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.65); }
-}
-
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.85); }
-  to   { opacity: 1; transform: none; }
-}
-
-.deal-anim {
-  animation: dealIn 0.4s var(--spring) both;
-}
-
-@keyframes dealIn {
-  from {
-    opacity: 0;
-    transform: translateY(-40px) rotate(-5deg) scale(0.7);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ============================================
-   INPUT
-   ============================================ */
-
-input[type=text] {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(200, 160, 69, 0.2);
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: var(--text);
-  font-family: 'Outfit', sans-serif;
-  font-size: 0.85rem;
-  outline: none;
-  transition: border-color 0.2s;
-  width: 100%;
-}
-
-input[type=text]:focus {
-  border-color: var(--gold);
 }
 
 /* ============================================
@@ -713,7 +546,7 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   NOTIFICACIONES MODERNAS (ALERTS)
+   NOTIFICACIONES MODERNAS - EXACTO DISEÑO REFERENCIA
    ============================================ */
 
 .notification-container {
@@ -728,7 +561,7 @@ input[type=text]:focus {
   pointer-events: none;
 }
 
-.notification {
+.alert {
   display: flex;
   align-items: center;
   padding: 0.55rem 0.65rem 0.55rem 0.75rem;
@@ -744,18 +577,18 @@ input[type=text]:focus {
               0px 115px 500px rgba(0, 0, 0, 0.07);
 }
 
-.notification.hiding {
+.alert.hiding {
   animation: fadeOutRight 0.3s ease-in forwards;
 }
 
-.notification-content {
+.content {
   display: flex;
   align-items: center;
-  gap: 12px;
 }
 
-.notification-icon {
+.icon {
   padding: 0.5rem;
+  margin-right: 1rem;
   border-radius: 39% 61% 42% 58% / 50% 51% 49% 50%;
   display: flex;
   align-items: center;
@@ -765,19 +598,20 @@ input[type=text]:focus {
               0px 14.4px 62.6px rgba(0, 0, 0, 0.035);
 }
 
-.notification-icon svg {
+.icon svg {
   width: 24px;
   height: 24px;
 }
 
-.notification-message {
+.alert p {
   font-family: 'Outfit', sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
   color: #333C48;
+  margin: 0;
 }
 
-.notification-close {
+.close {
   background-color: transparent;
   border: none;
   outline: none;
@@ -790,39 +624,43 @@ input[type=text]:focus {
   justify-content: center;
 }
 
-.notification-close:hover {
+.close:hover {
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-.notification.success {
+/* Success alert */
+.alert.success {
   background-color: rgba(62, 189, 97, 0.2);
   border: 2px solid #3ebd61;
 }
-.notification.success .notification-icon {
+.alert.success .icon {
   background-color: #3ebd61;
 }
 
-.notification.info {
+/* Info alert */
+.alert.info {
   background-color: rgba(0, 108, 227, 0.2);
   border: 2px solid #006CE3;
 }
-.notification.info .notification-icon {
+.alert.info .icon {
   background-color: #006CE3;
 }
 
-.notification.warning {
+/* Warning alert */
+.alert.warning {
   background-color: rgba(239, 148, 0, 0.2);
   border: 2px solid #EF9400;
 }
-.notification.warning .notification-icon {
+.alert.warning .icon {
   background-color: #EF9400;
 }
 
-.notification.danger {
+/* Danger alert */
+.alert.danger {
   background-color: rgba(236, 77, 43, 0.2);
   border: 2px solid #EC4D2B;
 }
-.notification.danger .notification-icon {
+.alert.danger .icon {
   background-color: #EC4D2B;
 }
 
@@ -855,7 +693,7 @@ input[type=text]:focus {
     left: 10px;
     max-width: none;
   }
-  .notification {
+  .alert {
     min-width: auto;
     width: 100%;
   }
@@ -992,7 +830,7 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   MODERN ACTION BUTTONS
+   MODERN ACTION BUTTONS (para el juego)
    ============================================ */
 
 .action-btn {

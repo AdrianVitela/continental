@@ -50,17 +50,17 @@ const NotificationSystem = (() => {
     console.log('📢 Mostrando notificación:', message, type);
     const container = getContainer();
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
+    notification.className = `alert ${type}`;
     
     notification.innerHTML = `
-      <div class="notification-content">
-        <div class="notification-icon">
+      <div class="content">
+        <div class="icon">
           ${getIconSvg(type)}
         </div>
-        <span class="notification-message">${escapeHtml(message)}</span>
+        <p>${escapeHtml(message)}</p>
       </div>
-      <button class="notification-close" onclick="this.closest('.notification').remove()">
-        <svg height="16px" viewBox="0 0 512 512" width="16px" xmlns="http://www.w3.org/2000/svg">
+      <button class="close" onclick="this.closest('.alert').remove()">
+        <svg height="18px" viewBox="0 0 512 512" width="18px" xmlns="http://www.w3.org/2000/svg">
           <path fill="#69727D" d="M437.5,386.6L306.9,256l130.6-130.6c14.1-14.1,14.1-36.8,0-50.9c-14.1-14.1-36.8-14.1-50.9,0L256,205.1L125.4,74.5c-14.1-14.1-36.8-14.1-50.9,0c-14.1,14.1-14.1,36.8,0,50.9L205.1,256L74.5,386.6c-14.1,14.1-14.1,36.8,0,50.9c14.1,14.1,36.8,14.1,50.9,0L256,306.9l130.6,130.6c14.1,14.1,36.8,14.1,50.9,0C451.5,423.4,451.5,400.6,437.5,386.6z"/>
         </svg>
       </button>
@@ -89,116 +89,7 @@ const NotificationSystem = (() => {
       .replace(/"/g, '&quot;');
   }
 
-  // ============================================================
-  // MODERN DIALOG SYSTEM
-  // ============================================================
-  
-  let activeDialog = null;
-  
-  function showDialog(options) {
-    return new Promise((resolve) => {
-      if (activeDialog) {
-        closeDialog();
-      }
-      
-      const overlay = document.createElement('div');
-      overlay.className = 'modern-dialog-overlay';
-      
-      const iconMap = {
-        warning: '⚠️',
-        danger: '🔴',
-        success: '✅',
-        info: 'ℹ️',
-        question: '❓'
-      };
-      
-      const dialogIcon = options.icon || iconMap[options.type] || '🎴';
-      
-      overlay.innerHTML = `
-        <div class="modern-dialog">
-          <div class="modern-dialog-header">
-            <div class="dialog-icon">${dialogIcon}</div>
-            <h3>${escapeHtml(options.title || 'Atención')}</h3>
-          </div>
-          <div class="modern-dialog-content">
-            ${options.cardPreview ? `
-              <div class="card-preview">
-                ${options.cardPreview}
-              </div>
-            ` : ''}
-            <p>${escapeHtml(options.message || '')}</p>
-          </div>
-          <div class="modern-dialog-buttons">
-            ${options.buttons.map(btn => `
-              <button class="btn-dialog-${btn.type || 'secondary'}" data-value="${btn.value}">
-                ${escapeHtml(btn.label)}
-              </button>
-            `).join('')}
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(overlay);
-      activeDialog = overlay;
-      
-      setTimeout(() => overlay.classList.add('show'), 10);
-      
-      const buttons = overlay.querySelectorAll('button');
-      const handleClick = (e) => {
-        const value = e.currentTarget.getAttribute('data-value');
-        closeDialog();
-        resolve(value);
-      };
-      
-      buttons.forEach(btn => btn.addEventListener('click', handleClick));
-      
-      if (options.closeOnOverlayClick !== false) {
-        overlay.addEventListener('click', (e) => {
-          if (e.target === overlay) {
-            closeDialog();
-            resolve(options.defaultValue || null);
-          }
-        });
-      }
-    });
-  }
-  
-  function closeDialog() {
-    if (activeDialog) {
-      activeDialog.classList.remove('show');
-      setTimeout(() => {
-        if (activeDialog && activeDialog.parentNode) {
-          activeDialog.parentNode.removeChild(activeDialog);
-        }
-        activeDialog = null;
-      }, 200);
-    }
-  }
-  
-  function confirm(message, title = 'Confirmar') {
-    return showDialog({
-      title: title,
-      message: message,
-      type: 'question',
-      buttons: [
-        { label: 'Sí', value: true, type: 'primary' },
-        { label: 'No', value: false, type: 'secondary' }
-      ],
-      defaultValue: false
-    });
-  }
-  
-  function alert(message, title = 'Atención') {
-    return showDialog({
-      title: title,
-      message: message,
-      type: 'info',
-      buttons: [
-        { label: 'Aceptar', value: true, type: 'primary' }
-      ]
-    });
-  }
-  
+  // Diálogo de castigo moderno
   function showCastigoDialog(card, onYes, onNo) {
     let cardPreviewHtml = '';
     if (card) {
@@ -224,19 +115,38 @@ const NotificationSystem = (() => {
       `;
     }
     
-    return showDialog({
-      title: '⚡ Castigo',
-      message: `¿Te castigas? Recibirás la carta ${card?.valor || ''}${card?.palo || ''} del fondo y robarás una extra del mazo.`,
-      cardPreview: cardPreviewHtml,
-      type: 'warning',
-      buttons: [
-        { label: '✅ Sí, castigarme', value: 'yes', type: 'danger' },
-        { label: '❌ No', value: 'no', type: 'secondary' }
-      ]
-    }).then(result => {
-      if (result === 'yes' && onYes) onYes();
-      if (result === 'no' && onNo) onNo();
-    });
+    // Crear overlay del diálogo
+    const overlay = document.createElement('div');
+    overlay.className = 'modern-dialog-overlay';
+    overlay.innerHTML = `
+      <div class="modern-dialog">
+        <div class="modern-dialog-header">
+          <div class="dialog-icon">⚠️</div>
+          <h3>⚡ Castigo</h3>
+        </div>
+        <div class="modern-dialog-content">
+          ${cardPreviewHtml}
+          <p>¿Te castigas? Recibirás la carta ${card?.valor || ''}${card?.palo || ''} del fondo y robarás una extra del mazo.</p>
+        </div>
+        <div class="modern-dialog-buttons">
+          <button class="btn-dialog-danger" data-value="yes">✅ Sí, castigarme</button>
+          <button class="btn-dialog-secondary" data-value="no">❌ No</button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.classList.add('show'), 10);
+    
+    const handleClick = (e) => {
+      const value = e.currentTarget.getAttribute('data-value');
+      overlay.classList.remove('show');
+      setTimeout(() => overlay.remove(), 200);
+      if (value === 'yes' && onYes) onYes();
+      if (value === 'no' && onNo) onNo();
+    };
+    
+    overlay.querySelectorAll('button').forEach(btn => btn.addEventListener('click', handleClick));
   }
 
   function success(message, duration) { return show(message, 'success', duration); }
@@ -246,12 +156,10 @@ const NotificationSystem = (() => {
 
   return { 
     show, success, info, warning, danger,
-    showDialog, confirm, alert, showCastigoDialog, closeDialog
+    showCastigoDialog
   };
 })();
 
 window.Notify = NotificationSystem;
-window.NotifyConfirm = (msg, title) => NotificationSystem.confirm(msg, title);
-window.NotifyAlert = (msg, title) => NotificationSystem.alert(msg, title);
 
-console.log('✅ notifications.js cargado correctamente, Notify disponible:', typeof window.Notify);
+console.log('✅ notifications.js cargado correctamente');

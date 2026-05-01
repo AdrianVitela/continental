@@ -1197,8 +1197,6 @@ function renderActions() {
   const btns   = document.getElementById('action-btns');
   const instr  = document.getElementById('instr');
   const cb     = document.getElementById('castigo-banner');
-
-  if (cb)   cb.style.display = 'none';
   if (btns) btns.innerHTML   = '';
 
   // ── helper para crear botones con estilo ALERTA MODERNO ──

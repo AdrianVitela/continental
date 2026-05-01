@@ -913,7 +913,7 @@
 
       <!-- Fila 1: Sobrantes -->
       <div class="row-label">
-        <span>📦 SOBRANTES</span>
+        <span>SOBRANTES</span>
         <span class="row-desc">Cartas no usadas</span>
       </div>
       <div class="hand-zone discard-zone" id="discard-zone"></div>
@@ -981,7 +981,7 @@
 
   <div class="modal-overlay" id="modal-juego">
     <div class="modal">
-      <h2>🎉 ¡Juego Terminado!</h2>
+      <h2>¡Juego Terminado!</h2>
       <p>Resultados finales:</p>
       <div class="score-rows" id="mj-scores"></div>
       <div class="modal-btns">
@@ -1224,9 +1224,9 @@
           audio.volume = s.volumen;
           audio.load(); // Precargar
           this.sonidos[s.nombre] = audio;
-          console.log(`✅ Sonido cargado: ${s.nombre}`);
+          console.log(`Sonido cargado: ${s.nombre}`);
         } catch (e) {
-          console.warn(`❌ Error cargando sonido ${s.nombre}:`, e);
+          console.warn(`Error cargando sonido ${s.nombre}:`, e);
           this.sonidos[s.nombre] = null;
         }
       });

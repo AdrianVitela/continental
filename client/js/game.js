@@ -36,6 +36,7 @@ let intercambioMode = false;
 let selectedComodinInfo = null;
 
 let buildingCards = new Map();
+let castigoBannerMostrado = false;
 
 // ================================================================
 // VERIFICAR Y CONFIGURAR NOTIFICACIONES MODERNAS
@@ -477,16 +478,18 @@ async function applyEvent(event, data, prev) {
 }
 
 async function handleNewRound() {
-    ackSent = false;
-    intercambioMode = false;
-    selectedComodinInfo = null;
-    buildingCards.clear();
-    const mazoEl = document.getElementById('mazo-wrap');
-    await Anim.shuffleAnim(mazoEl);
-    const discardZone = document.getElementById('discard-zone');
-    if (discardZone && G.jugadores[myIdx]) {
-        await Anim.dealAnim(mazoEl, discardZone, G.jugadores[myIdx].mano || [], 0);
-    }
+  ackSent = false;
+  intercambioMode = false;
+  selectedComodinInfo = null;
+  buildingCards.clear();
+  castigoBannerMostrado = false; // ← Agrega esta línea
+  
+  const mazoEl = document.getElementById('mazo-wrap');
+  await Anim.shuffleAnim(mazoEl);
+  const discardZone = document.getElementById('discard-zone');
+  if (discardZone && G.jugadores[myIdx]) {
+    await Anim.dealAnim(mazoEl, discardZone, G.jugadores[myIdx].mano || [], 0);
+  }
 }
 
 async function handleTomarMazo(data) {
@@ -570,11 +573,15 @@ function acFondoDrag(insertIdx) {
 function acCastigo(acepta) {
   // Ocultar el banner de castigo
   const cb = document.getElementById('castigo-banner');
-  if (cb) cb.style.display = 'none';
+  if (cb) {
+    cb.style.display = 'none';
+    castigoBannerMostrado = false; // Resetear la bandera
+  }
   
   WS.send({ type: 'castigo', acepta });
   cancelIntercambio();
 }
+
 function mostrarDialogoCastigo(card) {
   // Ocultar el banner viejo
   const cb = document.getElementById('castigo-banner');
@@ -1269,19 +1276,15 @@ function renderActions() {
 // ── No es mi turno ──
 if (!myTurn) {
   if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
-  if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
+  if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb && !castigoBannerMostrado) {
     DragDrop.cancelDrag();
     const top = G.fondo_top;
     cb.style.display = 'flex';
     cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
     if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+    castigoBannerMostrado = true; // Marcar que ya se mostró
     add('Sí, castigarme', 'warning', () => acCastigo(true));
     add('No', 'danger', () => acCastigo(false));
-  } else {
-    // Asegurar que el banner esté oculto cuando no aplica
-    if (cb && cb.style.display !== 'none') {
-      cb.style.display = 'none';
-    }
   }
   return;
 }
@@ -1300,14 +1303,14 @@ if (!myTurn) {
     case 'fase_castigo': {
   const jc  = G.jugadores[G.castigo_idx];
   const top = G.fondo_top;
-  if (G.castigo_idx === myIdx && cb) {
+  if (G.castigo_idx === myIdx && cb && !castigoBannerMostrado) {
     cb.style.display = 'flex';
     cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
     if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+    castigoBannerMostrado = true; // Marcar que ya se mostró
     add('Sí, castigarme', 'warning', () => acCastigo(true));
     add('No', 'danger', () => acCastigo(false));
   } else {
-    // Ocultar banner si el castigo no es para mí
     if (cb) cb.style.display = 'none';
     if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
   }

@@ -549,25 +549,22 @@ function acCastigo(acepta) {
 
 function mostrarDialogoCastigo(card) {
   if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
-    // Usamos el nuevo diálogo con colores personalizados
-    // Botón SÍ = amarillo (warning), Botón NO = rojo (danger)
     Notify.showCastigoDialog(card, 
-      () => acCastigo(true),   // onYes
-      () => acCastigo(false),  // onNo
+      () => acCastigo(true),
+      () => acCastigo(false),
       {
         confirmText: 'SÍ, CASTIGARME',
         cancelText: 'NO',
-        confirmColor: 'warning',  // Amarillo
-        cancelColor: 'danger',    // Rojo
-        title: '¿Te castigas?'
+        type: 'info',  // Cambiado a 'info' para que sea azul
+        title: 'Castigo'
       }
     );
   } else {
+    // Fallback por si no existe Notify
     const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
     acCastigo(result);
   }
 }
-
 function acBajar() {
     if (!slotsListosParaBajar()) { Notify?.danger('Completa las jugadas requeridas en los slots antes de bajarte'); return; }
     const defs    = getSlotDefsRonda(G.ronda);

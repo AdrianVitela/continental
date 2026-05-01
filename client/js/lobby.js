@@ -180,7 +180,12 @@ function setDesign(design) {
         if (btn.dataset.design === design) btn.classList.add('active');
         else btn.classList.remove('active');
     });
-    toast(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`, 'green');
+    // Usar notificación moderna
+    if (typeof Notify !== 'undefined') {
+        Notify.success(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`);
+    } else {
+        toastLegacy(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`, 'green');
+    }
 }
 
 /* ================================================================
@@ -224,9 +229,9 @@ function closeNamesModalOutside(e) {
 }
 
 /* ================================================================
-   TOAST / COPY
+   TOAST LEGACY (fallback) / COPY
    ================================================================ */
-function toast(msg, type = 'red') {
+function toastLegacy(msg, type = 'red') {
   const t = document.getElementById('toast');
   if (!t) return;
   t.textContent = msg;
@@ -235,9 +240,24 @@ function toast(msg, type = 'red') {
   clearTimeout(t._t);
   t._t = setTimeout(() => (t.style.display = 'none'), 2500);
 }
+
+// Función unificada para mostrar mensajes
+function showMessage(msg, type = 'info') {
+  if (typeof Notify !== 'undefined') {
+    switch(type) {
+      case 'success': Notify.success(msg); break;
+      case 'warning': Notify.warning(msg); break;
+      case 'danger': Notify.danger(msg); break;
+      default: Notify.info(msg);
+    }
+  } else {
+    toastLegacy(msg, type === 'success' ? 'green' : 'red');
+  }
+}
+
 function copyCode() {
   navigator.clipboard?.writeText(myCode);
-  toast('¡Código copiado!', 'green');
+  showMessage('¡Código copiado!', 'success');
 }
 
 /* ================================================================
@@ -343,7 +363,10 @@ function setupSocketEvents() {
       }
     }
   });
-  WS.on('error', ({ msg }) => toast(msg));
+  WS.on('error', ({ msg }) => {
+    // Usar notificación moderna para errores
+    showMessage(msg, 'danger');
+  });
 }
 
 /* ================================================================

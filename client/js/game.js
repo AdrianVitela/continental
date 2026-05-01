@@ -1273,7 +1273,7 @@ function renderActions() {
       cb.style.display = 'block';
       cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
       if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-      add('Sí, castigarme', 'warning', () => acCastigo(true));
+      add('Sí, castigarme', 'warning', mostrarDialogoCastigo(top));
       add('No', 'danger', () => acCastigo(false));
     }
     return;

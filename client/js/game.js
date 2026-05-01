@@ -35,48 +35,44 @@ let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null;
 
-let buildingCards = new Map(); // slotIndex (string) -> array de cartas completas
+let buildingCards = new Map();
 
 // ================================================================
 // VERIFICAR Y CONFIGURAR NOTIFICACIONES MODERNAS
 // ================================================================
 
-// Asegurar que Notify esté disponible
 if (typeof Notify === 'undefined') {
-    console.warn('⚠️ Notify no disponible, usando sistema de respaldo');
+    console.warn('Notify no disponible, usando sistema de respaldo');
     window.Notify = {
-        success: (msg) => { console.log('✅', msg); toastLegacy(msg, 'green'); },
-        warning: (msg) => { console.log('⚠️', msg); toastLegacy(msg, 'yellow'); },
-        danger: (msg) => { console.log('🔴', msg); toastLegacy(msg, 'red'); },
-        info: (msg) => { console.log('ℹ️', msg); toastLegacy(msg, 'blue'); },
-        show: (msg, type) => { console.log('📢', msg); toastLegacy(msg, type === 'danger' ? 'red' : 'green'); },
+        success: (msg) => { console.log(msg); toastLegacy(msg, 'green'); },
+        warning: (msg) => { console.log(msg); toastLegacy(msg, 'yellow'); },
+        danger:  (msg) => { console.log(msg); toastLegacy(msg, 'red'); },
+        info:    (msg) => { console.log(msg); toastLegacy(msg, 'blue'); },
+        show:    (msg, type) => { toastLegacy(msg, type === 'danger' ? 'red' : 'green'); },
         showCastigoDialog: (card, onYes, onNo) => {
             const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
-            if (result) onYes();
-            else onNo();
+            if (result) onYes(); else onNo();
         }
     };
 }
 
-// Función de respaldo (legacy)
 function toastLegacy(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;
     t.textContent = msg;
-    t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
+    t.style.background = type === 'green'  ? 'rgba(40,160,80,.9)'  :
                          type === 'yellow' ? 'rgba(200,160,69,.9)' :
-                         'rgba(180,50,50,.9)';
+                                             'rgba(180,50,50,.9)';
     t.style.display = 'block';
     clearTimeout(t._t);
     t._t = setTimeout(() => t.style.display = 'none', 2600);
 }
 
-// Reemplazar la función toast original por el nuevo sistema de notificaciones
 function toastModern(msg, type = 'info') {
     if (typeof Notify !== 'undefined') {
         let newType = 'info';
-        if (type === 'red') newType = 'danger';
-        else if (type === 'green') newType = 'success';
+        if (type === 'red')    newType = 'danger';
+        else if (type === 'green')  newType = 'success';
         else if (type === 'yellow') newType = 'warning';
         Notify.show(msg, newType);
     } else {
@@ -84,87 +80,47 @@ function toastModern(msg, type = 'info') {
     }
 }
 
-// Sobrescribir la función toast global
 window.toast = toastModern;
 
 // ================================================================
-// FUNCIONES PARA IMÁGENES DE CARTAS (DISEÑO MÉXICO / USA)
+// FUNCIONES PARA IMÁGENES DE CARTAS
 // ================================================================
 
-// Obtener diseño actual del localStorage
 function getCurrentDesign() {
-    const design = localStorage.getItem('cardDesign');
-    console.log('🎴 Diseño actual:', design);
-    return design || 'mexico';
+    return localStorage.getItem('cardDesign') || 'mexico';
 }
 
-// Construye la ruta de la imagen para una carta dada
 function getCardImageURL(card, design = null) {
     if (!design) design = getCurrentDesign();
-    
-    console.log('🔍 Generando URL para carta:', card.valor, card.palo, 'diseño:', design);
-    
-    // Para comodines
+
     if (card.comodin) {
-        let url = '';
-        if (design === 'mexico') {
-            url = 'imagenes/Mexico/Joker/Joker_1.png';
-        } else {
-            url = 'imagenes/Estados Unidos/Joker/j1.png';
-        }
-        console.log('  📸 URL comodín:', url);
-        return url;
+        return design === 'mexico'
+            ? 'imagenes/Mexico/Joker/Joker_1.png'
+            : 'imagenes/Estados Unidos/Joker/j1.png';
     }
-    
-    // Construir ruta base
-    let base = design === 'mexico' ? 'imagenes/Mexico/' : 'imagenes/Estados Unidos/';
+
+    let base   = design === 'mexico' ? 'imagenes/Mexico/' : 'imagenes/Estados Unidos/';
     let folder = '';
-    let filename = '';
-    
-    // Determinar carpeta por palo
+
     switch (card.palo) {
-        case '♥': 
-        case '♥️': 
-            folder = 'corazones'; 
-            break;
-        case '♦': 
-        case '♦️': 
-            folder = 'diamantes'; 
-            break;
-        case '♠': 
-        case '♠️': 
-            folder = 'picas'; 
-            break;
-        case '♣': 
-        case '♣️': 
-            folder = 'treboles'; 
-            break;
-        default: 
-            folder = 'corazones';
+        case '♥': case '♥️': folder = 'corazones'; break;
+        case '♦': case '♦️': folder = 'diamantes'; break;
+        case '♠': case '♠️': folder = 'picas';     break;
+        case '♣': case '♣️': folder = 'treboles';  break;
+        default:              folder = 'corazones';
     }
-    
-    // Determinar nombre de archivo
+
     const valor = card.valor;
-    if (valor === 'A' || valor === 'As') {
-        filename = 'As.png';
-    } else if (valor === 'J') {
-        filename = 'J.png';
-    } else if (valor === 'Q' || valor === 'Reina') {
-        filename = 'Q.png';
-    } else if (valor === 'K' || valor === 'Rey') {
-        filename = 'K.png';
-    } else {
-        filename = `${valor}.png`;
-    }
-    
-    let url = `${base}${folder}/${filename}`;
-    url = url.replace(/ /g, '%20');
-    
-    console.log('  📸 URL carta:', url);
-    return url;
+    let filename = '';
+    if      (valor === 'A' || valor === 'As')         filename = 'As.png';
+    else if (valor === 'J')                            filename = 'J.png';
+    else if (valor === 'Q' || valor === 'Reina')       filename = 'Q.png';
+    else if (valor === 'K' || valor === 'Rey')         filename = 'K.png';
+    else                                               filename = `${valor}.png`;
+
+    return `${base}${folder}/${filename}`.replace(/ /g, '%20');
 }
 
-// Genera el HTML interno de texto (diseño genérico) para una carta
 function getTextCardHTML(card) {
     if (card.comodin) {
         return `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
@@ -179,25 +135,25 @@ function getTextCardHTML(card) {
 }
 
 // ================================================================
-// VALIDACIÓN CLIENTE PARA HABILITAR BOTÓN BAJAR
+// VALIDACIÓN CLIENTE
 // ================================================================
 
 function slotTerciaValido(cards) {
     if (cards.length < 3) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
+    const normales  = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c =>  c.comodin);
     if (normales.length === 0) return false;
-    if (comodines.length > 1) return false;
+    if (comodines.length > 1)  return false;
     const valorBase = normales[0].valor;
     return normales.every(c => c.valor === valorBase);
 }
 
 function slotCorridaValido(cards) {
     if (cards.length < 4) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
+    const normales  = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c =>  c.comodin);
     if (normales.length === 0) return false;
-    if (comodines.length > 1) return false;
+    if (comodines.length > 1)  return false;
     const palo = normales[0].palo;
     if (!normales.every(c => c.palo === palo)) return false;
     if (new Set(normales.map(c => c.valor)).size !== normales.length) return false;
@@ -224,10 +180,10 @@ function slotCorridaValido(cards) {
 
 function slotTerciaCasiCompleta(cards) {
     if (cards.length < 3) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
+    const normales  = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c =>  c.comodin);
     if (normales.length === 0) return false;
-    if (comodines.length > 1) return false;
+    if (comodines.length > 1)  return false;
     if (comodines.length === 1 && normales.length >= 2) return true;
     const conteo = {};
     normales.forEach(c => { conteo[c.valor] = (conteo[c.valor] || 0) + 1; });
@@ -236,10 +192,10 @@ function slotTerciaCasiCompleta(cards) {
 
 function slotCorridaCasiCompleta(cards) {
     if (cards.length < 4) return false;
-    const normales = cards.filter(c => !c.comodin);
-    const comodines = cards.filter(c => c.comodin);
+    const normales  = cards.filter(c => !c.comodin);
+    const comodines = cards.filter(c =>  c.comodin);
     if (normales.length === 0) return false;
-    if (comodines.length > 1) return false;
+    if (comodines.length > 1)  return false;
     const palo = normales[0].palo;
     if (!normales.every(c => c.palo === palo)) return false;
     if (new Set(normales.map(c => c.valor)).size !== normales.length) return false;
@@ -254,18 +210,16 @@ function slotCorridaCasiCompleta(cards) {
     }
 
     const valsNorm = normales.map(c => VN[c.valor]).sort((a, b) => a - b);
-    const h1 = contarHuecos(valsNorm);
-    if ((h1 - comodines.length) === 1) return true;
+    if ((contarHuecos(valsNorm) - comodines.length) === 1) return true;
     if (valsNorm.includes(1)) {
         const valsA14 = valsNorm.map(v => v === 1 ? 14 : v).sort((a, b) => a - b);
-        const h2 = contarHuecos(valsA14);
-        if ((h2 - comodines.length) === 1) return true;
+        if ((contarHuecos(valsA14) - comodines.length) === 1) return true;
     }
     return false;
 }
 
 // ================================================================
-// DETECCIÓN AUTOMÁTICA DE INTERCAMBIOS POSIBLES
+// DETECCIÓN AUTOMÁTICA DE INTERCAMBIOS
 // ================================================================
 
 const _intercambiosCache = new Map();
@@ -273,13 +227,10 @@ const _intercambiosCache = new Map();
 function detectarIntercambiosPosibles() {
     if (!G || myIdx < 0) return [];
     if (!isMyTurn()) return [];
-
     const me = G.jugadores[myIdx];
     if (!me) return [];
-
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
     if (!estadosValidos.includes(G.estado)) return [];
-
     if (!me.bajado && G.estado !== 'esperando_accion') return [];
 
     const intercambios = [];
@@ -293,9 +244,8 @@ function detectarIntercambiosPosibles() {
         jOrigen.jugadas?.forEach((jug, jugi) => {
             const comodin = jug.cartas.find(c => c.comodin);
             if (!comodin) return;
-
             const valorNecesario = comodin.valorReemplazado;
-            const paloNecesario = comodin.paloReemplazado;
+            const paloNecesario  = comodin.paloReemplazado;
 
             me.mano.forEach(carta => {
                 if (carta.comodin) return;
@@ -304,7 +254,6 @@ function detectarIntercambiosPosibles() {
                 const encaja = jug.tipo === 'tercia'
                     ? carta.valor === valorNecesario
                     : carta.valor === valorNecesario && carta.palo === paloNecesario;
-
                 if (!encaja) return;
 
                 if (me.bajado) {
@@ -316,18 +265,9 @@ function detectarIntercambiosPosibles() {
                             return true;
                         });
                     });
-
                     if (!jokerEsUtil) return;
 
-                    const icObj = {
-                        cartaId: carta.id,
-                        cartaValor: carta.valor,
-                        cartaPalo: carta.palo,
-                        jugadorIdx: ji,
-                        jugadaIdx: jugi,
-                        comodinId: comodin.id,
-                        esCasoBajado: true,
-                    };
+                    const icObj = { cartaId: carta.id, cartaValor: carta.valor, cartaPalo: carta.palo, jugadorIdx: ji, jugadaIdx: jugi, comodinId: comodin.id, esCasoBajado: true };
                     const icKey = `${ji}-${jugi}-${comodin.id}`;
                     _intercambiosCache.set(icKey, icObj);
                     intercambios.push(icObj);
@@ -354,19 +294,12 @@ function detectarIntercambiosPosibles() {
                     let comodinAsignado = false;
                     for (const def of defs) {
                         const slotCards = buildingCards.get(def.index) || [];
-                        if (comodinAsignado) {
-                            jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) });
-                            continue;
-                        }
+                        if (comodinAsignado) { jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) }); continue; }
                         const conComodin = [...slotCards, { ...comodin, comodin: true }];
-                        const valido = def.type === 'tercia' ? slotTerciaValido(conComodin) : slotCorridaValido(conComodin);
-                        const sinComodin = def.type === 'tercia' ? slotTerciaValido(slotCards) : slotCorridaValido(slotCards);
-                        if (!sinComodin && valido) {
-                            jugadasSimuladas.push({ tipo: def.type, cartas: conComodin });
-                            comodinAsignado = true;
-                        } else {
-                            jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) });
-                        }
+                        const valido    = def.type === 'tercia' ? slotTerciaValido(conComodin) : slotCorridaValido(conComodin);
+                        const sinComodin = def.type === 'tercia' ? slotTerciaValido(slotCards)  : slotCorridaValido(slotCards);
+                        if (!sinComodin && valido) { jugadasSimuladas.push({ tipo: def.type, cartas: conComodin }); comodinAsignado = true; }
+                        else { jugadasSimuladas.push({ tipo: def.type, cartas: slotCards.filter(Boolean) }); }
                     }
                 }
 
@@ -374,21 +307,12 @@ function detectarIntercambiosPosibles() {
                 let terciasOk = 0, corridasOk = 0;
                 for (const js of jugadasSimuladas) {
                     if (!js.cartas || js.cartas.length === 0) continue;
-                    if (js.tipo === 'tercia' && slotTerciaValido(js.cartas)) terciasOk++;
+                    if (js.tipo === 'tercia'  && slotTerciaValido(js.cartas))  terciasOk++;
                     if (js.tipo === 'corrida' && slotCorridaValido(js.cartas)) corridasOk++;
                 }
                 if (terciasOk < req.t || corridasOk < req.c) return;
 
-                const icObj = {
-                    cartaId: carta.id,
-                    cartaValor: carta.valor,
-                    cartaPalo: carta.palo,
-                    jugadorIdx: ji,
-                    jugadaIdx: jugi,
-                    comodinId: comodin.id,
-                    jugadasSimuladas,
-                    esCasoBajado: false,
-                };
+                const icObj = { cartaId: carta.id, cartaValor: carta.valor, cartaPalo: carta.palo, jugadorIdx: ji, jugadaIdx: jugi, comodinId: comodin.id, jugadasSimuladas, esCasoBajado: false };
                 const icKey = `${ji}-${jugi}-${comodin.id}`;
                 _intercambiosCache.set(icKey, icObj);
                 intercambios.push(icObj);
@@ -421,14 +345,14 @@ function slotsListosParaBajar() {
     if (G.estado !== 'esperando_accion') return false;
     if (me.penalizacion?.activa) return false;
 
-    const req = REQ[G.ronda];
+    const req  = REQ[G.ronda];
     const defs = getSlotDefsRonda(G.ronda);
 
     let completos = 0, casiCompletos = 0, insuficientes = 0;
     for (const def of defs) {
-        const cards = buildingCards.get(def.index) || [];
-        const esCompleto = def.type === 'tercia' ? slotTerciaValido(cards) : slotCorridaValido(cards);
-        const esCasi    = def.type === 'tercia' ? slotTerciaCasiCompleta(cards) : slotCorridaCasiCompleta(cards);
+        const cards      = buildingCards.get(def.index) || [];
+        const esCompleto = def.type === 'tercia' ? slotTerciaValido(cards)        : slotCorridaValido(cards);
+        const esCasi     = def.type === 'tercia' ? slotTerciaCasiCompleta(cards)  : slotCorridaCasiCompleta(cards);
         if (esCompleto) completos++;
         else if (esCasi) casiCompletos++;
         else insuficientes++;
@@ -453,7 +377,6 @@ function slotsListosParaBajar() {
 
 function init() {
     if (!MY_ID || !ROOM) { location.href = '/'; return; }
-    localStorage.setItem('nombre_' + MY_ID, localStorage.getItem('nombre_' + MY_ID) || 'Jugador');
     setupSocketEvents();
     WS.connect();
 }
@@ -461,11 +384,11 @@ function init() {
 function setupSocketEvents() {
     WS.on('_connected', () => {
         document.getElementById('modal-disconnected').classList.remove('show');
-        document.getElementById('mode-pill').textContent = '🟢 Conectado';
+        document.getElementById('mode-pill').textContent = 'Conectado';
     });
     WS.on('_disconnected', () => {
         document.getElementById('modal-disconnected').classList.add('show');
-        document.getElementById('mode-pill').textContent = '🔴 Desconectado';
+        document.getElementById('mode-pill').textContent = 'Desconectado';
     });
     WS.on('state_update', ({ event, data, state }) => {
         if (!state) return;
@@ -475,7 +398,7 @@ function setupSocketEvents() {
         applyEvent(event, data, prev);
         render();
     });
-    WS.on('player_reconnected', ({ nombre }) => Notify?.success(`${nombre} se reconectó`));
+    WS.on('player_reconnected',  ({ nombre }) => Notify?.success(`${nombre} se reconectó`));
     WS.on('player_disconnected', ({ nombre }) => Notify?.warning(`${nombre} se desconectó`));
     WS.on('error', ({ msg }) => {
         Notify?.danger(msg);
@@ -490,13 +413,13 @@ function setupSocketEvents() {
         if (esBajada && buildingCards.size > 0) {
             const me = G?.jugadores?.[myIdx];
             if (me) {
-                buildingCards.forEach((cards) => {
+                buildingCards.forEach(cards => {
                     cards.forEach(carta => {
                         if (carta && !me.mano.some(c => c.id === carta.id)) me.mano.push(carta);
                     });
                 });
                 buildingCards.clear();
-                if (msg.includes('BAJADA EN FALSO')) Notify?.danger('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.');
+                if (msg.includes('BAJADA EN FALSO')) Notify?.danger('Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.');
                 render();
             }
         }
@@ -543,7 +466,7 @@ async function handleNewRound() {
 
 async function handleTomarMazo(data) {
     if (data.jugadorIdx === myIdx) {
-        const mazoEl = document.getElementById('mazo-wrap');
+        const mazoEl      = document.getElementById('mazo-wrap');
         const discardZone = document.getElementById('discard-zone');
         await new Promise(r => setTimeout(r, 20));
         const newCardEl = discardZone?.querySelector(`.card[data-id="${data.carta?.id}"]`);
@@ -555,7 +478,7 @@ async function handleTomarMazo(data) {
 
 async function handlePagar(data) {
     if (data.jugadorIdx !== myIdx) {
-        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
+        const oppEl  = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
         const fondoW = document.getElementById('fondo-wrap');
         if (oppEl && fondoW) await Anim.rivalPaysToFondo(oppEl, fondoW, null);
     }
@@ -565,17 +488,17 @@ async function handleBajar(data) {
     if (data.jugadorIdx === myIdx) {
         buildingCards.clear();
         const discardZone = document.getElementById('discard-zone');
-        const bajadas = document.getElementById('table-bajadas');
-        const cardEls = [...(discardZone?.querySelectorAll('.card') || [])];
+        const bajadas     = document.getElementById('table-bajadas');
+        const cardEls     = [...(discardZone?.querySelectorAll('.card') || [])];
         if (cardEls.length && bajadas) await Anim.bajarAnim(cardEls, bajadas);
     }
 }
 
 async function handleIntercambiarComodin(data) {
     if (data.jugadorIdx === myIdx) {
-        Notify?.success('✨ ¡Intercambio exitoso! Recibiste un comodín');
+        Notify?.success('Intercambio exitoso — recibiste un comodín');
     } else if (data.origenJugadorIdx === myIdx) {
-        Notify?.warning('⚠️ Te intercambiaron un comodín de tus jugadas');
+        Notify?.warning('Te intercambiaron un comodín de tus jugadas');
     }
 }
 
@@ -597,7 +520,7 @@ function handleFinRonda(data) {
 // ACCIONES DEL JUGADOR
 // ================================================================
 
-function isMyTurn() { return myIdx === G?.turno; }
+function isMyTurn()  { return myIdx === G?.turno; }
 function isPayable() { return isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G?.estado); }
 
 function acMazo() {
@@ -624,14 +547,9 @@ function acCastigo(acepta) {
     cancelIntercambio();
 }
 
-// Nueva función que usa el diálogo moderno
 function mostrarDialogoCastigo(card) {
     if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
-        Notify.showCastigoDialog(
-            card,
-            () => acCastigo(true),
-            () => acCastigo(false)
-        );
+        Notify.showCastigoDialog(card, () => acCastigo(true), () => acCastigo(false));
     } else {
         const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
         acCastigo(result);
@@ -640,11 +558,10 @@ function mostrarDialogoCastigo(card) {
 
 function acBajar() {
     if (!slotsListosParaBajar()) { Notify?.danger('Completa las jugadas requeridas en los slots antes de bajarte'); return; }
-    const defs = getSlotDefsRonda(G.ronda);
+    const defs    = getSlotDefsRonda(G.ronda);
     const jugadas = [];
     for (const def of defs) {
-        const cards = buildingCards.get(def.index) || [];
-        if (cards.length === 0) continue;
+        const cards       = buildingCards.get(def.index) || [];
         const cartasReales = cards.filter(Boolean);
         if (cartasReales.length === 0) continue;
         jugadas.push({ tipo: def.type, cartas: cartasReales });
@@ -671,7 +588,7 @@ function acPagar(cartaId) {
 }
 
 function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
-    const me = G?.jugadores?.[myIdx];
+    const me     = G?.jugadores?.[myIdx];
     const jugada = G?.jugadores?.[destJugadorIdx]?.jugadas?.[destJugadaIdx];
 
     if (me?.bajado && jugada?.tipo === 'corrida' && posicion === null) {
@@ -697,23 +614,23 @@ function acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, posicion = null) {
 }
 
 function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, jugada) {
-    const VN_MAP = { A:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, K:13 };
+    const VN_MAP = { A:1,2:2,3:3,4:4,5:5,6:6,7:7,8:8,9:9,10:10,J:11,Q:12,K:13 };
     const VN_REV = {1:'A',2:'2',3:'3',4:'4',5:'5',6:'6',7:'7',8:'8',9:'9',10:'10',11:'J',12:'Q',13:'K',14:'A'};
     const normales = jugada.cartas.filter(c => !c.comodin);
-    const palo = normales[0]?.palo || '';
-    const vals = normales.map(c => VN_MAP[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
+    const palo     = normales[0]?.palo || '';
+    const vals     = normales.map(c => VN_MAP[c.valor] || parseInt(c.valor)).sort((a, b) => a - b);
 
-    const tieneAs = vals.includes(1);
+    const tieneAs   = vals.includes(1);
     const tieneAltas = vals.some(v => v >= 11);
-    const useA14 = tieneAs && tieneAltas && !vals.includes(2);
+    const useA14    = tieneAs && tieneAltas && !vals.includes(2);
     const valsReales = vals.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
 
-    const minVal = valsReales[0];
-    const maxVal = valsReales[valsReales.length - 1];
+    const minVal  = valsReales[0];
+    const maxVal  = valsReales[valsReales.length - 1];
     const valBaja = minVal - 1;
     const valAlta = maxVal + 1;
 
-    const lblBaja = valBaja >= 1 ? `${VN_REV[valBaja] || valBaja}${palo}` : null;
+    const lblBaja = valBaja >= 1  ? `${VN_REV[valBaja] || valBaja}${palo}` : null;
     const lblAlta = valAlta <= 14 ? `${VN_REV[valAlta] || valAlta}${palo}` : null;
 
     const prev = document.getElementById('joker-pos-modal');
@@ -721,69 +638,36 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 
     const modal = document.createElement('div');
     modal.id = 'joker-pos-modal';
-    modal.style.cssText = `
-        position: fixed; inset: 0; z-index: 9999;
-        display: flex; align-items: center; justify-content: center;
-        background: rgba(0,0,0,.7);
-    `;
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);';
 
     const secuenciaHtml = jugada.cartas.map(c => {
-        if (c.comodin) return `<span style="background:#4a2080;color:#ffe066;padding:2px 5px;border-radius:4px;font-size:.75rem">🃏</span>`;
+        if (c.comodin) return `<span style="background:#4a2080;color:#ffe066;padding:2px 5px;border-radius:4px;font-size:.75rem">JOKER</span>`;
         const isRed = c.palo === '♥' || c.palo === '♦';
         return `<span style="color:${isRed ? '#e05050' : '#e8e8e8'};font-size:.75rem">${c.valor}${c.palo}</span>`;
     }).join('<span style="color:#aaa;margin:0 2px">·</span>');
 
     modal.innerHTML = `
-        <div style="
-            background: #1a2a1a;
-            border: 2px solid var(--gold, #c8a045);
-            border-radius: 10px;
-            padding: 18px 22px;
-            min-width: 260px;
-            max-width: 320px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,.6);
-        ">
-            <div style="font-size:.72rem;color:#aaa;margin-bottom:6px">¿Dónde va el 🃏 Joker?</div>
-            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-                ${secuenciaHtml}
-            </div>
+        <div style="background:#1a2a1a;border:2px solid var(--gold,#c8a045);border-radius:10px;padding:18px 22px;min-width:260px;max-width:320px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.6);">
+            <div style="font-size:.72rem;color:#aaa;margin-bottom:6px">¿Dónde va el Joker?</div>
+            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;align-items:center">${secuenciaHtml}</div>
             <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-                ${lblBaja ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')"
-                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
-                    ⬅ Baja<br><small style="font-size:.7rem;color:#aaa">${lblBaja}</small>
-                </button>` : ''}
-                ${lblAlta ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')"
-                    style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">
-                    Alta ➡<br><small style="font-size:.7rem;color:#aaa">${lblAlta}</small>
-                </button>` : ''}
+                ${lblBaja ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')" style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">Baja<br><small style="font-size:.7rem;color:#aaa">${lblBaja}</small></button>` : ''}
+                ${lblAlta ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')" style="background:#1e4a2e;border:1px solid #2ecc71;color:#2ecc71;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:.8rem">Alta<br><small style="font-size:.7rem;color:#aaa">${lblAlta}</small></button>` : ''}
                 ${!lblBaja && !lblAlta ? `<span style="color:#aaa;font-size:.75rem">Solo hay una posición posible</span>` : ''}
             </div>
-            <button onclick="document.getElementById('joker-pos-modal').remove(); window.cancelIntercambio();"
-                style="margin-top:12px;background:transparent;border:none;color:#888;cursor:pointer;font-size:.72rem">
-                ✕ Cancelar
-            </button>
-        </div>
-    `;
+            <button onclick="document.getElementById('joker-pos-modal').remove();window.cancelIntercambio();" style="margin-top:12px;background:transparent;border:none;color:#888;cursor:pointer;font-size:.72rem">Cancelar</button>
+        </div>`;
 
     document.body.appendChild(modal);
 
-    if (!lblBaja && lblAlta) {
-        modal.remove();
-        acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'alta');
-    } else if (lblBaja && !lblAlta) {
-        modal.remove();
-        acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'baja');
-    }
+    if (!lblBaja && lblAlta)  { modal.remove(); acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'alta'); }
+    else if (lblBaja && !lblAlta) { modal.remove(); acAcomodar(cartaId, destJugadorIdx, destJugadaIdx, 'baja'); }
 }
 
 window._confirmarPosJoker = function(cartaId, destJugadorIdx, destJugadaIdx, posicion) {
     const modal = document.getElementById('joker-pos-modal');
     if (modal) modal.remove();
-    const id = isNaN(cartaId) ? cartaId : Number(cartaId);
-    const ji = Number(destJugadorIdx);
-    const jugi = Number(destJugadaIdx);
-    acAcomodar(id, ji, jugi, posicion);
+    acAcomodar(isNaN(cartaId) ? cartaId : Number(cartaId), Number(destJugadorIdx), Number(destJugadaIdx), posicion);
 };
 
 function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
@@ -793,7 +677,6 @@ function acIntercambiarComodin(cartaId, origenJugadorIdx, origenJugadaIdx) {
 
     const me = G.jugadores[myIdx];
     const jugadasEnSlots = [];
-
     if (!me?.bajado) {
         const defs = getSlotDefsRonda(G.ronda);
         for (const def of defs) {
@@ -811,7 +694,6 @@ function activarModoIntercambio(jugadorIdx, jugadaIdx, comodinId) {
     if (!isMyTurn()) { Notify?.warning('No es tu turno para intercambiar.'); return; }
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
     if (!estadosValidos.includes(G.estado)) { Notify?.warning('No puedes intercambiar en este momento.'); return; }
-
     if (!selId) { Notify?.warning('Primero selecciona una carta de tu mano para intercambiar.'); return; }
     const me = G.jugadores[myIdx];
     const cartaSeleccionada = me?.mano?.find(c => c.id === selId);
@@ -842,18 +724,11 @@ function ejecutarIntercambioDirecto(intercambio) {
     const estadosValidos = ['esperando_accion', 'esperando_pago'];
     if (!estadosValidos.includes(G.estado)) { Notify?.warning('Solo puedes intercambiar después de robar.'); return; }
 
-    const me = G.jugadores[myIdx];
     const carta = `${intercambio.cartaValor}${intercambio.cartaPalo}`;
 
     if (intercambio.esCasoBajado) {
-        Notify?.info(`🔄 Intercambiando ${carta} por el Joker…`);
-        WS.send({
-            type: 'intercambiar_comodin',
-            cartaId: intercambio.cartaId,
-            origenJugadorIdx: intercambio.jugadorIdx,
-            origenJugadaIdx: intercambio.jugadaIdx,
-            jugadasEnSlots: [],
-        });
+        Notify?.info(`Intercambiando ${carta} por el Joker…`);
+        WS.send({ type: 'intercambiar_comodin', cartaId: intercambio.cartaId, origenJugadorIdx: intercambio.jugadorIdx, origenJugadaIdx: intercambio.jugadaIdx, jugadasEnSlots: [] });
     } else {
         const defs = getSlotDefsRonda(G.ronda);
         const jugadasEnSlots = [];
@@ -862,14 +737,8 @@ function ejecutarIntercambioDirecto(intercambio) {
             if (cards.length > 0) jugadasEnSlots.push({ tipo: def.type, cartas: cards.filter(Boolean) });
         }
         if (jugadasEnSlots.length === 0) { Notify?.danger('Arma tus jugadas en los slots antes de intercambiar.'); return; }
-        Notify?.info(`🔄 Intercambiando ${carta} por el Joker…`);
-        WS.send({
-            type: 'intercambiar_comodin',
-            cartaId: intercambio.cartaId,
-            origenJugadorIdx: intercambio.jugadorIdx,
-            origenJugadaIdx: intercambio.jugadaIdx,
-            jugadasEnSlots,
-        });
+        Notify?.info(`Intercambiando ${carta} por el Joker…`);
+        WS.send({ type: 'intercambiar_comodin', cartaId: intercambio.cartaId, origenJugadorIdx: intercambio.jugadorIdx, origenJugadaIdx: intercambio.jugadaIdx, jugadasEnSlots });
     }
 
     selId = null;
@@ -885,16 +754,14 @@ function acReorder(draggedId, beforeId) {
     const me = G.jugadores[myIdx];
     if (!me) return;
     let slotOrigen = null;
-    buildingCards.forEach((cards, slotIndex) => {
-        if (cards.some(c => c.id === draggedId)) slotOrigen = slotIndex;
-    });
+    buildingCards.forEach((cards, slotIndex) => { if (cards.some(c => c.id === draggedId)) slotOrigen = slotIndex; });
     if (slotOrigen !== null) { Notify?.warning('No puedes reordenar cartas que están en construcción'); return; }
     const fromIdx = me.mano.findIndex(c => c.id === draggedId);
     if (fromIdx < 0) return;
     let toIdx = beforeId;
     if (beforeId === Infinity || beforeId >= me.mano.length) toIdx = me.mano.length - 1;
     const newOrder = [...me.mano];
-    const [moved] = newOrder.splice(fromIdx, 1);
+    const [moved]  = newOrder.splice(fromIdx, 1);
     newOrder.splice(toIdx, 0, moved);
     me.mano = newOrder;
     renderHand();
@@ -927,7 +794,7 @@ function render() {
     if (!G || myIdx < 0) return;
     const me = G.jugadores[myIdx];
     document.getElementById('ronda-pill').textContent = `Ronda ${G.ronda} de 7`;
-    document.getElementById('req-pill').textContent = REQ_LABELS[G.ronda] || '';
+    document.getElementById('req-pill').textContent   = REQ_LABELS[G.ronda] || '';
     renderScoreboard();
     renderOpponents();
     renderTableBajadas();
@@ -956,7 +823,7 @@ function renderOpponents() {
         d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
         d.dataset.idx = i;
         d.innerHTML = `
-            <div class="opp-name">${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
+            <div class="opp-name">${j.nombre}${j.bajado ? ' ✓' : ''}${!j.conectado ? ' (desconectado)' : ''} · ${j.pts_t}pts</div>
             <div class="opp-backs">${(j.mano || []).map(() => '<div class="cback-xs"></div>').join('')}</div>
             ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
         `;
@@ -980,36 +847,36 @@ function renderTableBajadas() {
             pile.dataset.ji = jugi;
 
             const _me = G.jugadores[myIdx];
-            const puedeIntercambiar = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
+            const puedeIntercambiar  = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
             const intercambiosPosibles = puedeIntercambiar ? detectarIntercambiosPosibles() : [];
 
             const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
-                    const vr = c.valorReemplazado || '?';
-                    const vrPalo = c.paloReemplazado ? c.paloReemplazado : '';
+                    const vr     = c.valorReemplazado || '?';
+                    const vrPalo = c.paloReemplazado  || '';
                     const intercPosible = intercambiosPosibles.find(
                         ic => ic.jugadorIdx === ji && ic.jugadaIdx === jugi && ic.comodinId === c.id
                     );
                     if (intercPosible) {
-                        const icKey = `${ji}-${jugi}-${c.id}`;
+                        const icKey  = `${ji}-${jugi}-${c.id}`;
                         const tipTxt = intercPosible.esCasoBajado
-                            ? `🔄 Poner ${intercPosible.cartaValor}${intercPosible.cartaPalo} aquí → recibes el Joker para acomodar`
-                            : `🔄 Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker`;
+                            ? `Poner ${intercPosible.cartaValor}${intercPosible.cartaPalo} aquí → recibes el Joker para acomodar`
+                            : `Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker`;
                         return `<div class="card-sm joker-sm comodin-intercambiable joker-highlight"
                                      title="${tipTxt}"
                                      data-ic-key="${icKey}"
-                                     onclick="event.stopPropagation(); window.ejecutarIntercambioDesdeKey('${icKey}')">
-                                     🃏<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
-                                     <small style="font-size:7px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
+                                     onclick="event.stopPropagation();window.ejecutarIntercambioDesdeKey('${icKey}')">
+                                     JOKER<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
+                                     <small style="font-size:7px;display:block;color:#4de88a;">CLIC</small></div>`;
                     }
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
                         return `<div class="card-sm joker-sm comodin-intercambiable"
                                      title="Reemplaza a: ${vr}${vrPalo}"
                                      data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
-                                     onclick="event.stopPropagation(); window.activarModoIntercambio(${ji}, ${jugi}, '${c.id}')">
-                                     🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                                     onclick="event.stopPropagation();window.activarModoIntercambio(${ji},${jugi},'${c.id}')">
+                                     JOKER<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                     }
-                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}">🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}">JOKER<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
                 }
                 return cSm(c);
             }).join('');
@@ -1038,10 +905,7 @@ function renderFondo(me) {
     fw.innerHTML = '';
     if (G.fondo_top) {
         const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
-        
-        const fondoHTML = cFull(G.fondo_top, true);
-        fw.innerHTML = fondoHTML;
-        
+        fw.innerHTML  = cFull(G.fondo_top, true);
         const fc = fw.querySelector('.card');
         if (fc) {
             if (!canTake) {
@@ -1061,11 +925,11 @@ function renderFondo(me) {
 }
 
 function renderPlayerInfo(me) {
-    document.getElementById('my-name').textContent = me?.nombre || '—';
+    document.getElementById('my-name').textContent    = me?.nombre || '—';
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
     const dot = document.getElementById('pulse-dot');
     if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';
-    document.getElementById('turn-tag').textContent = isMyTurn() ? '' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+    document.getElementById('turn-tag').textContent   = isMyTurn() ? '' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
 }
 
 // ================================================================
@@ -1088,17 +952,17 @@ function renderBuildingRow() {
             <div class="building-slot-cards" id="slot-${index}-cards"></div>
             <div class="slot-hint">${hint}</div>
         </div>`;
-    const T = (t, i) => slotDef(t, 'tercia', i, 3, 'Mínimo 3 cartas del mismo valor');
+    const T = (t, i) => slotDef(t, 'tercia',  i, 3, 'Mínimo 3 cartas del mismo valor');
     const C = (t, i) => slotDef(t, 'corrida', i, 4, 'Mínimo 4 cartas del mismo palo en secuencia');
 
     const htmlMap = {
-        1: T('TERCIA 1', 0) + T('TERCIA 2', 1),
-        2: T('TERCIA', 0) + C('CORRIDA', 1),
-        3: C('CORRIDA 1', 0) + C('CORRIDA 2', 1),
-        4: T('TERCIA 1', 0) + T('TERCIA 2', 1) + T('TERCIA 3', 2),
-        5: T('TERCIA 1', 0) + T('TERCIA 2', 1) + C('CORRIDA', 2),
-        6: C('CORRIDA 1', 0) + C('CORRIDA 2', 1) + T('TERCIA', 2),
-        7: C('CORRIDA 1', 0) + C('CORRIDA 2', 1) + C('CORRIDA 3', 2),
+        1: T('TERCIA 1',0) + T('TERCIA 2',1),
+        2: T('TERCIA',0)   + C('CORRIDA',1),
+        3: C('CORRIDA 1',0)+ C('CORRIDA 2',1),
+        4: T('TERCIA 1',0) + T('TERCIA 2',1) + T('TERCIA 3',2),
+        5: T('TERCIA 1',0) + T('TERCIA 2',1) + C('CORRIDA',2),
+        6: C('CORRIDA 1',0)+ C('CORRIDA 2',1)+ T('TERCIA',2),
+        7: C('CORRIDA 1',0)+ C('CORRIDA 2',1)+ C('CORRIDA 3',2),
     };
 
     buildingRow.innerHTML = htmlMap[G.ronda] || '';
@@ -1107,7 +971,7 @@ function renderBuildingRow() {
 
 function renderHand() {
     if (!G || myIdx < 0) return;
-    const me = G.jugadores[myIdx];
+    const me          = G.jugadores[myIdx];
     const discardZone = document.getElementById('discard-zone');
     if (!discardZone) return;
 
@@ -1125,36 +989,20 @@ function renderHand() {
 }
 
 function createCardElement(c, fromSlot = null) {
-    const el = document.createElement('div');
-    el.className = 'card' + (c.id === selId ? ' selected' : '');
+    const el       = document.createElement('div');
+    el.className   = 'card' + (c.id === selId ? ' selected' : '');
     if (intercambioMode && selId && c.id === selId) el.classList.add('pending-intercambio');
-    el.dataset.id = c.id;
+    el.dataset.id  = c.id;
     if (fromSlot !== null) el.dataset.slot = fromSlot;
-    el.draggable = false;
+    el.draggable   = false;
 
     const imgUrl = getCardImageURL(c);
-    
-    const img = document.createElement('img');
-    img.src = imgUrl;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    img.style.borderRadius = 'var(--r)';
-    img.style.display = 'block';
-    
-    img.onerror = () => {
-        console.warn('❌ No se pudo cargar la imagen:', imgUrl, '- usando diseño de texto');
-        el.innerHTML = getTextCardHTML(c);
-        attachDragAndClickEvents(el, c, fromSlot);
-    };
-    
-    img.onload = () => {
-        console.log('✅ Imagen cargada correctamente:', imgUrl);
-    };
-    
+    const img    = document.createElement('img');
+    img.src      = imgUrl;
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:var(--r);display:block;';
+    img.onerror  = () => { el.innerHTML = getTextCardHTML(c); attachDragAndClickEvents(el, c, fromSlot); };
     el.appendChild(img);
     attachDragAndClickEvents(el, c, fromSlot);
-    
     return el;
 }
 
@@ -1163,14 +1011,14 @@ function attachDragAndClickEvents(el, c, fromSlot) {
 
     const dragCallbacks = {
         isPayable,
-        onPagar: id => acPagar(id),
-        onAcomodar: (id, pi, ji) => acAcomodar(id, pi, ji),
-        onReorder: (id, beforeId) => acReorder(id, beforeId),
-        onBuildingDrop: (id, slotIndex, slotType, insertIdx) => handleBuildingDrop(id, slotIndex, slotType, insertIdx),
-        onRemoveFromSlot: (id, slotIndex) => handleRemoveFromSlot(id, slotIndex),
-        onMoveBetweenSlots: (id, fromSlot, toSlot, toSlotType, insertIdx) => handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType, insertIdx),
-        onReturnToHand: (id, slotIndex) => handleReturnToHand(id, slotIndex),
-        onReorderWithinSlot: (id, slotIndex, insertIdx) => handleReorderWithinSlot(id, slotIndex, insertIdx),
+        onPagar:               id                              => acPagar(id),
+        onAcomodar:            (id, pi, ji)                    => acAcomodar(id, pi, ji),
+        onReorder:             (id, beforeId)                  => acReorder(id, beforeId),
+        onBuildingDrop:        (id, slotIndex, slotType, insertIdx) => handleBuildingDrop(id, slotIndex, slotType, insertIdx),
+        onRemoveFromSlot:      (id, slotIndex)                 => handleRemoveFromSlot(id, slotIndex),
+        onMoveBetweenSlots:    (id, fromSlot, toSlot, toSlotType, insertIdx) => handleMoveBetweenSlots(id, fromSlot, toSlot, toSlotType, insertIdx),
+        onReturnToHand:        (id, slotIndex)                 => handleReturnToHand(id, slotIndex),
+        onReorderWithinSlot:   (id, slotIndex, insertIdx)      => handleReorderWithinSlot(id, slotIndex, insertIdx),
     };
 
     el.addEventListener('mousedown', e => { if (e.button !== 0) return; DragDrop.startHandDrag(e, el, c.id, dragCallbacks); });
@@ -1197,7 +1045,7 @@ function handleBuildingDrop(cartaId, slotIndex, slotType, insertIdx) {
     renderHand();
     renderActions();
     selId = null;
-    Notify?.success(`Carta ${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`);
+    Notify?.success(`${cartaMovida.valor}${cartaMovida.palo || ''} agregada a ${slotType}`);
 }
 
 function updateSlotUI(slotIndex, cards) {
@@ -1206,14 +1054,11 @@ function updateSlotUI(slotIndex, cards) {
     const cardsContainer = document.getElementById(`slot-${slotIndex}-cards`);
     if (!cardsContainer) return;
     cardsContainer.innerHTML = '';
-    cards.forEach(carta => {
-        if (!carta) return;
-        cardsContainer.appendChild(createCardElement(carta, slotIndex));
-    });
+    cards.forEach(carta => { if (!carta) return; cardsContainer.appendChild(createCardElement(carta, slotIndex)); });
     const countSpan = slot.querySelector('.building-slot-count');
-    const minCards = parseInt(slot.dataset.minCards);
-    const slotType = slot.dataset.slotType;
-    const esValido = slotType === 'tercia' ? slotTerciaValido(cards) : slotCorridaValido(cards);
+    const minCards  = parseInt(slot.dataset.minCards);
+    const slotType  = slot.dataset.slotType;
+    const esValido  = slotType === 'tercia' ? slotTerciaValido(cards) : slotCorridaValido(cards);
     if (countSpan) {
         countSpan.textContent = `${cards.length}/${minCards}+`;
         countSpan.classList.toggle('valid', esValido);
@@ -1241,7 +1086,7 @@ function handleReturnToHand(cartaId, slotIndex) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) { Notify?.danger('Ya estás bajado, no puedes modificar jugadas'); return; }
     slotIndex = String(slotIndex);
-    const slotCards = buildingCards.get(slotIndex);
+    const slotCards  = buildingCards.get(slotIndex);
     if (!slotCards) return;
     const cartaIndex = slotCards.findIndex(c => c.id === cartaId);
     if (cartaIndex === -1) return;
@@ -1251,14 +1096,14 @@ function handleReturnToHand(cartaId, slotIndex) {
     if (!yaEnMano) me.mano.push(cartaDevuelta);
     renderHand();
     renderActions();
-    Notify?.info(`Carta ${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`);
+    Notify?.info(`${cartaDevuelta.valor}${cartaDevuelta.palo || ''} devuelta a sobrantes`);
 }
 
 function handleMoveBetweenSlots(cartaId, fromSlotIndex, toSlotIndex, toSlotType, insertIdx) {
     const me = G.jugadores[myIdx];
     if (!me || me.bajado) { Notify?.warning('Ya estás bajado, no puedes modificar jugadas'); return; }
     fromSlotIndex = String(fromSlotIndex);
-    toSlotIndex = String(toSlotIndex);
+    toSlotIndex   = String(toSlotIndex);
     const fromSlotCards = buildingCards.get(fromSlotIndex);
     if (!fromSlotCards) return;
     const cartaIndex = fromSlotCards.findIndex(c => c.id === cartaId);
@@ -1285,8 +1130,8 @@ function handleReorderWithinSlot(cartaId, slotIndex, insertIdx) {
     if (!slotCards) return;
     const currentIdx = slotCards.findIndex(c => c.id === cartaId);
     if (currentIdx === -1) return;
-    const [carta] = slotCards.splice(currentIdx, 1);
-    const adjustedIdx = (insertIdx > currentIdx) ? Math.max(0, insertIdx - 1) : insertIdx;
+    const [carta]      = slotCards.splice(currentIdx, 1);
+    const adjustedIdx  = (insertIdx > currentIdx) ? Math.max(0, insertIdx - 1) : insertIdx;
     slotCards.splice(adjustedIdx, 0, carta);
     updateSlotUI(slotIndex, slotCards);
     renderActions();
@@ -1299,40 +1144,40 @@ function handleReorderWithinSlot(cartaId, slotIndex, insertIdx) {
 function renderActions() {
     if (!G || myIdx < 0) return;
 
-    const me = G.jugadores[myIdx];
+    const me     = G.jugadores[myIdx];
     const myTurn = isMyTurn();
-    const btns = document.getElementById('action-btns');
-    const instr = document.getElementById('instr');
-    const cb = document.getElementById('castigo-banner');
+    const btns   = document.getElementById('action-btns');
+    const instr  = document.getElementById('instr');
+    const cb     = document.getElementById('castigo-banner');
 
-    if (cb) cb.style.display = 'none';
-    if (btns) btns.innerHTML = '';
+    if (cb)   cb.style.display = 'none';
+    if (btns) btns.innerHTML   = '';
 
-    // Función add actualizada con clases modernas
+    // ── helper para crear botones con el estilo moderno ──
     const add = (txt, cls, fn, dis = false) => {
         if (!btns) return;
         const b = document.createElement('button');
-        
+
+        // Mapear clases legacy a las nuevas
         let modernClass = cls;
-        if (cls === 'abtn-gold') modernClass = 'action-btn action-btn-primary';
+        if      (cls === 'abtn-gold')    modernClass = 'action-btn action-btn-primary';
         else if (cls === 'abtn-outline') modernClass = 'action-btn action-btn-secondary';
-        else if (cls === 'abtn-green') modernClass = 'action-btn action-btn-success';
-        else if (cls === 'abtn-red') modernClass = 'action-btn action-btn-danger';
+        else if (cls === 'abtn-green')   modernClass = 'action-btn action-btn-success';
+        else if (cls === 'abtn-red')     modernClass = 'action-btn action-btn-danger';
         else if (cls === 'abtn-warning') modernClass = 'action-btn action-btn-warning';
-        else if (cls === 'action-btn action-btn-danger') modernClass = cls;
-        else if (cls === 'action-btn action-btn-secondary') modernClass = cls;
-        else if (cls.startsWith('abtn')) modernClass = 'action-btn action-btn-secondary';
-        
+        else if (!cls.startsWith('action-btn')) modernClass = 'action-btn action-btn-secondary';
+
         b.className = modernClass;
         b.textContent = txt;
-        b.disabled = dis;
-        b.onclick = fn;
+        b.disabled    = dis;
+        b.onclick     = fn;
         btns.appendChild(b);
     };
 
+    // ── Modo intercambio ──
     if (intercambioMode) {
-        if (instr) instr.textContent = '🔄 Selecciona una carta de tu mano para intercambiar por el comodín';
-        add('❌ Cancelar Intercambio', 'abtn-red', cancelIntercambio);
+        if (instr) instr.textContent = 'Selecciona una carta de tu mano para intercambiar por el comodín';
+        add('Cancelar intercambio', 'abtn-red', cancelIntercambio);
         return;
     }
 
@@ -1351,9 +1196,9 @@ function renderActions() {
                     if (carta.comodin) return true;
                     const nats = jug.cartas.filter(c => !c.comodin);
                     if (!nats.length || carta.palo !== nats[0].palo) return false;
-                    const vs = nats.map(c => ({ A: 1, J: 11, Q: 12, K: 13 }[c.valor] ?? parseInt(c.valor))).sort((a, b) => a - b);
-                    const v = ({ A: 1, J: 11, Q: 12, K: 13 }[carta.valor] ?? parseInt(carta.valor));
-                    return v === vs[0] - 1 || v === vs[vs.length - 1] + 1;
+                    const vs = nats.map(c => ({ A:1,J:11,Q:12,K:13 }[c.valor] ?? parseInt(c.valor))).sort((a,b) => a-b);
+                    const v  = ({ A:1,J:11,Q:12,K:13 }[carta.valor] ?? parseInt(carta.valor));
+                    return v === vs[0] - 1 || v === vs[vs.length-1] + 1;
                 }
             });
         });
@@ -1370,67 +1215,69 @@ function renderActions() {
         });
     };
 
+    // ── No es mi turno ──
     if (!myTurn) {
         if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
         if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
             DragDrop.cancelDrag();
             const top = G.fondo_top;
             cb.style.display = 'block';
-            cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+            cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
             if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-            add('✅ Sí, castigarme', 'action-btn action-btn-danger', () => acCastigo(true));
-            add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
+            add('Sí, castigarme', 'action-btn action-btn-warning', () => acCastigo(true));
+            add('No',             'action-btn action-btn-secondary', () => acCastigo(false));
         }
         return;
     }
 
+    // ── Estados de juego ──
     switch (G.estado) {
+
         case 'esperando_robo':
             if (instr) instr.textContent = me?.bajado
                 ? `${me.nombre} (bajado) — roba del mazo.`
-                : `Tu turno — toma del fondo o roba del mazo.`;
-            if (!me?.bajado) add('📥 Tomar Fondo', 'abtn-gold', acFondo, !G.fondo_top);
-            add('🎴 Robar Mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo);
+                : 'Tu turno — toma del fondo o roba del mazo.';
+            if (!me?.bajado) add('Tomar fondo', 'abtn-gold', acFondo, !G.fondo_top);
+            add('Robar mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo);
             break;
 
         case 'fase_castigo': {
-    const jc = G.jugadores[G.castigo_idx];
-    const top = G.fondo_top;
-    if (G.castigo_idx === myIdx && cb) {
-        cb.style.display = 'block';
-        cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-        if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-        // Usar el diálogo moderno
-        add('✅ Sí, castigarme', 'action-btn action-btn-warning', () => mostrarDialogoCastigo(top));
-        add('❌ No', 'action-btn action-btn-secondary', () => acCastigo(false));
-    } else {
-        if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
-    }
-    break;
-}
+            const jc  = G.jugadores[G.castigo_idx];
+            const top = G.fondo_top;
+            if (G.castigo_idx === myIdx && cb) {
+                cb.style.display = 'block';
+                cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+                if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+                add('Sí, castigarme', 'action-btn action-btn-warning',   () => mostrarDialogoCastigo(top));
+                add('No',             'action-btn action-btn-secondary',  () => acCastigo(false));
+            } else {
+                if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+            }
+            break;
+        }
 
         case 'esperando_accion': {
             const listoParaBajar = slotsListosParaBajar();
             if (!me?.bajado) {
                 if (me?.penalizacion?.activa) {
-                    if (instr) instr.textContent = `⚠️ Penalización activa: ${me.penalizacion.turnosRestantes} turno(s) sin bajar.`;
+                    if (instr) instr.textContent = `Penalización activa: ${me.penalizacion.turnosRestantes} turno(s) sin bajar.`;
                 } else if (listoParaBajar) {
-                    if (instr) instr.textContent = '✅ Jugadas listas — pulsa Bajarme para confirmar.';
+                    if (instr) instr.textContent = 'Jugadas listas — pulsa Bajarme para confirmar.';
                 } else {
                     if (instr) instr.textContent = selId
                         ? 'Carta seleccionada — págala o arrástrala a un slot.'
                         : 'Arrastra cartas a los slots para armar tus jugadas.';
                 }
-                add('🔥 Bajarme', 'abtn-gold', acBajar, !listoParaBajar);
-                add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
+                add('Bajarme', 'abtn-gold',    acBajar,           !listoParaBajar);
+                add('Pagar',   'abtn-outline',  () => acPagar(selId), !selId);
 
                 const intercambiosPosibles = detectarIntercambiosPosibles();
                 if (intercambiosPosibles.length > 0) {
                     const ic = intercambiosPosibles[0];
-                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte!`;
+                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
+                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker de ${G.jugadores[ic.jugadorIdx]?.nombre} y bajarte.`;
                 } else if (selId && hasComodinesIntercambiables()) {
-                    add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
+                    add('Intercambiar por comodín', 'abtn-outline', () => {
                         Notify?.info('Haz clic en un comodín de las jugadas de otros jugadores');
                         intercambioMode = true;
                         render();
@@ -1440,16 +1287,16 @@ function renderActions() {
                 if (instr) instr.textContent = selId
                     ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
                     : 'Selecciona una carta para acomodar o intercambiar.';
-                add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+                add('Pagar', 'abtn-outline', () => acPagar(selId), !selId);
+                if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'abtn-green', () => {});
 
                 const intercambiosPosibles = detectarIntercambiosPosibles();
                 if (intercambiosPosibles.length > 0) {
                     const ic = intercambiosPosibles[0];
-                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
+                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
+                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
                 } else if (selId && hasComodinesIntercambiables()) {
-                    add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
+                    add('Intercambiar por comodín', 'abtn-outline', () => {
                         Notify?.info('Haz clic en un comodín de las jugadas');
                         intercambioMode = true;
                         render();
@@ -1462,21 +1309,21 @@ function renderActions() {
         case 'esperando_pago':
             if (!me?.bajado) {
                 if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
-                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+                add('Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
             } else {
                 if (instr) instr.textContent = selId
                     ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
                     : 'Selecciona una carta para acomodar, intercambiar o pagar.';
-                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+                add('Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+                if (hasDestForAcomodar()) add('Acomodar — clic en jugada', 'abtn-green', () => {});
 
                 const intercambiosPosibles = detectarIntercambiosPosibles();
                 if (intercambiosPosibles.length > 0) {
                     const ic = intercambiosPosibles[0];
-                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
+                    add(`Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
+                    if (instr) instr.textContent = `Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
                 } else if (selId && hasComodinesIntercambiables()) {
-                    add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
+                    add('Intercambiar por comodín', 'abtn-outline', () => {
                         Notify?.info('Haz clic en un comodín de las jugadas');
                         intercambioMode = true;
                         render();
@@ -1496,41 +1343,37 @@ function renderActions() {
 
 function cFull(c, withId = true) {
     if (!c) return '';
-    
-    const design = getCurrentDesign();
-    const imgUrl = getCardImageURL(c, design);
-    
+    const imgUrl = getCardImageURL(c);
+    const sc     = SUIT_CLS[c.palo] || '';
+
     if (c.comodin) {
         return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
-            <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);" 
-                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'card-face joker-f\'><span class=\'cv\'>🃏</span><span class=\'cs\' style=\'font-size:.55rem\'>JOKER</span></div>';">
+            <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);"
+                 onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'card-face joker-f\'><span class=\'cv\'>JOKER</span></div>';">
         </div>`;
     }
-    
-    const sc = SUIT_CLS[c.palo] || '';
+
     return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
-        <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);" 
-             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'card-face ${sc}\'><div class=\'corner tl\'>${c.valor}<br>${c.palo}</div><div class=\'cv\'>${c.palo}</div><div class=\'cs\'>${c.valor}</div><div class=\'corner br\'>${c.valor}<br>${c.palo}</div></div>';">
+        <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);"
+             onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'card-face ${sc}\'><div class=\'corner tl\'>${c.valor}<br>${c.palo}</div><div class=\'cv\'>${c.palo}</div><div class=\'cs\'>${c.valor}</div><div class=\'corner br\'>${c.valor}<br>${c.palo}</div></div>';">
     </div>`;
 }
 
 function cSm(c) {
     if (!c) return '';
-    
-    const design = getCurrentDesign();
-    const imgUrl = getCardImageURL(c, design);
-    const sc = SUIT_CLS[c.palo] || '';
-    
+    const imgUrl = getCardImageURL(c);
+    const sc     = SUIT_CLS[c.palo] || '';
+
     if (c.comodin) {
-        return `<div class="card-sm joker-sm" style="background: transparent; padding: 0; overflow: hidden;">
-                    <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
-                         onerror="this.style.display='none'; this.parentElement.innerHTML='🃏'; this.parentElement.classList.add('joker-sm'); this.parentElement.style.background='linear-gradient(160deg, #1a0a4a, #2d1060)';">
+        return `<div class="card-sm joker-sm" style="background:transparent;padding:0;overflow:hidden;">
+                    <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"
+                         onerror="this.style.display='none';this.parentElement.textContent='JOKER';this.parentElement.style.background='linear-gradient(160deg,#1a0a4a,#2d1060)';">
                 </div>`;
     }
-    
-    return `<div class="card-sm natural ${sc}" style="background: transparent; padding: 0; overflow: hidden;">
-                <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;" 
-                     onerror="this.style.display='none'; this.parentElement.innerHTML='${c.valor}<br>${c.palo}'; this.parentElement.classList.add('${sc}'); this.parentElement.style.background='linear-gradient(160deg, #fffbf2, #f5ead8)';">
+
+    return `<div class="card-sm natural ${sc}" style="background:transparent;padding:0;overflow:hidden;">
+                <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"
+                     onerror="this.style.display='none';this.parentElement.textContent='${c.valor}${c.palo}';this.parentElement.style.background='linear-gradient(160deg,#fffbf2,#f5ead8)';">
             </div>`;
 }
 
@@ -1542,11 +1385,11 @@ function showModalRonda(ganadorIdx, puntos) {
     DragDrop.cancelDrag();
     const modal = document.getElementById('modal-ronda');
     if (!modal) return;
-    document.getElementById('mr-title').textContent = `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`;
-    document.getElementById('mr-msg').textContent = G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!';
-    document.getElementById('mr-scores').innerHTML = G.jugadores.map((j, i) => `
+    document.getElementById('mr-title').textContent = `Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana`;
+    document.getElementById('mr-msg').textContent   = G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : 'Última ronda.';
+    document.getElementById('mr-scores').innerHTML  = G.jugadores.map((j, i) => `
         <div class="srow ${i === ganadorIdx ? 'winner' : ''}">
-            <span>${j.nombre}${i === ganadorIdx ? ' 🏆' : ''}</span>
+            <span>${j.nombre}${i === ganadorIdx ? ' — ganador' : ''}</span>
             <span class="srow-pts">+${puntos?.[i]?.pts_r ?? 0} · Total: ${j.pts_t}</span>
         </div>
     `).join('');
@@ -1561,7 +1404,7 @@ function showModalJuego(jugadores) {
     const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);
     document.getElementById('mj-scores').innerHTML = sorted.map((j, i) => `
         <div class="srow ${i === 0 ? 'winner' : ''}">
-            <span>${['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i]} ${j.nombre}</span>
+            <span>${['1°', '2°', '3°', '4°', '5°'][i]} ${j.nombre}</span>
             <span class="srow-pts">${j.pts_t} pts</span>
         </div>
     `).join('');
@@ -1571,30 +1414,33 @@ function showModalJuego(jugadores) {
 function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;
-    t.textContent = msg;
-    t.style.background = type === 'green' ? 'rgba(40,160,80,.9)' :
+    t.textContent   = msg;
+    t.style.background = type === 'green'  ? 'rgba(40,160,80,.9)'  :
                          type === 'yellow' ? 'rgba(200,160,69,.9)' :
-                         'rgba(180,50,50,.9)';
+                                             'rgba(180,50,50,.9)';
     t.style.display = 'block';
     clearTimeout(t._t);
     t._t = setTimeout(() => t.style.display = 'none', 2600);
 }
 
-// Exponer funciones para los onclick
-window.acMazo = acMazo;
-window.acFondo = acFondo;
-window.acCastigo = acCastigo;
-window.acBajar = acBajar;
-window.acPagar = acPagar;
-window.acAcomodar = acAcomodar;
-window.acIntercambiarComodin = acIntercambiarComodin;
-window.acReorder = acReorder;
-window.selCard = selCard;
-window.ackRonda = ackRonda;
-window.toast = toast;
-window.activarModoIntercambio = activarModoIntercambio;
-window.cancelIntercambio = cancelIntercambio;
-window.ejecutarIntercambioDirecto = ejecutarIntercambioDirecto;
+// ================================================================
+// EXPONER GLOBALES
+// ================================================================
+
+window.acMazo                    = acMazo;
+window.acFondo                   = acFondo;
+window.acCastigo                 = acCastigo;
+window.acBajar                   = acBajar;
+window.acPagar                   = acPagar;
+window.acAcomodar                = acAcomodar;
+window.acIntercambiarComodin     = acIntercambiarComodin;
+window.acReorder                 = acReorder;
+window.selCard                   = selCard;
+window.ackRonda                  = ackRonda;
+window.toast                     = toast;
+window.activarModoIntercambio    = activarModoIntercambio;
+window.cancelIntercambio         = cancelIntercambio;
+window.ejecutarIntercambioDirecto  = ejecutarIntercambioDirecto;
 window.ejecutarIntercambioDesdeKey = ejecutarIntercambioDesdeKey;
 
 document.addEventListener('DOMContentLoaded', init);

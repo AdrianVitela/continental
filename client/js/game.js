@@ -548,12 +548,24 @@ function acCastigo(acepta) {
 }
 
 function mostrarDialogoCastigo(card) {
-    if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
-        Notify.showCastigoDialog(card, () => acCastigo(true), () => acCastigo(false));
-    } else {
-        const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
-        acCastigo(result);
-    }
+  if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
+    // Usamos el nuevo diálogo con colores personalizados
+    // Botón SÍ = amarillo (warning), Botón NO = rojo (danger)
+    Notify.showCastigoDialog(card, 
+      () => acCastigo(true),   // onYes
+      () => acCastigo(false),  // onNo
+      {
+        confirmText: 'SÍ, CASTIGARME',
+        cancelText: 'NO',
+        confirmColor: 'warning',  // Amarillo
+        cancelColor: 'danger',    // Rojo
+        title: '¿Te castigas?'
+      }
+    );
+  } else {
+    const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
+    acCastigo(result);
+  }
 }
 
 function acBajar() {

@@ -1081,3 +1081,55 @@ input[type=text]:focus {
   transform: none !important;
   pointer-events: none;
 }
+
+/* ============================================
+   BOTONES DE DIÁLOGO ADICIONALES
+   ============================================ */
+
+.btn-dialog-success {
+  background: linear-gradient(135deg, #2ecc71, #229954);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+}
+
+.btn-dialog-success:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #3edd81, #2eb862);
+  box-shadow: 0 6px 18px rgba(46, 204, 113, 0.4);
+}
+
+.btn-dialog-warning {
+  background: linear-gradient(135deg, #ef9400, #cc7a00);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(239, 148, 0, 0.3);
+}
+
+.btn-dialog-warning:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ffaa20, #e08800);
+  box-shadow: 0 6px 18px rgba(239, 148, 0, 0.4);
+}
+
+.btn-dialog-danger {
+  background: linear-gradient(135deg, #b83030, #8a2020);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(184, 48, 48, 0.3);
+}
+
+.btn-dialog-danger:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #d44040, #a82828);
+  box-shadow: 0 6px 18px rgba(184, 48, 48, 0.4);
+}
+
+.btn-dialog-secondary {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-dim);
+}
+
+.btn-dialog-secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text);
+  transform: translateY(-2px);
+}

@@ -1272,7 +1272,7 @@ function renderActions() {
       cb.style.display = 'flex';
       cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
       if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-      add('Sí, castigarme', 'warning', mostrarDialogoCastigo(top));
+      add('Sí, castigarme', 'warning', acCastigo(true));
       add('No', 'danger', () => acCastigo(false));
     }
     return;
@@ -1296,7 +1296,7 @@ function renderActions() {
         cb.style.display = 'flex';
         cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
         if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-        add('Sí, castigarme', 'warning', () => mostrarDialogoCastigo(top));
+        add('Sí, castigarme', 'warning', () => acCastigo(true));
         add('No', 'danger', () => acCastigo(false));
       } else {
         if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;

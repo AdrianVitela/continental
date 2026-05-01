@@ -1294,7 +1294,7 @@ if (!myTurn) {
   const top = G.fondo_top;
   if (G.castigo_idx === myIdx && cb) {
     cb.style.display = 'flex';
-    cb.innerHTML = `ℹ️ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+    cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
     if (instr) instr.textContent = 'Tienes prioridad de castigo.';
     add('Sí, castigarme', 'warning', () => acCastigo(true));   // ← CORREGIDO
     add('No', 'danger', () => acCastigo(false));               // ← CORREGIDO

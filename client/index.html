@@ -586,21 +586,32 @@
                     </div>
                 </div>
 
-                <!-- Selector de diseño de cartas -->
+                <!-- Selector de diseño de cartas - versión compacta -->
 <div class="field-group design-row">
     <label>🎴 Estilo de cartas</label>
-    <div class="mode-row" style="flex-wrap: wrap;">
-        <div class="mode-btn" data-design="default" onclick="setDesign('default')">
-            🃏 Predeterminado
-        </div>
-        <div class="mode-btn" data-design="usa" onclick="setDesign('usa')">
-            🇺🇸 Estados Unidos
-        </div>
-        <div class="mode-btn" data-design="mexico_dm" onclick="setDesign('mexico_dm')">
-            💀 México (Día de Muertos)
-        </div>
-        <div class="mode-btn" data-design="mexico_mundial" onclick="setDesign('mexico_mundial')">
-            🌎 México (Mundial)
+    <div class="design-dropdown">
+        <button class="design-dropdown-btn" id="design-dropdown-btn" onclick="toggleDesignMenu()">
+            <span id="current-design-icon">🎴</span>
+            <span id="current-design-name">México (Día de Muertos)</span>
+            <span style="margin-left: auto;">▼</span>
+        </button>
+        <div class="design-dropdown-menu" id="design-dropdown-menu">
+            <div class="design-option" data-design="default" onclick="selectDesign('default', '🃏', 'Predeterminado')">
+                <span>🃏</span> Predeterminado
+                <span class="design-check">✓</span>
+            </div>
+            <div class="design-option" data-design="usa" onclick="selectDesign('usa', '🇺🇸', 'Estados Unidos')">
+                <span>🇺🇸</span> Estados Unidos
+                <span class="design-check">✓</span>
+            </div>
+            <div class="design-option" data-design="mexico_dm" onclick="selectDesign('mexico_dm', '💀', 'México (Día de Muertos)')">
+                <span>💀</span> México (Día de Muertos)
+                <span class="design-check">✓</span>
+            </div>
+            <div class="design-option" data-design="mexico_mundial" onclick="selectDesign('mexico_mundial', '🌎', 'México (Mundial)')">
+                <span>🌎</span> México (Mundial)
+                <span class="design-check">✓</span>
+            </div>
         </div>
     </div>
 </div>
@@ -703,6 +714,61 @@
             if (typeof window._unirseActual === 'function') window._unirseActual();
         }
     </script>
+
+    <script>
+// Dropdown de diseño de cartas
+function toggleDesignMenu() {
+    const menu = document.getElementById('design-dropdown-menu');
+    menu.classList.toggle('show');
+}
+
+function selectDesign(design, icon, name) {
+    // Cerrar menú
+    document.getElementById('design-dropdown-menu').classList.remove('show');
+    
+    // Actualizar botón
+    document.getElementById('current-design-icon').textContent = icon;
+    document.getElementById('current-design-name').textContent = name;
+    
+    // Marcar opción activa
+    document.querySelectorAll('.design-option').forEach(opt => {
+        opt.classList.remove('active');
+    });
+    document.querySelector(`.design-option[data-design="${design}"]`).classList.add('active');
+    
+    // Llamar a la función original de lobby.js
+    if (typeof window.setDesign === 'function') {
+        window.setDesign(design);
+    } else {
+        // Fallback si lobby.js no está cargado
+        localStorage.setItem('cardDesign', design);
+    }
+}
+
+// Cerrar dropdown al hacer clic fuera
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('design-dropdown-menu');
+    const btn = document.getElementById('design-dropdown-btn');
+    if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.remove('show');
+    }
+});
+
+// Inicializar diseño guardado
+document.addEventListener('DOMContentLoaded', function() {
+    const saved = localStorage.getItem('cardDesign') || 'mexico_dm';
+    let icon = '💀', name = 'México (Día de Muertos)';
+    switch(saved) {
+        case 'default': icon = '🃏'; name = 'Predeterminado'; break;
+        case 'usa': icon = '🇺🇸'; name = 'Estados Unidos'; break;
+        case 'mexico_dm': icon = '💀'; name = 'México (Día de Muertos)'; break;
+        case 'mexico_mundial': icon = '🌎'; name = 'México (Mundial)'; break;
+    }
+    document.getElementById('current-design-icon').textContent = icon;
+    document.getElementById('current-design-name').textContent = name;
+    document.querySelector(`.design-option[data-design="${saved}"]`).classList.add('active');
+});
+</script>
 
     <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>

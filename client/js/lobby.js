@@ -173,24 +173,50 @@ function chgMax(d) {
 }
 
 // Función para cambiar el diseño de cartas
+// Reemplazar la función setDesign existente
 function setDesign(design) {
     localStorage.setItem('cardDesign', design);
-    // design puede ser: 'default', 'usa', 'mexico_dm', 'mexico_mundial'
     
+    // Actualizar estilo visual de los botones en el menú dropdown
     document.querySelectorAll('[data-design]').forEach(btn => {
         if (btn.dataset.design === design) btn.classList.add('active');
         else btn.classList.remove('active');
     });
     
     let displayName = '';
+    let icon = '';
     switch(design) {
-        case 'default': displayName = 'Predeterminado'; break;
-        case 'usa': displayName = 'Estados Unidos'; break;
-        case 'mexico_dm': displayName = 'México (Día de Muertos)'; break;
-        case 'mexico_mundial': displayName = 'México (Mundial)'; break;
+        case 'default': 
+            displayName = 'Predeterminado'; 
+            icon = '🃏';
+            break;
+        case 'usa': 
+            displayName = 'Estados Unidos'; 
+            icon = '🇺🇸';
+            break;
+        case 'mexico_dm': 
+            displayName = 'México (Día de Muertos)'; 
+            icon = '💀';
+            break;
+        case 'mexico_mundial': 
+            displayName = 'México (Mundial)'; 
+            icon = '🌎';
+            break;
+        default: 
+            displayName = 'México (Día de Muertos)';
+            icon = '💀';
     }
     
-    Notify.success(`Diseño cambiado a ${displayName}`);
+    // Actualizar el botón dropdown si existe
+    const iconSpan = document.getElementById('current-design-icon');
+    const nameSpan = document.getElementById('current-design-name');
+    if (iconSpan) iconSpan.textContent = icon;
+    if (nameSpan) nameSpan.textContent = displayName;
+    
+    // Usar notificación moderna
+    if (typeof Notify !== 'undefined') {
+        Notify.success(`🎴 ${icon} Diseño cambiado a ${displayName}`);
+    }
 }
 
 /* ================================================================

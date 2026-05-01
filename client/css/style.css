@@ -1269,3 +1269,77 @@ input[type=text]:focus {
   font-size: 1rem;
   display: inline-block;
 }
+
+/* Dropdown de diseño compacto */
+.design-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.design-dropdown-btn {
+    width: 100%;
+    padding: 12px 14px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(200, 160, 69, 0.3);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.design-dropdown-btn:hover {
+    background: rgba(200, 160, 69, 0.1);
+    border-color: var(--gold);
+}
+
+.design-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: linear-gradient(160deg, #1a3d28, #0d1f14);
+    border: 1px solid rgba(200, 160, 69, 0.3);
+    border-radius: 10px;
+    margin-top: 5px;
+    z-index: 100;
+    display: none;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+.design-dropdown-menu.show {
+    display: block;
+}
+
+.design-option {
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.15s;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.design-option:hover {
+    background: rgba(200, 160, 69, 0.15);
+}
+
+.design-option .design-check {
+    margin-left: auto;
+    color: var(--gold);
+    display: none;
+}
+
+.design-option.active .design-check {
+    display: inline;
+}
+
+.design-option span:first-child {
+    font-size: 1.2rem;
+}

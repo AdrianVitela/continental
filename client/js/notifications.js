@@ -86,7 +86,7 @@ const NotificationSystem = (() => {
   function showCastigoDialog(card, onYes, onNo, options = {}) {
     // DIALOGO DESACTIVADO - Usamos el banner de castigo en el HTML
     // Esta función no hace nada para evitar el diálogo flotante
-    console.log('⚠️ showCastigoDialog llamado pero DESACTIVADO - usando banner de castigo');
+    console.log('showCastigoDialog llamado pero DESACTIVADO - usando banner de castigo');
     
     // No creamos ningún overlay ni elemento visual
     // Simplemente ignoramos la llamada

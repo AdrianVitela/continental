@@ -1264,19 +1264,19 @@ function renderActions() {
   };
 
   // ── No es mi turno ──
-  if (!myTurn) {
-    if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
-    if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
-      DragDrop.cancelDrag();
-      const top = G.fondo_top;
-      cb.style.display = 'flex';
-      cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-      if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-      add('Sí, castigarme', 'warning', acCastigo(true));
-      add('No', 'danger', () => acCastigo(false));
-    }
-    return;
+if (!myTurn) {
+  if (instr) instr.textContent = `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
+  if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
+    DragDrop.cancelDrag();
+    const top = G.fondo_top;
+    cb.style.display = 'flex';
+    cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+    if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+    add('Sí, castigarme', 'warning', () => acCastigo(true));   // ← CORREGIDO
+    add('No', 'danger', () => acCastigo(false));               // ← CORREGIDO
   }
+  return;
+}
 
   // ── Estados de juego ──
   switch (G.estado) {
@@ -1290,19 +1290,19 @@ function renderActions() {
       break;
 
     case 'fase_castigo': {
-      const jc  = G.jugadores[G.castigo_idx];
-      const top = G.fondo_top;
-      if (G.castigo_idx === myIdx && cb) {
-        cb.style.display = 'flex';
-        cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
-        if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-        add('Sí, castigarme', 'warning', () => acCastigo(true));
-        add('No', 'danger', () => acCastigo(false));
-      } else {
-        if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
-      }
-      break;
-    }
+  const jc  = G.jugadores[G.castigo_idx];
+  const top = G.fondo_top;
+  if (G.castigo_idx === myIdx && cb) {
+    cb.style.display = 'flex';
+    cb.innerHTML = `ℹ️ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
+    if (instr) instr.textContent = 'Tienes prioridad de castigo.';
+    add('Sí, castigarme', 'warning', () => acCastigo(true));   // ← CORREGIDO
+    add('No', 'danger', () => acCastigo(false));               // ← CORREGIDO
+  } else {
+    if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
+  }
+  break;
+}
 
     case 'esperando_accion': {
       const listoParaBajar = slotsListosParaBajar();

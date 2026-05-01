@@ -1265,7 +1265,6 @@ input[type=text]:focus {
 }
 
 #castigo-banner::before {
-  content: "ℹ️";
   font-size: 1rem;
   display: inline-block;
 }

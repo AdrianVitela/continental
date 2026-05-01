@@ -87,21 +87,46 @@ window.toast = toastModern;
 // ================================================================
 
 function getCurrentDesign() {
-    return localStorage.getItem('cardDesign') || 'mexico';
+    const saved = localStorage.getItem('cardDesign');
+    // Si no hay saved o es 'mexico' (antiguo), por defecto usar 'mexico_dm'
+    if (!saved || saved === 'mexico') return 'mexico_dm';
+    return saved;
 }
 
 function getCardImageURL(card, design = null) {
     if (!design) design = getCurrentDesign();
 
     if (card.comodin) {
-        return design === 'mexico'
-            ? 'imagenes/Mexico/Joker/Joker_1.png'
-            : 'imagenes/Estados Unidos/Joker/j1.png';
+        switch(design) {
+            case 'usa':
+                return 'imagenes/Estados Unidos/Joker/j1.png';
+            case 'mexico_dm':
+                return 'imagenes/Mexico/Edicion_DM/Joker/Joker_1.png';
+            case 'mexico_mundial':
+                return 'imagenes/Mexico/Edicion_Mundial/Joker/Joker_1.png';
+            case 'default':
+            default:
+                return null; // Usará el fallback de texto
+        }
     }
 
-    let base   = design === 'mexico' ? 'imagenes/Mexico/' : 'imagenes/Estados Unidos/';
-    let folder = '';
+    let base = '';
+    switch(design) {
+        case 'usa':
+            base = 'imagenes/Estados Unidos/';
+            break;
+        case 'mexico_dm':
+            base = 'imagenes/Mexico/Edicion_DM/';
+            break;
+        case 'mexico_mundial':
+            base = 'imagenes/Mexico/Edicion_Mundial/';
+            break;
+        case 'default':
+        default:
+            return null; // Usará fallback de texto
+    }
 
+    let folder = '';
     switch (card.palo) {
         case '♥': case '♥️': folder = 'corazones'; break;
         case '♦': case '♦️': folder = 'diamantes'; break;
@@ -548,23 +573,27 @@ function acCastigo(acepta) {
 }
 
 function mostrarDialogoCastigo(card) {
+  // Verificar que Notify existe y tiene showCastigoDialog
   if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
+    console.log('Usando Notify.showCastigoDialog', card);
     Notify.showCastigoDialog(card, 
-      () => acCastigo(true),
-      () => acCastigo(false),
+      function() { acCastigo(true); },   // onYes
+      function() { acCastigo(false); },  // onNo
       {
         confirmText: 'SÍ, CASTIGARME',
         cancelText: 'NO',
-        type: 'info',  // Cambiado a 'info' para que sea azul
+        type: 'info',  // Azul
         title: 'Castigo'
       }
     );
   } else {
-    // Fallback por si no existe Notify
+    // Fallback solo si no existe Notify
+    console.warn('Notify no disponible, usando confirm fallback');
     const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
     acCastigo(result);
   }
 }
+
 function acBajar() {
     if (!slotsListosParaBajar()) { Notify?.danger('Completa las jugadas requeridas en los slots antes de bajarte'); return; }
     const defs    = getSlotDefsRonda(G.ronda);

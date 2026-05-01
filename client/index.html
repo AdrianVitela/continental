@@ -587,19 +587,25 @@
                 </div>
 
                 <!-- Selector de diseño de cartas -->
-                <div class="field-group design-row">
-                    <label>🎴 Estilo de cartas</label>
-                    <div class="mode-row">
-                        <div class="mode-btn" data-design="mexico" onclick="setDesign('mexico')">
-                            🇲🇽 México
-                        </div>
-                        <div class="mode-btn" data-design="usa" onclick="setDesign('usa')">
-                            🇺🇸 Estados Unidos
-                        </div>
-                    </div>
-                </div>
+<div class="field-group design-row">
+    <label>🎴 Estilo de cartas</label>
+    <div class="mode-row" style="flex-wrap: wrap;">
+        <div class="mode-btn" data-design="default" onclick="setDesign('default')">
+            🃏 Predeterminado
+        </div>
+        <div class="mode-btn" data-design="usa" onclick="setDesign('usa')">
+            🇺🇸 Estados Unidos
+        </div>
+        <div class="mode-btn" data-design="mexico_dm" onclick="setDesign('mexico_dm')">
+            💀 México (Día de Muertos)
+        </div>
+        <div class="mode-btn" data-design="mexico_mundial" onclick="setDesign('mexico_mundial')">
+            🌎 México (Mundial)
+        </div>
+    </div>
+</div>
 
-                <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSalaActual()">🃏 Crear Sala</button>
+                <button class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSalaActual()">Crear Sala</button>
             </div>
 
             <!-- UNIRSE -->

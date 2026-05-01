@@ -175,17 +175,22 @@ function chgMax(d) {
 // Función para cambiar el diseño de cartas
 function setDesign(design) {
     localStorage.setItem('cardDesign', design);
-    // Actualizar estilo visual de los botones
+    // design puede ser: 'default', 'usa', 'mexico_dm', 'mexico_mundial'
+    
     document.querySelectorAll('[data-design]').forEach(btn => {
         if (btn.dataset.design === design) btn.classList.add('active');
         else btn.classList.remove('active');
     });
-    // Usar notificación moderna
-    if (typeof Notify !== 'undefined') {
-        Notify.success(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`);
-    } else {
-        toastLegacy(`🎴 Diseño cambiado a ${design === 'mexico' ? 'México' : 'Estados Unidos'}`, 'green');
+    
+    let displayName = '';
+    switch(design) {
+        case 'default': displayName = 'Predeterminado'; break;
+        case 'usa': displayName = 'Estados Unidos'; break;
+        case 'mexico_dm': displayName = 'México (Día de Muertos)'; break;
+        case 'mexico_mundial': displayName = 'México (Mundial)'; break;
     }
+    
+    Notify.success(`Diseño cambiado a ${displayName}`);
 }
 
 /* ================================================================

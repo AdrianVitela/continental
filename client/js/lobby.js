@@ -173,7 +173,6 @@ function chgMax(d) {
 }
 
 // Función para cambiar el diseño de cartas
-// Reemplazar la función setDesign existente
 function setDesign(design) {
     localStorage.setItem('cardDesign', design);
     
@@ -428,13 +427,20 @@ window.shuffleNames           = shuffleNames;
 /* ================================================================
    INIT
    ================================================================ */
+// En lobby.js, en DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   loadSavedName();
   setupSocketEvents();
   WS.connect();
   
-  // Inicializar el diseño guardado
+  // Inicializar el diseño guardado (ahora usa mexico_dm por defecto)
   const savedDesign = localStorage.getItem('cardDesign');
-  if (savedDesign) setDesign(savedDesign);
-  else setDesign('mexico');
+  if (savedDesign && savedDesign !== 'mexico') {
+    setDesign(savedDesign);
+  } else if (savedDesign === 'mexico') {
+    // Migrar del diseño antiguo 'mexico' al nuevo 'mexico_dm'
+    setDesign('mexico_dm');
+  } else {
+    setDesign('mexico_dm');
+  }
 });

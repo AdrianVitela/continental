@@ -685,10 +685,10 @@
 
                 <!-- Selector de diseño de cartas - versión compacta -->
 <div class="field-group design-row">
-    <label>🎴 Estilo de cartas</label>
+    <label>Estilo de cartas</label>
     <div class="design-dropdown">
         <button class="design-dropdown-btn" id="design-dropdown-btn" onclick="toggleDesignMenu()">
-            <span id="current-design-icon">🎴</span>
+            <span id="current-design-icon"></span>
             <span id="current-design-name">México (Día de Muertos)</span>
             <span style="margin-left: auto;">▼</span>
         </button>
@@ -870,7 +870,7 @@ function selectDesign(design, icon, name) {
     
     // Mostrar notificación
     if (typeof Notify !== 'undefined') {
-        Notify.success(`🎴 Diseño cambiado a ${name}`);
+        Notify.success(`Diseño cambiado a ${name}`);
     }
 }
 

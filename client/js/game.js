@@ -1269,7 +1269,7 @@ function renderActions() {
     if (G.estado === 'fase_castigo' && G.castigo_idx === myIdx && cb) {
       DragDrop.cancelDrag();
       const top = G.fondo_top;
-      cb.style.display = 'none';
+      cb.style.display = 'flex';
       cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
       if (instr) instr.textContent = 'Tienes prioridad de castigo.';
       add('Sí, castigarme', 'warning', mostrarDialogoCastigo(top));
@@ -1293,7 +1293,7 @@ function renderActions() {
       const jc  = G.jugadores[G.castigo_idx];
       const top = G.fondo_top;
       if (G.castigo_idx === myIdx && cb) {
-        cb.style.display = 'none';
+        cb.style.display = 'flex';
         cb.textContent   = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
         if (instr) instr.textContent = 'Tienes prioridad de castigo.';
         add('Sí, castigarme', 'warning', () => mostrarDialogoCastigo(top));

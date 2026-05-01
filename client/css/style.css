@@ -1236,3 +1236,36 @@ input[type=text]:focus {
   transform: none;
   pointer-events: none;
 }
+
+/* ============================================
+   CASTIGO BANNER CON ESTILO MODERNO (INFO)
+   ============================================ */
+
+#castigo-banner {
+  background-color: rgba(0, 108, 227, 0.15) !important;
+  border: 2px solid #006CE3 !important;
+  border-radius: 1rem !important;
+  padding: 0.55rem 1.25rem !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #006CE3 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  max-width: 640px !important;
+  width: 100% !important;
+  text-align: center !important;
+  box-shadow: 0 4px 12px rgba(0, 108, 227, 0.2) !important;
+  animation: none !important;
+  backdrop-filter: blur(4px);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+}
+
+#castigo-banner::before {
+  content: "ℹ️";
+  font-size: 1rem;
+  display: inline-block;
+}

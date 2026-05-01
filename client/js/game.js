@@ -573,22 +573,23 @@ function acCastigo(acepta) {
 }
 
 function mostrarDialogoCastigo(card) {
-  // Verificar que Notify existe y tiene showCastigoDialog
-  if (typeof Notify !== 'undefined' && Notify.showCastigoDialog) {
-    console.log('Usando Notify.showCastigoDialog', card);
+  console.log('mostrarDialogoCastigo llamado', card);
+  console.log('Notify existe?', typeof Notify);
+  console.log('Notify.showCastigoDialog existe?', Notify && typeof Notify.showCastigoDialog);
+  
+  if (Notify && typeof Notify.showCastigoDialog === 'function') {
     Notify.showCastigoDialog(card, 
-      function() { acCastigo(true); },   // onYes
-      function() { acCastigo(false); },  // onNo
+      function() { acCastigo(true); },
+      function() { acCastigo(false); },
       {
         confirmText: 'SÍ, CASTIGARME',
         cancelText: 'NO',
-        type: 'info',  // Azul
+        type: 'info',
         title: 'Castigo'
       }
     );
   } else {
-    // Fallback solo si no existe Notify
-    console.warn('Notify no disponible, usando confirm fallback');
+    console.warn('Usando confirm fallback');
     const result = confirm(`¿Te castigas el ${card?.valor}${card?.palo || ''}?`);
     acCastigo(result);
   }

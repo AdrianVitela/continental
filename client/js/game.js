@@ -88,9 +88,9 @@ window.toast = toastModern;
 
 function getCurrentDesign() {
     const saved = localStorage.getItem('cardDesign');
-    // Si no hay saved, o es 'mexico' (antiguo), o es 'default', usar 'mexico_dm'
-    if (!saved || saved === 'mexico' || saved === 'default') {
-        return 'mexico_dm';
+    // Si no hay diseño guardado, o es el antiguo 'mexico', usar 'default' (cartas blancas con texto)
+    if (!saved || saved === 'mexico') {
+        return 'default';
     }
     return saved;
 }
@@ -1013,19 +1013,52 @@ function renderHand() {
 }
 
 function createCardElement(c, fromSlot = null) {
-    const el       = document.createElement('div');
-    el.className   = 'card' + (c.id === selId ? ' selected' : '');
+    const el = document.createElement('div');
+    el.className = 'card' + (c.id === selId ? ' selected' : '');
     if (intercambioMode && selId && c.id === selId) el.classList.add('pending-intercambio');
-    el.dataset.id  = c.id;
+    el.dataset.id = c.id;
     if (fromSlot !== null) el.dataset.slot = fromSlot;
-    el.draggable   = false;
+    el.draggable = false;
 
     const imgUrl = getCardImageURL(c);
-    const img    = document.createElement('img');
-    img.src      = imgUrl;
-    img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:var(--r);display:block;';
-    img.onerror  = () => { el.innerHTML = getTextCardHTML(c); attachDragAndClickEvents(el, c, fromSlot); };
-    el.appendChild(img);
+    
+    if (!imgUrl) {
+        // Diseño default: mostrar texto
+        if (c.comodin) {
+            el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+        } else {
+            const sc = SUIT_CLS[c.palo] || '';
+            el.innerHTML = `
+                <div class="card-face ${sc}">
+                    <div class="corner tl">${c.valor}<br>${c.palo}</div>
+                    <div class="cv">${c.palo}</div>
+                    <div class="cs">${c.valor}</div>
+                    <div class="corner br">${c.valor}<br>${c.palo}</div>
+                </div>`;
+        }
+    } else {
+        // Con imagen
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:var(--r);display:block;';
+        img.onerror = () => {
+            // Fallback a texto si la imagen falla
+            if (c.comodin) {
+                el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
+            } else {
+                const sc = SUIT_CLS[c.palo] || '';
+                el.innerHTML = `
+                    <div class="card-face ${sc}">
+                        <div class="corner tl">${c.valor}<br>${c.palo}</div>
+                        <div class="cv">${c.palo}</div>
+                        <div class="cs">${c.valor}</div>
+                        <div class="corner br">${c.valor}<br>${c.palo}</div>
+                    </div>`;
+            }
+        };
+        el.appendChild(img);
+    }
+
     attachDragAndClickEvents(el, c, fromSlot);
     return el;
 }
@@ -1367,23 +1400,39 @@ function renderActions() {
 
 function cFull(c, withId = true) {
     if (!c) return '';
-    
+
     const imgUrl = getCardImageURL(c);
     
-    // Si no hay URL de imagen, mostrar la versión de texto directamente
+    // Si no hay URL de imagen (diseño 'default'), mostrar el texto directamente
     if (!imgUrl) {
-        return getTextCardHTML(c); // Necesitas definir getTextCardHTML o usar el HTML de texto
+        // Usamos la misma función que genera cartas de texto (usando HTML plano)
+        if (c.comodin) {
+            return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
+                        <div class="card-face joker-f">
+                            <span class="cv">🃏</span>
+                            <span class="cs" style="font-size:.55rem">JOKER</span>
+                        </div>
+                    </div>`;
+        }
+        const sc = SUIT_CLS[c.palo] || '';
+        return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
+                    <div class="card-face ${sc}">
+                        <div class="corner tl">${c.valor}<br>${c.palo}</div>
+                        <div class="cv">${c.palo}</div>
+                        <div class="cs">${c.valor}</div>
+                        <div class="corner br">${c.valor}<br>${c.palo}</div>
+                    </div>
+                </div>`;
     }
 
+    // Resto del código para cuando hay imagen (diseños con imágenes)
     const sc = SUIT_CLS[c.palo] || '';
-
     if (c.comodin) {
         return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
             <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);"
                  onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'card-face joker-f\'><span class=\'cv\'>JOKER</span></div>';">
         </div>`;
     }
-
     return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
         <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);"
              onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'card-face ${sc}\'><div class=\'corner tl\'>${c.valor}<br>${c.palo}</div><div class=\'cv\'>${c.palo}</div><div class=\'cs\'>${c.valor}</div><div class=\'corner br\'>${c.valor}<br>${c.palo}</div></div>';">
@@ -1392,9 +1441,19 @@ function cFull(c, withId = true) {
 
 function cSm(c) {
     if (!c) return '';
-    const imgUrl = getCardImageURL(c);
-    const sc     = SUIT_CLS[c.palo] || '';
 
+    const imgUrl = getCardImageURL(c);
+    const sc = SUIT_CLS[c.palo] || '';
+
+    // Para diseño 'default' (sin imágenes), mostrar texto directamente
+    if (!imgUrl) {
+        if (c.comodin) {
+            return `<div class="card-sm joker-sm">🃏</div>`;
+        }
+        return `<div class="card-sm natural ${sc}">${c.valor}<br>${c.palo}</div>`;
+    }
+
+    // Con imagen: intentar cargarla con fallback a texto
     if (c.comodin) {
         return `<div class="card-sm joker-sm" style="background:transparent;padding:0;overflow:hidden;">
                     <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:4px;"

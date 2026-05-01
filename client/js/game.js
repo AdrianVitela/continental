@@ -88,8 +88,10 @@ window.toast = toastModern;
 
 function getCurrentDesign() {
     const saved = localStorage.getItem('cardDesign');
-    // Si no hay saved o es 'mexico' (antiguo), por defecto usar 'mexico_dm'
-    if (!saved || saved === 'mexico') return 'mexico_dm';
+    // Si no hay saved, o es 'mexico' (antiguo), o es 'default', usar 'mexico_dm'
+    if (!saved || saved === 'mexico' || saved === 'default') {
+        return 'mexico_dm';
+    }
     return saved;
 }
 
@@ -104,9 +106,8 @@ function getCardImageURL(card, design = null) {
                 return 'imagenes/Mexico/Edicion_DM/Joker/Joker_1.png';
             case 'mexico_mundial':
                 return 'imagenes/Mexico/Edicion_Mundial/Joker/Joker_1.png';
-            case 'default':
             default:
-                return null; // Usará el fallback de texto
+                return null;
         }
     }
 
@@ -1366,8 +1367,15 @@ function renderActions() {
 
 function cFull(c, withId = true) {
     if (!c) return '';
+    
     const imgUrl = getCardImageURL(c);
-    const sc     = SUIT_CLS[c.palo] || '';
+    
+    // Si no hay URL de imagen, mostrar la versión de texto directamente
+    if (!imgUrl) {
+        return getTextCardHTML(c); // Necesitas definir getTextCardHTML o usar el HTML de texto
+    }
+
+    const sc = SUIT_CLS[c.palo] || '';
 
     if (c.comodin) {
         return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>

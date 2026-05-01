@@ -471,6 +471,51 @@
     width: 100%;
   }
 }
+/* ===== ESTILOS PARA INPUTS DEL LOBBY ===== */
+.field-group input[type="text"],
+.field-group input[type="text"]:focus {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(200, 160, 69, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.field-group input[type="text"]:focus {
+    border-color: var(--gold);
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px rgba(200, 160, 69, 0.2);
+}
+
+.field-group input[type="text"]::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Estilo específico para el campo de código */
+#unirse-code {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 1.1rem;
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(200, 160, 69, 0.3);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--gold);
+}
+
+#unirse-code:focus {
+    border-color: var(--gold);
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px rgba(200, 160, 69, 0.2);
+}
     </style>
 </head>
 <body>

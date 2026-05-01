@@ -713,7 +713,7 @@ input[type=text]:focus {
 }
 
 /* ============================================
-   NOTIFICACIONES MODERNAS - EXACTO DISEÑO REFERENCIA
+   NOTIFICACIONES MODERNAS
    ============================================ */
 
 .notification-container {
@@ -728,7 +728,7 @@ input[type=text]:focus {
   pointer-events: none;
 }
 
-.alert {
+.notif-alert {
   display: flex;
   align-items: center;
   padding: 0.55rem 0.65rem 0.55rem 0.75rem;
@@ -736,41 +736,41 @@ input[type=text]:focus {
   justify-content: space-between;
   pointer-events: auto;
   animation: slideInRight 0.3s ease-out forwards;
-  box-shadow: 0px 3.2px 13.8px rgba(0, 0, 0, 0.02),
-              0px 7.6px 33.3px rgba(0, 0, 0, 0.028),
-              0px 14.4px 62.6px rgba(0, 0, 0, 0.035),
-              0px 25.7px 111.7px rgba(0, 0, 0, 0.042),
-              0px 48px 208.9px rgba(0, 0, 0, 0.05),
-              0px 115px 500px rgba(0, 0, 0, 0.07);
+  box-shadow: 0px 3.2px 13.8px rgba(0,0,0,0.02),
+              0px 7.6px 33.3px rgba(0,0,0,0.028),
+              0px 14.4px 62.6px rgba(0,0,0,0.035),
+              0px 25.7px 111.7px rgba(0,0,0,0.042),
+              0px 48px 208.9px rgba(0,0,0,0.05),
+              0px 115px 500px rgba(0,0,0,0.07);
 }
 
-.alert.hiding {
+.notif-alert.hiding {
   animation: fadeOutRight 0.3s ease-in forwards;
 }
 
-.content {
+.notif-content {
   display: flex;
   align-items: center;
 }
 
-.icon {
+.notif-icon {
   padding: 0.5rem;
   margin-right: 1rem;
   border-radius: 39% 61% 42% 58% / 50% 51% 49% 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0px 3.2px 13.8px rgba(0, 0, 0, 0.02),
-              0px 7.6px 33.3px rgba(0, 0, 0, 0.028),
-              0px 14.4px 62.6px rgba(0, 0, 0, 0.035);
+  box-shadow: 0px 3.2px 13.8px rgba(0,0,0,0.02),
+              0px 7.6px 33.3px rgba(0,0,0,0.028),
+              0px 14.4px 62.6px rgba(0,0,0,0.035);
 }
 
-.icon svg {
+.notif-icon svg {
   width: 24px;
   height: 24px;
 }
 
-.alert p {
+.notif-alert p {
   font-family: 'Outfit', sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
@@ -778,7 +778,7 @@ input[type=text]:focus {
   margin: 0;
 }
 
-.close {
+.notif-close {
   background-color: transparent;
   border: none;
   outline: none;
@@ -791,79 +791,49 @@ input[type=text]:focus {
   justify-content: center;
 }
 
-.close:hover {
+.notif-close:hover {
   background-color: rgba(255, 255, 255, 0.8);
 }
 
-/* Success alert */
-.alert.success {
+.notif-alert.success {
   background-color: rgba(62, 189, 97, 0.2);
   border: 2px solid #3ebd61;
 }
-.alert.success .icon {
-  background-color: #3ebd61;
-}
+.notif-alert.success .notif-icon { background-color: #3ebd61; }
 
-/* Info alert */
-.alert.info {
+.notif-alert.info {
   background-color: rgba(0, 108, 227, 0.2);
   border: 2px solid #006CE3;
 }
-.alert.info .icon {
-  background-color: #006CE3;
-}
+.notif-alert.info .notif-icon { background-color: #006CE3; }
 
-/* Warning alert */
-.alert.warning {
+.notif-alert.warning {
   background-color: rgba(239, 148, 0, 0.2);
   border: 2px solid #EF9400;
 }
-.alert.warning .icon {
-  background-color: #EF9400;
-}
+.notif-alert.warning .notif-icon { background-color: #EF9400; }
 
-/* Danger alert */
-.alert.danger {
+.notif-alert.danger {
   background-color: rgba(236, 77, 43, 0.2);
   border: 2px solid #EC4D2B;
 }
-.alert.danger .icon {
-  background-color: #EC4D2B;
-}
+.notif-alert.danger .notif-icon { background-color: #EC4D2B; }
 
 @keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes fadeOutRight {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(100%);
-  }
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(100%); }
 }
 
 @media (max-width: 480px) {
   .notification-container {
-    top: 10px;
-    right: 10px;
-    left: 10px;
-    max-width: none;
+    top: 10px; right: 10px; left: 10px; max-width: none;
   }
-  .alert {
-    min-width: auto;
-    width: 100%;
-  }
+  .notif-alert { min-width: auto; width: 100%; }
 }
 
 /* ============================================

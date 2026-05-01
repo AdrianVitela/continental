@@ -517,7 +517,7 @@
     box-shadow: 0 0 0 2px rgba(200, 160, 69, 0.2);
 }
 
-/* Dropdown de diseño compacto - CON SCROLL Y HACIA ARRIBA */
+/* Dropdown de diseño compacto - Menú hacia arriba con mejor visibilidad */
 .design-dropdown {
     position: relative;
     width: 100%;
@@ -546,47 +546,49 @@
 
 .design-dropdown-menu {
     position: absolute;
-    bottom: 100%;           /* ← Aparece HACIA ARRIBA */
+    bottom: calc(100% + 5px);  /* Aparece arriba, con 5px de separación */
     left: 0;
     right: 0;
     background: linear-gradient(160deg, #1a3d28, #0d1f14);
-    border: 1px solid rgba(200, 160, 69, 0.3);
+    border: 1px solid rgba(200, 160, 69, 0.4);
     border-radius: 10px;
-    margin-bottom: 5px;     /* ← Separación del botón */
-    z-index: 100;
+    z-index: 1000;
     display: none;
-    overflow-y: auto;       /* ← SCROLL solo dentro del menú */
-    max-height: 180px;      /* ← Altura máxima con scroll */
-    box-shadow: 0 -8px 20px rgba(0,0,0,0.4);
+    overflow-y: auto;
+    max-height: 200px;
+    box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.5);
 }
 
-/* Scrollbar personalizada para el dropdown */
+/* Asegurar que el menú sea visible */
+.design-dropdown-menu.show {
+    display: block !important;
+}
+
+/* Scrollbar */
 .design-dropdown-menu::-webkit-scrollbar {
     width: 5px;
 }
 
 .design-dropdown-menu::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.3);
     border-radius: 10px;
 }
 
 .design-dropdown-menu::-webkit-scrollbar-thumb {
-    background: var(--gold-dim);
+    background: var(--gold);
     border-radius: 10px;
 }
 
-.design-dropdown-menu.show {
-    display: block;
-}
-
 .design-option {
-    padding: 10px 14px;
+    padding: 12px 14px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     transition: background 0.15s;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    font-size: 0.85rem;
 }
 
 .design-option:last-child {
@@ -594,13 +596,14 @@
 }
 
 .design-option:hover {
-    background: rgba(200, 160, 69, 0.15);
+    background: rgba(200, 160, 69, 0.2);
 }
 
 .design-option .design-check {
     margin-left: auto;
     color: var(--gold);
     display: none;
+    font-weight: bold;
 }
 
 .design-option.active .design-check {
@@ -608,7 +611,7 @@
 }
 
 .design-option span:first-child {
-    font-size: 1.2rem;
+    font-size: 1.3rem;
 }
     </style>
 </head>
@@ -810,32 +813,64 @@
     </script>
 
     <script>
-// Dropdown de diseño de cartas
-function toggleDesignMenu() {
+        // Dropdown de diseño de cartas
+function toggleDesignMenu(event) {
+    if (event) event.stopPropagation();
     const menu = document.getElementById('design-dropdown-menu');
-    menu.classList.toggle('show');
+    if (!menu) return;
+    
+    // Cerrar si está abierto, abrir si está cerrado
+    if (menu.classList.contains('show')) {
+        menu.classList.remove('show');
+    } else {
+        // Cerrar cualquier otro dropdown abierto
+        document.querySelectorAll('.design-dropdown-menu.show').forEach(m => {
+            if (m !== menu) m.classList.remove('show');
+        });
+        menu.classList.add('show');
+        
+        // Opcional: asegurar que el menú sea visible (scroll si es necesario)
+        const rect = menu.getBoundingClientRect();
+        if (rect.top < 0) {
+            // Si se sale por arriba, ajustar posición
+            menu.style.bottom = 'auto';
+            menu.style.top = 'calc(100% + 5px)';
+        } else {
+            menu.style.bottom = 'calc(100% + 5px)';
+            menu.style.top = 'auto';
+        }
+    }
 }
 
 function selectDesign(design, icon, name) {
     // Cerrar menú
-    document.getElementById('design-dropdown-menu').classList.remove('show');
+    const menu = document.getElementById('design-dropdown-menu');
+    if (menu) menu.classList.remove('show');
     
     // Actualizar botón
-    document.getElementById('current-design-icon').textContent = icon;
-    document.getElementById('current-design-name').textContent = name;
+    const iconSpan = document.getElementById('current-design-icon');
+    const nameSpan = document.getElementById('current-design-name');
+    if (iconSpan) iconSpan.textContent = icon;
+    if (nameSpan) nameSpan.textContent = name;
     
     // Marcar opción activa
     document.querySelectorAll('.design-option').forEach(opt => {
         opt.classList.remove('active');
     });
-    document.querySelector(`.design-option[data-design="${design}"]`).classList.add('active');
+    const activeOpt = document.querySelector(`.design-option[data-design="${design}"]`);
+    if (activeOpt) activeOpt.classList.add('active');
     
-    // Llamar a la función original de lobby.js
+    // Guardar en localStorage
+    localStorage.setItem('cardDesign', design);
+    
+    // Llamar a la función de lobby.js si existe
     if (typeof window.setDesign === 'function') {
         window.setDesign(design);
-    } else {
-        // Fallback si lobby.js no está cargado
-        localStorage.setItem('cardDesign', design);
+    }
+    
+    // Mostrar notificación
+    if (typeof Notify !== 'undefined') {
+        Notify.success(`🎴 Diseño cambiado a ${name}`);
     }
 }
 
@@ -843,24 +878,39 @@ function selectDesign(design, icon, name) {
 document.addEventListener('click', function(e) {
     const dropdown = document.getElementById('design-dropdown-menu');
     const btn = document.getElementById('design-dropdown-btn');
-    if (dropdown && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
-        dropdown.classList.remove('show');
+    if (dropdown && dropdown.classList.contains('show')) {
+        if (!btn?.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.remove('show');
+        }
     }
 });
 
-// Inicializar diseño guardado
+// Inicializar diseño guardado al cargar
 document.addEventListener('DOMContentLoaded', function() {
-    const saved = localStorage.getItem('cardDesign') || 'mexico_dm';
+    const saved = localStorage.getItem('cardDesign');
     let icon = '💀', name = 'México (Día de Muertos)';
-    switch(saved) {
+    
+    if (!saved || saved === 'mexico') {
+        // Migrar o default
+        localStorage.setItem('cardDesign', 'mexico_dm');
+    }
+    
+    const currentDesign = localStorage.getItem('cardDesign') || 'mexico_dm';
+    
+    switch(currentDesign) {
         case 'default': icon = '🃏'; name = 'Predeterminado'; break;
         case 'usa': icon = '🇺🇸'; name = 'Estados Unidos'; break;
         case 'mexico_dm': icon = '💀'; name = 'México (Día de Muertos)'; break;
         case 'mexico_mundial': icon = '🌎'; name = 'México (Mundial)'; break;
     }
-    document.getElementById('current-design-icon').textContent = icon;
-    document.getElementById('current-design-name').textContent = name;
-    document.querySelector(`.design-option[data-design="${saved}"]`).classList.add('active');
+    
+    const iconSpan = document.getElementById('current-design-icon');
+    const nameSpan = document.getElementById('current-design-name');
+    if (iconSpan) iconSpan.textContent = icon;
+    if (nameSpan) nameSpan.textContent = name;
+    
+    const activeOpt = document.querySelector(`.design-option[data-design="${currentDesign}"]`);
+    if (activeOpt) activeOpt.classList.add('active');
 });
 </script>
 

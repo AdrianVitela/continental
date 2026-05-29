@@ -214,7 +214,7 @@ function setDesign(design) {
     
     // Usar notificación moderna
     if (typeof Notify !== 'undefined') {
-        Notify.success(`🎴 ${icon} Diseño cambiado a ${displayName}`);
+        Notify.success(`${icon} Diseño cambiado a ${displayName}`);
     }
 }
 

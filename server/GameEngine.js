@@ -346,6 +346,18 @@ function ordenarCorridaAcomodada(cartas) {
     return resultado;
 }
 
+function getValorOrdenCorrida(carta, useA14) {
+    return carta.valor === 'A' && useA14 ? 14 : VNUM[carta.valor];
+}
+
+function debeOrdenarAsAlto(cartas) {
+    const valsNorm = cartas
+        .filter(c => !c.comodin)
+        .map(c => VNUM[c.valor])
+        .filter(Boolean);
+    return valsNorm.includes(1) && valsNorm.some(v => v >= 11) && !valsNorm.includes(2);
+}
+
 function puedeAcomodar(carta, jugada) {
     return jugada.tipo === 'tercia'
         ? puedeAcomodarEnTercia(carta, jugada.cartas)
@@ -373,7 +385,10 @@ function validarTercia(cartas) {
 }
 
 function ordenarCorrida(cartas) {
-    const normales = cartas.filter(c => !c.comodin).map(c => ({ ...c, valorNum: VNUM[c.valor] }));
+    const useA14 = debeOrdenarAsAlto(cartas);
+    const normales = cartas
+        .filter(c => !c.comodin)
+        .map(c => ({ ...c, valorNum: getValorOrdenCorrida(c, useA14) }));
     const comodines = cartas.filter(c => c.comodin);
     if (normales.length === 0) return cartas;
 
@@ -929,7 +944,8 @@ class GameEngine {
                 // el usuario es libre de ponerlo como baja o alta.
                 // Ordenar las cartas normales y colocar el joker al inicio o final.
                 const normales = jug.cartas.filter(c => !c.comodin);
-                normales.sort((a, b) => VNUM[a.valor] - VNUM[b.valor]);
+                const useA14 = debeOrdenarAsAlto(normales);
+                normales.sort((a, b) => getValorOrdenCorrida(a, useA14) - getValorOrdenCorrida(b, useA14));
                 if (posicion === 'baja') {
                     jug.cartas = [carta, ...normales];
                 } else {
@@ -957,8 +973,23 @@ class GameEngine {
     acReordenarMano(playerId, newOrder) {
         const j = this._findPlayer(playerId);
         if (!j) return this._err('Jugador no encontrado.');
-        const reordered = newOrder.map(id => j.mano.find(c => c.id === id)).filter(Boolean);
-        if (reordered.length !== j.mano.length) return this._err('Orden inválido.');
+
+        if (!Array.isArray(newOrder) || newOrder.length !== j.mano.length) {
+            return this._err('Orden inválido.');
+        }
+
+        const cartasPorId = new Map(j.mano.map(c => [c.id, c]));
+        const idsUsados = new Set();
+        const reordered = [];
+
+        for (const id of newOrder) {
+            if (!cartasPorId.has(id) || idsUsados.has(id)) {
+                return this._err('Orden inválido.');
+            }
+            idsUsados.add(id);
+            reordered.push(cartasPorId.get(id));
+        }
+
         j.mano = reordered;
         return this._ok('reordenar', { jugadorIdx: this.jugadores.indexOf(j) }, false);
     }

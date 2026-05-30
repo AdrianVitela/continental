@@ -86,6 +86,15 @@ window.toast = toastModern;
 // FUNCIONES PARA IMÁGENES DE CARTAS
 // ================================================================
 
+function escHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 function getCurrentDesign() {
     const saved = localStorage.getItem('cardDesign');
     // Si no hay diseño guardado, o es el antiguo 'mexico', usar 'default' (cartas blancas con texto)
@@ -95,20 +104,42 @@ function getCurrentDesign() {
     return saved;
 }
 
+function getJokerVariant(card) {
+    const explicitVariant = Number(card?.jokerVariant);
+    if (Number.isInteger(explicitVariant) && explicitVariant >= 1 && explicitVariant <= 4) {
+        return explicitVariant;
+    }
+
+    const idVariant = Number(card?.id);
+    if (Number.isFinite(idVariant) && idVariant > 0) {
+        return ((Math.floor(idVariant) - 1) % 4) + 1;
+    }
+
+    return 1;
+}
+
+function getJokerImageURL(card, design) {
+    const variant = getJokerVariant(card);
+    const mexicoFiles = ['Joker_1.png', 'Joker_1_1.png', 'Joker_2.png', 'Joker_2_2.png'];
+
+    switch(design) {
+        case 'usa':
+            return `imagenes/Estados Unidos/Joker/j${variant}.png`;
+        case 'mexico_dm':
+            return `imagenes/Mexico/Edicion_DM/Joker/${mexicoFiles[variant - 1]}`;
+        case 'mexico_mundial':
+            return `imagenes/Mexico/Edicion_Mundial/Joker/${mexicoFiles[variant - 1]}`;
+        default:
+            return null;
+    }
+}
+
 function getCardImageURL(card, design = null) {
     if (!design) design = getCurrentDesign();
 
     if (card.comodin) {
-        switch(design) {
-            case 'usa':
-                return 'imagenes/Estados Unidos/Joker/j1.png';
-            case 'mexico_dm':
-                return 'imagenes/Mexico/Edicion_DM/Joker/Joker_1.png';
-            case 'mexico_mundial':
-                return 'imagenes/Mexico/Edicion_Mundial/Joker/Joker_1.png';
-            default:
-                return null;
-        }
+        const jokerUrl = getJokerImageURL(card, design);
+        return jokerUrl ? jokerUrl.replace(/ /g, '%20') : null;
     }
 
     let base = '';
@@ -886,21 +917,24 @@ function renderTableBajadas() {
                         const tipTxt = intercPosible.esCasoBajado
                             ? `Poner ${intercPosible.cartaValor}${intercPosible.cartaPalo} aquí → recibes el Joker para acomodar`
                             : `Intercambiar por ${intercPosible.cartaValor}${intercPosible.cartaPalo} → recibes el Joker`;
-                        return `<div class="card-sm joker-sm comodin-intercambiable joker-highlight"
-                                     title="${tipTxt}"
-                                     data-ic-key="${icKey}"
-                                     onclick="event.stopPropagation();window.ejecutarIntercambioDesdeKey('${icKey}')">
-                                     JOKER<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
-                                     <small style="font-size:7px;display:block;color:#4de88a;">CLIC</small></div>`;
+                        return cJokerBajada(c, {
+                            className: 'comodin-intercambiable joker-highlight',
+                            title: tipTxt,
+                            attrs: `data-ic-key="${icKey}" onclick="event.stopPropagation();window.ejecutarIntercambioDesdeKey('${icKey}')"`,
+                            actionText: 'CLIC'
+                        });
                     }
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
-                        return `<div class="card-sm joker-sm comodin-intercambiable"
-                                     title="Reemplaza a: ${vr}${vrPalo}"
-                                     data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
-                                     onclick="event.stopPropagation();window.activarModoIntercambio(${ji},${jugi},'${c.id}')">
-                                     JOKER<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                        return cJokerBajada(c, {
+                            className: 'comodin-intercambiable',
+                            title: `Reemplaza a: ${vr}${vrPalo}`,
+                            attrs: `data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}" onclick="event.stopPropagation();window.activarModoIntercambio(${ji},${jugi},'${c.id}')"`,
+                            actionText: 'CLIC'
+                        });
                     }
-                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}">JOKER<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                    return cJokerBajada(c, {
+                        title: `Reemplaza a: ${vr}${vrPalo}`
+                    });
                 }
                 return cSm(c);
             }).join('');
@@ -1437,6 +1471,25 @@ function cFull(c, withId = true) {
         <img src="${imgUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--r);"
              onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\'card-face ${sc}\'><div class=\'corner tl\'>${c.valor}<br>${c.palo}</div><div class=\'cv\'>${c.palo}</div><div class=\'cs\'>${c.valor}</div><div class=\'corner br\'>${c.valor}<br>${c.palo}</div></div>';">
     </div>`;
+}
+
+function cJokerBajada(c, opts = {}) {
+    const vr = c?.valorReemplazado || '?';
+    const vrPalo = c?.paloReemplazado || '';
+    const replacement = `=${vr}${vrPalo}`;
+    const className = opts.className ? ` ${opts.className}` : '';
+    const title = escHtml(opts.title || `Reemplaza a: ${vr}${vrPalo}`);
+    const attrs = opts.attrs || '';
+    const action = opts.actionText
+        ? `<div class="joker-action-badge">${escHtml(opts.actionText)}</div>`
+        : '';
+    const jokerCard = cSm(c).replace('card-sm joker-sm', 'card-sm joker-sm joker-bajada-card');
+
+    return `<div class="joker-bajada-wrap${className}" title="${title}" ${attrs}>
+                <div class="joker-replacement-badge">${escHtml(replacement)}</div>
+                ${jokerCard}
+                ${action}
+            </div>`;
 }
 
 function cSm(c) {

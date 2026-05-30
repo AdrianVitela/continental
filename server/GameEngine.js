@@ -22,8 +22,8 @@ const VNUM = {
 
 let _uid = 1;
 
-const mkCard = (valor, palo = null, comodin = false) =>
-    ({ id: _uid++, valor, palo, comodin });
+const mkCard = (valor, palo = null, comodin = false, extra = {}) =>
+    ({ id: _uid++, valor, palo, comodin, ...extra });
 
 function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -41,14 +41,20 @@ function shuffle(arr) {
 function mkMazo(numJugadores = 2) {
     const barajas = numJugadores >= 7 ? 3 : 2;
     const m = [];
+    let jokerVariantCursor = 0;
     for (let baraja = 0; baraja < barajas; baraja++) {
         for (const p of PALOS) {
             for (const v of VALORES) {
                 m.push(mkCard(v, p));
             }
         }
-        m.push(mkCard('JOKER', null, true));
-        m.push(mkCard('JOKER', null, true));
+        for (let joker = 0; joker < 2; joker++) {
+            const jokerVariant = jokerVariantCursor < 4
+                ? jokerVariantCursor + 1
+                : Math.floor(Math.random() * 4) + 1;
+            m.push(mkCard('JOKER', null, true, { jokerVariant }));
+            jokerVariantCursor++;
+        }
     }
     return shuffle(m);
 }

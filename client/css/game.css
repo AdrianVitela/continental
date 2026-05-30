@@ -1,4 +1,9 @@
 /* ===== LAYOUT PRINCIPAL ===== */
+:root {
+  --cw-bajada: 58px;
+  --ch-bajada: 82px;
+}
+
 #game {
   position: fixed;
   inset: 0;
@@ -139,7 +144,96 @@
 }
 .bajada-pile:hover { border-color: rgba(200,160,69,.5); }
 .bajada-pile-label { font-size: 0.52rem; color: var(--text-muted); text-align: center; margin-bottom: 3px; }
-.bajada-pile-cards { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
+.bajada-pile-cards {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: visible;
+}
+
+.bajada-pile-cards .card-sm {
+  width: var(--cw-bajada);
+  height: var(--ch-bajada);
+  font-size: 0.82rem;
+}
+
+.joker-bajada-wrap {
+  width: var(--cw-bajada);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.joker-bajada-wrap.comodin-intercambiable {
+  cursor: pointer;
+}
+
+.joker-replacement-badge,
+.joker-action-badge {
+  max-width: 100%;
+  min-height: 14px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  line-height: 1.1;
+  font-size: 0.55rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.joker-replacement-badge {
+  color: var(--gold-hi);
+  background: rgba(16, 8, 28, 0.92);
+  border: 1px solid rgba(232, 200, 112, 0.55);
+  box-shadow: 0 0 10px rgba(200, 160, 69, 0.25);
+}
+
+.joker-action-badge {
+  color: #79f2a5;
+  background: rgba(8, 42, 24, 0.88);
+  border: 1px solid rgba(77, 232, 138, 0.45);
+  font-size: 0.48rem;
+}
+
+.joker-bajada-card {
+  border: 1px solid rgba(232, 200, 112, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(232, 200, 112, 0.35),
+    0 0 14px rgba(232, 200, 112, 0.75),
+    0 0 26px rgba(138, 92, 255, 0.48);
+  animation: jokerBajadaGlow 1.5s ease-in-out infinite alternate;
+}
+
+.joker-bajada-wrap.joker-highlight .joker-bajada-card,
+.joker-bajada-wrap.comodin-intercambiable:hover .joker-bajada-card {
+  box-shadow:
+    0 0 0 2px rgba(77, 232, 138, 0.75),
+    0 0 16px rgba(77, 232, 138, 0.7),
+    0 0 30px rgba(232, 200, 112, 0.5);
+}
+
+@keyframes jokerBajadaGlow {
+  from {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0 1px rgba(232, 200, 112, 0.35),
+      0 0 10px rgba(232, 200, 112, 0.55),
+      0 0 18px rgba(138, 92, 255, 0.32);
+  }
+  to {
+    filter: brightness(1.12);
+    box-shadow:
+      0 0 0 1px rgba(232, 200, 112, 0.65),
+      0 0 18px rgba(232, 200, 112, 0.85),
+      0 0 34px rgba(138, 92, 255, 0.55);
+  }
+}
 
 /* ===== MAZO Y FONDO ===== */
 .deck-area-container {
@@ -739,6 +833,7 @@
 
 /* ── Móviles ≤ 480px ── */
 @media (max-width: 480px) {
+  :root { --cw-bajada: 48px; --ch-bajada: 68px; }
   .scoreboard { position: static; transform: none; margin: 0 auto; pointer-events: auto; }
   .abtn { padding: 5px 10px; font-size: 0.68rem; border-radius: 18px; }
   .instr { font-size: 0.64rem; padding: 3px 8px; }
@@ -768,7 +863,7 @@
 
 /* ── Landscape móviles horizontales (≤ 500px alto) ── */
 @media (orientation: landscape) and (max-height: 500px) {
-  :root { --cw: 30px; --ch: 44px; --cw-sm: 20px; --ch-sm: 28px; }
+  :root { --cw: 30px; --ch: 44px; --cw-sm: 20px; --ch-sm: 28px; --cw-bajada: 42px; --ch-bajada: 60px; }
 
   .topbar { height: 32px; min-height: 32px; padding: 0 10px; }
   .tb-title { font-size: 0.85rem; }

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continental | World Cup 2026 Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #020d08;
+            --bg-pitch: #062113;
+            --gold-primary: #d4af37;
+            --gold-light: #f9e596;
+            --gold-dark: #8a7020;
+            
+            --glass-bg: rgba(6, 33, 19, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.4);
+            
+            --text-main: #ffffff;
+            --text-muted: #809a8d;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-main);
+            height: 100vh;
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* --- FONDO AMBIENTAL --- */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 70% 50%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+                radial-gradient(circle at 30% 80%, rgba(10, 50, 28, 0.8) 0%, transparent 50%);
+            z-index: 0;
+        }
+
+        /* --- ANIMACIÓN DE BARRIDO GLOBAL (DERECHA A IZQUIERDA) --- */
+        @keyframes sweepInRight {
+            0% { 
+                opacity: 0; 
+                transform: translateX(100px) scale(0.98); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: translateX(0) scale(1); 
+            }
+        }
+
+        /* Contenedor maestro para animar toda la pantalla junta */
+        .app-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            /* Aplicación del barrido */
+            opacity: 0;
+            animation: sweepInRight 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* --- ESTRUCTURA DASHBOARD --- */
+        .dashboard-container {
+            position: relative;
+            z-index: 10;
+            width: 95%;
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: 1fr 420px; 
+            gap: 40px;
+            align-items: center;
+        }
+
+        /* --- COLUMNA IZQUIERDA: CONTEXTO --- */
+        .left-col {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            padding: 40px 0;
+        }
+
+        .left-col > header, 
+        .left-col > .game-selector-grid {
+            position: relative;
+            z-index: 2; 
+        }
+
+        /* MARCA DE AGUA 26 CENTRADA CON LA NUEVA COPA 2026 */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: clamp(8rem, 16vw, 18rem);
+            color: rgba(255, 255, 255, 0.04); /* Ligeramente más visible para ver detalles */
+            z-index: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        /* Ajustes de la nueva copa SVG */
+        .watermark-trophy {
+            width: clamp(5rem, 10vw, 12rem);
+            height: auto;
+            color: rgba(255, 255, 255, 0.05); 
+            margin-top: -15px;
+        }
+
+        header { margin-bottom: 40px; }
+
+        .subtitle {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+            color: var(--gold-primary);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle::before {
+            content: ''; display: block; width: 40px; height: 2px; background: var(--gold-primary);
+        }
+
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: clamp(3rem, 5vw, 4.5rem);
+            line-height: 1.1;
+            text-transform: uppercase;
+            background: linear-gradient(to right, #fff, #bbb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+
+        .game-selector-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            max-width: 450px;
+        }
+
+        .game-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .game-card svg {
+            width: 28px; height: 28px;
+            fill: var(--text-muted); transition: fill 0.3s;
+        }
+
+        .game-card h3 { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+        .game-card p { font-size: 0.75rem; color: var(--text-muted); line-height: 1.4; }
+
+        .game-card:hover { background: rgba(255,255,255,0.08); }
+        
+        .game-card.active {
+            background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.02));
+            border-color: var(--gold-primary);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .game-card.active svg { fill: var(--gold-primary); }
+
+        /* --- COLUMNA DERECHA: PANEL DE ACCIÓN --- */
+        .right-col {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .right-col::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px;
+            background: linear-gradient(90deg, transparent, var(--gold-primary), transparent);
+        }
+
+        .tabs {
+            display: flex; background: var(--input-bg); border-radius: 12px;
+            padding: 5px; margin-bottom: 25px;
+        }
+
+        .tab {
+            flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer;
+            font-size: 0.9rem; font-weight: 600; color: var(--text-muted); transition: all 0.3s;
+        }
+
+        .tab.active { background: var(--bg-pitch); color: var(--gold-primary); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        .form-section { display: none; }
+        .form-section.active { display: block; animation: fadeInForm 0.3s ease; }
+        @keyframes fadeInForm { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label {
+            display: block; font-size: 0.75rem; color: var(--text-muted);
+            margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 500;
+        }
+
+        .input-wrapper { display: flex; gap: 10px; }
+
+        input[type="text"] {
+            flex: 1; background: var(--input-bg); border: 1px solid var(--glass-border);
+            color: white; padding: 14px 16px; border-radius: 10px;
+            font-family: inherit; font-size: 1rem; outline: none; transition: 0.3s;
+        }
+        input[type="text"]:focus { border-color: var(--gold-primary); background: rgba(0,0,0,0.6); }
+
+        .btn-icon {
+            background: var(--input-bg); border: 1px solid var(--glass-border); width: 50px;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted); transition: 0.3s;
+        }
+        .btn-icon:hover { border-color: var(--gold-primary); color: var(--gold-primary); }
+        .btn-icon svg { width: 20px; height: 20px; }
+
+        .row-group { display: flex; gap: 15px; margin-bottom: 20px; }
+        .half-width { flex: 1; }
+
+        .visual-select {
+            background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 10px;
+            padding: 14px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+            font-size: 0.9rem; transition: 0.3s;
+        }
+        .visual-select:hover { border-color: rgba(255,255,255,0.3); }
+        .visual-select.active { border-color: var(--gold-primary); }
+
+        .stepper {
+            display: flex; align-items: center; justify-content: space-between;
+            background: var(--input-bg); border: 1px solid var(--glass-border);
+            border-radius: 10px; padding: 5px;
+        }
+        .step-btn {
+            background: transparent; border: none; color: var(--gold-primary); font-size: 1.5rem;
+            width: 35px; height: 35px; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; border-radius: 6px;
+        }
+        .step-btn:hover { background: rgba(255,255,255,0.05); }
+        .step-val { font-size: 1.1rem; font-weight: 700; }
+
+        .card-style-box {
+            background: var(--input-bg); border: 1px solid var(--glass-border); border-radius: 10px;
+            padding: 12px 15px; display: flex; align-items: center; justify-content: space-between;
+            cursor: pointer; transition: 0.3s; margin-bottom: 25px;
+        }
+        .card-style-box:hover { border-color: var(--gold-primary); }
+        
+        .card-preview-mini { display: flex; align-items: center; gap: 12px; }
+        .deck-icon {
+            width: 30px; height: 40px; background: #fff; border-radius: 4px;
+            position: relative; box-shadow: -2px 2px 5px rgba(0,0,0,0.5);
+        }
+        .deck-icon::after {
+            content: ''; position: absolute; top: 2px; left: 2px; right: 2px; bottom: 2px;
+            border: 1px solid #ddd; background: linear-gradient(135deg, #ff3333 50%, #fff 50%);
+        }
+        .card-name { font-size: 0.9rem; font-weight: 600; }
+        .card-desc { font-size: 0.7rem; color: var(--gold-primary); display: block; }
+
+        .btn-main {
+            width: 100%; background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: black; border: none; padding: 18px; border-radius: 10px;
+            font-family: inherit; font-size: 1.1rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+        }
+        .btn-main:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5); filter: brightness(1.1); }
+
+        @media (max-width: 900px) {
+            body { height: auto; overflow-y: auto; align-items: flex-start; }
+            .app-wrapper { padding: 40px 0; height: auto; }
+            .dashboard-container { grid-template-columns: 1fr; gap: 30px; width: 90%; }
+            .left-col { text-align: center; align-items: center; }
+            .subtitle { justify-content: center; }
+            .subtitle::before { display: none; }
+            .game-selector-grid { max-width: 100%; }
+            .right-col { padding: 20px; }
+            .watermark { font-size: 35vw; }
+            .watermark-trophy { width: 22vw; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor Maestro para la Animación Global de Barrido -->
+    <div class="app-wrapper">
+
+        <div class="dashboard-container">
+            
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="left-col">
+                
+                <!-- MARCA DE AGUA CENTRADA CON COPA 2026 VECTORIAL AVANZADA -->
+                <div class="watermark">
+                    <span>2</span>
+                    <!-- Recreación en SVG nativo de la copa de la imagen -->
+                    <svg viewBox="0 0 200 450" class="watermark-trophy" fill="currentColor">
+                        <defs>
+                            <mask id="trophyMask">
+                                <!-- Fondo blanco = Visible -->
+                                <rect width="100%" height="100%" fill="white"/>
+
+                                <!-- Líneas de corte dinámico (Negro = Transparente) -->
+                                <path d="M 100 105 Q 60 110 20 120" fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                                <path d="M 100 105 Q 120 60 150 25" fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                                <path d="M 100 105 Q 110 150 80 180" fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+
+                                <!-- Hoja de Maple (Canadá - Arriba Izquierda) -->
+                                <path d="M70,40 l3,10 l10,-3 l-5,12 l10,2 l-12,8 l2,12 l-8,-8 l-8,8 l2,-12 l-12,-8 l10,-2 l-5,-12 l10,3 z" fill="black"/>
+                                
+                                <!-- Estrella (EUA - Abajo Izquierda) -->
+                                <polygon points="55,130 59,140 70,140 61,147 65,157 55,151 45,157 49,147 40,140 51,140" fill="black" transform="rotate(-15 55 145)"/>
+                                
+                                <!-- Anillo (México - Derecha) -->
+                                <circle cx="145" cy="110" r="14" fill="none" stroke="black" stroke-width="7"/>
+                            </mask>
+                        </defs>
+
+                        <!-- Globo Superior con Máscara aplicada -->
+                        <circle cx="100" cy="100" r="80" mask="url(#trophyMask)"/>
+
+                        <!-- Cuerpo Principal (Tallo Izquierdo) -->
+                        <path d="M 85 195 Q 110 280 60 380 L 125 380 Q 110 280 95 195 Z" />
+                        
+                        <!-- Cristal Dinámico (Tallo Derecho) -->
+                        <path d="M 115 220 Q 140 280 135 340 Q 120 280 105 235 Z" />
+                        
+                        <!-- Base Curva Inferior -->
+                        <path d="M 55 395 A 150 20 0 0 0 130 395 L 140 430 A 160 25 0 0 1 45 430 Z" />
+                    </svg>
+                    <span>6</span>
+                </div>
+
+                <header>
+                    <div class="subtitle">Torneo Oficial</div>
+                    <h1 id="main-title">Continental</h1>
+                </header>
+
+                <div class="game-selector-grid">
+                    <div class="game-card active" onclick="selectGame(this, 'Continental')">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h12v14H4zm2 2v10h8V8H6zm14-4h-2v14h2V4z"/></svg>
+                        <div>
+                            <h3>Clásico</h3>
+                            <p>Arma tus tercias y corridas antes que el rival.</p>
+                        </div>
+                    </div>
+                    <div class="game-card" onclick="selectGame(this, 'Pesca')">
+                        <svg viewBox="0 0 24 24"><path d="M12 2C9.24 2 7 4.24 7 7v7c0 2.76 2.24 5 5 5s5-2.24 5-5v-1h-2v1c0 1.65-1.35 3-3 3s-3-1.35-3-3V7c0-1.65 1.35-3 3-3s3 1.35 3 3v2h2V7c0-2.76-2.24-5-5-5z"/></svg>
+                        <div>
+                            <h3>Pesca</h3>
+                            <p>Busca pares y roba cartas a tus oponentes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMNA DERECHA -->
+            <div class="right-col">
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('crear', this)">Nueva Sala</div>
+                    <div class="tab" onclick="switchTab('unirse', this)">Unirse</div>
+                </div>
+
+                <!-- TAB CREAR SALA -->
+                <div id="crear-sala" class="form-section active">
+                    <div class="form-group">
+                        <label>Jugador Titular</label>
+                        <div class="input-wrapper">
+                            <input type="text" value="saxaax" placeholder="Tu nombre">
+                            <button class="btn-icon" title="Generar nombre">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"></circle><circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row-group">
+                        <div class="form-group half-width" style="margin-bottom:0;">
+                            <label>Ritmo de Juego</label>
+                            <div class="visual-select active" onclick="toggleSelect(this)">
+                                <span id="mode-text">Tiempo Real</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group half-width" style="margin-bottom:0;">
+                            <label>Cupo Máximo</label>
+                            <div class="stepper">
+                                <button class="step-btn" onclick="updatePlayers(-1)">-</button>
+                                <span class="step-val" id="player-count">4</span>
+                                <button class="step-btn" onclick="updatePlayers(1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Diseño de Baraja</label>
+                        <div class="card-style-box">
+                            <div class="card-preview-mini">
+                                <div class="deck-icon"></div>
+                                <div>
+                                    <span class="card-name">Edición Canadá</span>
+                                    <span class="card-desc">Colección Mundial 2026</span>
+                                </div>
+                            </div>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+                        </div>
+                    </div>
+
+                    <button class="btn-main">Crear Partido</button>
+                </div>
+
+                <!-- TAB UNIRSE -->
+                <div id="unirse-sala" class="form-section">
+                    <div class="form-group">
+                        <label>Jugador Titular</label>
+                        <div class="input-wrapper">
+                            <input type="text" value="saxaax" placeholder="Tu nombre">
+                            <button class="btn-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8" cy="8" r="1.5" fill="currentColor"></circle><circle cx="16" cy="16" r="1.5" fill="currentColor"></circle><circle cx="16" cy="8" r="1.5" fill="currentColor"></circle><circle cx="8" cy="16" r="1.5" fill="currentColor"></circle><circle cx="12" cy="12" r="1.5" fill="currentColor"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Código de Invitación</label>
+                        <input type="text" placeholder="Ej: FINAL26" style="text-align: center; font-size: 1.2rem; letter-spacing: 4px; text-transform: uppercase;">
+                    </div>
+
+                    <button class="btn-main" style="margin-top: 20px;">Ingresar a la Sala</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+            
+            document.querySelectorAll('.form-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(tabId + '-sala').classList.add('active');
+        }
+
+        function selectGame(element, titleName) {
+            document.querySelectorAll('.game-card').forEach(card => card.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('main-title').innerText = titleName;
+        }
+
+        let players = 4;
+        function updatePlayers(change) {
+            players += change;
+            if (players < 2) players = 2;
+            if (players > 8) players = 8;
+            document.getElementById('player-count').innerText = players;
+        }
+
+        function toggleSelect(element) {
+            const textElement = document.getElementById('mode-text');
+            if(textElement.innerText === 'Tiempo Real') {
+                textElement.innerText = 'Asíncrono';
+            } else {
+                textElement.innerText = 'Tiempo Real';
+            }
+        }
+    </script>
+</body>
+</html>

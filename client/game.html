@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
   <title>Continental - Mesa de Juego</title>
   <link rel="stylesheet" href="css/style.css">
-
   <link rel="stylesheet" href="css/game.css">
 </head>
 
@@ -14,113 +13,142 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <span class="tb-title">Continental</span>
-    <span class="pill pill-gold" id="ronda-pill">Ronda 1</span>
-    <span class="pill pill-dim"  id="req-pill">2 tercias</span>
-    <span class="pill pill-dim"  id="mode-pill">●</span>
+    <div class="brand">
+      <span class="tb-title">Continental</span>
+      <span class="brand-sub">Mesa Mundial 2026</span>
+    </div>
+
+    <div class="round-chip">
+      <span id="ronda-pill">Ronda 1</span>
+      <span class="round-separator">-</span>
+      <span id="req-pill">2 tercias</span>
+    </div>
+
+    <span class="pill pill-dim" id="mode-pill">Conectando</span>
+
+    <div class="turn-board" id="turn-board" aria-live="polite">
+      <span class="turn-dot"></span>
+      <span class="turn-copy">
+        <span class="turn-label">Turno actual</span>
+        <span class="turn-name" id="turn-name">-</span>
+      </span>
+    </div>
+
     <div class="scoreboard" id="scoreboard"></div>
   </div>
 
   <!-- MESA -->
   <div class="table" id="main-table">
+    <div class="stadium-ring"></div>
+    <div class="turn-path"></div>
 
-    <!-- Fila de oponentes -->
-    <div class="opponents-row" id="opponents"></div>
+    <div class="table-felt">
+      <div class="world-lines"></div>
 
-    <!-- Zona central: bajadas + mazo/fondo -->
-    <div class="center-zone">
-
+      <!-- Jugadas bajadas sobre la mesa -->
       <div class="table-bajadas-container">
         <div class="table-bajadas" id="table-bajadas"></div>
       </div>
 
-      <div class="deck-area-container">
+      <!-- Mazo/fondo siempre al centro de la mesa -->
+      <div class="center-zone">
+        <div class="center-title">Centro de mesa</div>
+        <div class="deck-area-container">
 
-        <div class="deck-area">
-          <div class="deck-label">Mazo</div>
-          <div class="mazo-wrap" id="mazo-wrap" title="Clic para robar">
-            <div class="cback"></div>
-            <div class="cback"></div>
-            <div class="cback" id="mazo-top"></div>
+          <div class="deck-area">
+            <div class="deck-clickable-hint" id="mazo-hint">Tomar mazo</div>
+            <div class="mazo-wrap" id="mazo-wrap" title="Clic para robar">
+              <div class="cback"></div>
+              <div class="cback"></div>
+              <div class="cback" id="mazo-top"></div>
+            </div>
+            <div class="deck-label">Mazo</div>
+            <div class="mazo-count" id="mazo-count"></div>
           </div>
-          <div class="mazo-count" id="mazo-count"></div>
-          <div class="deck-clickable-hint" id="mazo-hint">▲ ROBAR</div>
+
+          <div class="deck-area">
+            <div class="deck-clickable-hint" id="fondo-hint">Tomar fondo</div>
+            <div id="fondo-wrap"></div>
+            <div class="deck-label">Fondo</div>
+          </div>
+
         </div>
+      </div><!-- /center-zone -->
+    </div>
 
-        <div class="deck-area">
-          <div class="deck-label">Fondo</div>
-          <div id="fondo-wrap"></div>
-          <div class="deck-clickable-hint" id="fondo-hint">▲ TOMAR</div>
-        </div>
+    <!-- Rivales colocados alrededor de la mesa -->
+    <div class="opponents-row" id="opponents"></div>
 
-      </div>
-    </div><!-- /center-zone -->
-
-    <!-- Sección del jugador propio -->
-    <div class="player-section">
+    <!-- Seccion del jugador propio -->
+    <div class="player-section" id="player-section">
+      <div class="castigo-banner" id="castigo-banner"></div>
 
       <div class="player-header">
         <div class="player-label">
-          <span class="pulse-dot" id="pulse-dot"></span>
-          <span id="my-name">—</span>
+          <span class="player-avatar" id="my-avatar">TU</span>
+          <span class="player-copy">
+            <span class="player-you">TU</span>
+            <span id="my-name">-</span>
+            <span class="player-meta" id="hand-count"></span>
+          </span>
         </div>
-        <span class="turn-tag"  id="turn-tag"></span>
-        <span id="hand-count"></span>
+        <div class="action-btns" id="action-btns"></div>
+        <span class="turn-tag" id="turn-tag"></span>
       </div>
       <div id="my-bubble-anchor" class="bubble-anchor"></div>
 
-      <!-- Fila 1: Sobrantes -->
-      <div class="row-label">
-        <span>SOBRANTES</span>
-        <span class="row-desc">Cartas no usadas</span>
-      </div>
-      <div class="hand-zone discard-zone" id="discard-zone"></div>
+      <div class="play-area">
+        <div class="zone-row">
+          <div class="row-label">
+            <span>Sobrantes</span>
+            <span class="row-desc">Cartas no usadas</span>
+          </div>
+          <div class="hand-zone discard-zone" id="discard-zone"></div>
+        </div>
 
-      <!-- Fila 2: Construcción -->
-      <div class="row-label">
-        <span>🔨 CONSTRUCCIÓN</span>
-        <span class="row-desc" id="building-requirement"></span>
+        <div class="zone-row">
+          <div class="row-label">
+            <span>Construccion</span>
+            <span class="row-desc" id="building-requirement"></span>
+          </div>
+          <div class="building-row" id="building-row"></div>
+        </div>
       </div>
-      <div class="building-row" id="building-row"></div>
 
+      <div class="table-status" aria-live="polite">
+        <div class="instr" id="instr"></div>
+        <div class="log-line" id="log-line"></div>
+      </div>
     </div><!-- /player-section -->
-
-    <!-- Barra de acciones -->
-    <div class="action-bar">
-      <div class="castigo-banner" id="castigo-banner"></div>
-      <div class="instr"        id="instr"></div>
-      <div class="action-btns"  id="action-btns"></div>
-      <div class="log-line"     id="log-line"></div>
-    </div>
 
   </div><!-- /table -->
 
   <!-- ===== CHAT / REACCIONES ===== -->
-  <button id="chat-toggle" title="Reacciones y mensajes">💬</button>
+  <button id="chat-toggle" title="Reacciones y mensajes">Chat</button>
 
   <div id="chat-panel">
-    <div class="chat-header">💬 Reacciones</div>
+    <div class="chat-header">Reacciones</div>
     <div class="chat-messages" id="chat-messages"></div>
 
     <div class="chat-section-label">Emojis</div>
     <div class="chat-emojis">
       <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="😂" title="Risa">😂</div>
-      <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="😤" title="Frustración">😤</div>
+      <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="😤" title="Frustracion">😤</div>
       <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="😢" title="Tristeza">😢</div>
       <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="😱" title="Sorpresa">😱</div>
-      <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="🥳" title="Celebración">🥳</div>
+      <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="🥳" title="Celebracion">🥳</div>
       <div class="chat-emoji-btn" data-reaction-type="emoji" data-reaction-text="🤬" title="Enojo">🤬</div>
     </div>
 
-    <div class="chat-section-label">Mensajes rápidos</div>
+    <div class="chat-section-label">Mensajes rapidos</div>
     <div class="chat-quick-msgs">
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡Ya dame mi carta! 😩">¡Ya dame mi carta! 😩</button>
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡Castígate! 😈">¡Castígate! 😈</button>
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡Ya gané, jaja! 🏆">¡Ya gané, jaja! 🏆</button>
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡Qué mala suerte! 😭">¡Qué mala suerte! 😭</button>
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡Buena jugada! 👏">¡Buena jugada! 👏</button>
-      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="¡No mames! 😤">¡No mames! 😤</button>
-      <button class="chat-quick-btn golpe" data-reaction-type="golpe" data-reaction-text="¡¡¡PAGA!!!">🔥 ¡¡¡PAGA!!!</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="Ya dame mi carta">Ya dame mi carta</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="Castigate">Castigate</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="Ya gane, jaja">Ya gane, jaja</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="Que mala suerte">Que mala suerte</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="Buena jugada">Buena jugada</button>
+      <button class="chat-quick-btn" data-reaction-type="msg" data-reaction-text="No mames">No mames</button>
+      <button class="chat-quick-btn golpe" data-reaction-type="golpe" data-reaction-text="PAGA">PAGA</button>
     </div>
   </div>
 
@@ -129,29 +157,29 @@
   <div class="modal-overlay" id="modal-ronda">
     <div class="modal">
       <h2 id="mr-title"></h2>
-      <p  id="mr-msg"></p>
+      <p id="mr-msg"></p>
       <div class="score-rows" id="mr-scores"></div>
       <div class="modal-btns">
-        <button class="btn btn-gold" data-action="ack-ronda">Siguiente Ronda →</button>
+        <button class="btn btn-gold" data-action="ack-ronda">Siguiente ronda</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="modal-juego">
     <div class="modal">
-      <h2>¡Juego Terminado!</h2>
+      <h2>Juego terminado</h2>
       <p>Resultados finales:</p>
       <div class="score-rows" id="mj-scores"></div>
       <div class="modal-btns">
-        <button class="btn btn-gold" data-href="/">Nueva Partida</button>
+        <button class="btn btn-gold" data-href="/">Nueva partida</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="modal-disconnected">
     <div class="modal">
-      <h2>📡 Reconectando</h2>
-      <p>Perdiste conexión. Intentando reconectar...</p>
+      <h2>Reconectando</h2>
+      <p>Perdiste conexion. Intentando reconectar...</p>
     </div>
   </div>
 
@@ -165,10 +193,9 @@
 <script src="js/dragdrop.js"></script>
 <script src="js/notifications.js"></script>
 <script src="js/game.js"></script>
-
 <script src="js/game-chat-audio.js"></script>
-  <div class="page-version game-version">beta v0.4.5</div>
-  <!-- Notification container - FUERA del flujo del juego -->
+
+<div class="page-version game-version">beta v0.4.5</div>
 <div id="notification-container" class="notification-container"></div>
 </body>
 </html>

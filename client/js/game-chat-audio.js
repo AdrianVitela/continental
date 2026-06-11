@@ -57,12 +57,44 @@
     }
   }
 
+  function reproducirSonidoReaccionRobusta(tipo, texto) {
+    const audio = window.AudioSystem;
+    if (!audio) return;
+
+    const txt = String(texto || '').trim();
+    const key = txt.toLowerCase();
+    const joy = String.fromCodePoint(0x1f602);
+    const party = String.fromCodePoint(0x1f973);
+    const angry = String.fromCodePoint(0x1f92c);
+    const frustrated = String.fromCodePoint(0x1f624);
+
+    if (tipo === 'golpe' || key.includes('paga')) {
+      audio.golpe();
+    } else if (tipo === 'emoji') {
+      if (txt === joy || txt === party) {
+        audio.jaja();
+      } else if (txt === angry || txt === frustrated) {
+        audio.caraEnojada();
+      }
+    } else if (key.includes('dame') || key.includes('carta')) {
+      audio.dameCarta();
+    } else if (key.includes('castig')) {
+      audio.castigate();
+    } else if (key.includes('gane') || key.includes('gan')) {
+      audio.gane();
+    } else if (key.includes('mala') || key.includes('suerte')) {
+      audio.caraEnojada();
+    } else if (key.includes('jaja')) {
+      audio.jaja();
+    }
+  }
+
   window.sendReaction = function (tipo, texto) {
     if (typeof G === 'undefined' || !G) return;
     const nombre = G.jugadores[myIdx]?.nombre || 'Yo';
     
     // 1. Reproducir sonido localmente (para quien hace clic)
-    reproducirSonidoReaccion(tipo, texto);
+    reproducirSonidoReaccionRobusta(tipo, texto);
     
     // 2. Enviar al servidor para que lo retransmita a otros
     WS.send({ type: 'reaction', tipo, texto, nombre });
@@ -75,10 +107,7 @@
   };
 
   WS.on('reaction', (msg) => {
-    // Ignorar nuestros propios mensajes (ya los mostramos localmente)
-    if (typeof G !== 'undefined' && G &&
-        G.jugadores[myIdx]?.nombre === msg.nombre) return;
-    
+    // El servidor ya excluye al emisor real al retransmitir.
     // Mostrar la reacción de OTROS jugadores CON sonido
     showReaction(msg, true);
   });
@@ -89,7 +118,7 @@
     
     // Reproducir sonido si se solicita
     if (reproducirSonido) {
-      reproducirSonidoReaccion(tipo, texto);
+      reproducirSonidoReaccionRobusta(tipo, texto);
     }
     
     // Mostrar burbuja visual
@@ -309,11 +338,44 @@
 
 
 document.addEventListener('DOMContentLoaded', function () {
-  document.getElementById('chat-toggle')?.addEventListener('click', toggleChat);
+  const chatToggle = document.getElementById('chat-toggle');
+  if (chatToggle) {
+    chatToggle.textContent = 'Chat';
+    chatToggle.addEventListener('click', toggleChat);
+    chatToggle.addEventListener('click', () => setTimeout(() => { chatToggle.textContent = 'Chat'; }, 0));
+  }
 
   document.querySelectorAll('[data-reaction-type][data-reaction-text]').forEach(function (el) {
+    if (el.dataset.reactionType === 'emoji') {
+      const initialEmojiByTitle = {
+        Risa: String.fromCodePoint(0x1f602),
+        Frustracion: String.fromCodePoint(0x1f624),
+        Tristeza: String.fromCodePoint(0x1f622),
+        Sorpresa: String.fromCodePoint(0x1f631),
+        Celebracion: String.fromCodePoint(0x1f973),
+        Enojo: String.fromCodePoint(0x1f92c)
+      };
+      if (initialEmojiByTitle[el.title]) {
+        el.dataset.reactionText = initialEmojiByTitle[el.title];
+        el.textContent = initialEmojiByTitle[el.title];
+      }
+    }
+
     el.addEventListener('click', function () {
-      sendReaction(el.dataset.reactionType, el.dataset.reactionText);
+      let reactionText = el.dataset.reactionText;
+      if (el.dataset.reactionType === 'emoji') {
+        const emojiByTitle = {
+          Risa: String.fromCodePoint(0x1f602),
+          Frustracion: String.fromCodePoint(0x1f624),
+          Tristeza: String.fromCodePoint(0x1f622),
+          Sorpresa: String.fromCodePoint(0x1f631),
+          Celebracion: String.fromCodePoint(0x1f973),
+          Enojo: String.fromCodePoint(0x1f92c)
+        };
+        reactionText = emojiByTitle[el.title] || reactionText;
+        el.textContent = reactionText;
+      }
+      sendReaction(el.dataset.reactionType, reactionText);
     });
   });
 

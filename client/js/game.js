@@ -104,6 +104,67 @@ function getCurrentDesign() {
     return saved;
 }
 
+function normalizeDeckDesign(design) {
+    if (!design || design === 'mexico') return 'default';
+    return String(design).replace(/[^a-z0-9_]/gi, '').toLowerCase() || 'default';
+}
+
+function getPlayerDesign(jugador, idx) {
+    const explicit = jugador?.cardDesign || jugador?.design || jugador?.diseno || jugador?.diseño;
+    if (explicit) return normalizeDeckDesign(explicit);
+    if (idx === myIdx) return normalizeDeckDesign(getCurrentDesign());
+
+    const pool = ['mexico_mundial', 'usa', 'canada', 'mexico_dm'];
+    return pool[Math.abs(idx) % pool.length];
+}
+
+function getDeckClass(design) {
+    const normalized = normalizeDeckDesign(design);
+    if (normalized === 'usa') return 'deck-usa';
+    if (normalized === 'canada') return 'deck-canada';
+    if (normalized === 'mexico_dm') return 'deck-mexico_dm';
+    if (normalized === 'mexico_mundial') return 'deck-mexico_mundial';
+    return 'deck-default';
+}
+
+function playerInitials(name, fallback = 'J') {
+    const clean = String(name || fallback).trim();
+    const parts = clean.split(/\s+/).filter(Boolean);
+    const letters = parts.length > 1
+        ? `${parts[0][0] || ''}${parts[1][0] || ''}`
+        : clean.slice(0, 2);
+    return letters.toUpperCase();
+}
+
+function getOppSeatSlots(count) {
+    const maps = {
+        1: ['top'],
+        2: ['top', 'right'],
+        3: ['left', 'top', 'right'],
+        4: ['left', 'top-left', 'top-right', 'right'],
+        5: ['left-top', 'left-bottom', 'top-left', 'top-right', 'right'],
+        6: ['left-top', 'left-bottom', 'top-left', 'top-right', 'right-top', 'right-bottom'],
+        7: ['left-top', 'left-bottom', 'top-left', 'top-mid', 'top-right', 'right-top', 'right-bottom']
+    };
+    return maps[Math.min(Math.max(count, 1), 7)] || maps[7];
+}
+
+function getOpponentsInTurnOrder() {
+    if (!G || myIdx < 0) return [];
+    const ordered = [];
+    for (let step = 1; step < G.jugadores.length; step++) {
+        const idx = (myIdx + step) % G.jugadores.length;
+        ordered.push({ jugador: G.jugadores[idx], idx });
+    }
+    return ordered;
+}
+
+function setDeckClass(el, design) {
+    if (!el) return;
+    el.classList.remove('deck-default', 'deck-mexico', 'deck-mexico_dm', 'deck-mexico_mundial', 'deck-usa', 'deck-canada');
+    el.classList.add(getDeckClass(design));
+}
+
 function getJokerVariant(card) {
     const explicitVariant = Number(card?.jokerVariant);
     if (Number.isInteger(explicitVariant) && explicitVariant >= 1 && explicitVariant <= 4) {
@@ -125,6 +186,8 @@ function getJokerImageURL(card, design) {
     switch(design) {
         case 'usa':
             return `imagenes/Estados Unidos/Joker/j${variant}.png`;
+        case 'canada':
+            return `imagenes/Canada/Joker/j${variant}.png`;
         case 'mexico_dm':
             return `imagenes/Mexico/Edicion_DM/Joker/${mexicoFiles[variant - 1]}`;
         case 'mexico_mundial':
@@ -146,6 +209,9 @@ function getCardImageURL(card, design = null) {
     switch(design) {
         case 'usa':
             base = 'imagenes/Estados Unidos/';
+            break;
+        case 'canada':
+            base = 'imagenes/Canada/';
             break;
         case 'mexico_dm':
             base = 'imagenes/Mexico/Edicion_DM/';
@@ -858,6 +924,7 @@ function render() {
     renderPlayerInfo(me);
     renderHand();
     renderActions();
+    updateTableVisualState(me);
 }
 
 function renderScoreboard() {
@@ -869,18 +936,60 @@ function renderScoreboard() {
     `).join('');
 }
 
+function updateTableVisualState(me) {
+    const gameEl = document.getElementById('game');
+    const playerSection = document.getElementById('player-section');
+    const turnBoard = document.getElementById('turn-board');
+    const activePlayer = G?.jugadores?.[G.turno];
+    const myDesign = getPlayerDesign(me, myIdx);
+    const turnDesign = getPlayerDesign(activePlayer, G.turno);
+    const canDrawMazo = isMyTurn() && G.estado === 'esperando_robo';
+    const canDrawFondo = canDrawMazo && !me?.bajado && !!G.fondo_top;
+
+    setDeckClass(gameEl, myDesign);
+    setDeckClass(playerSection, myDesign);
+    setDeckClass(turnBoard, turnDesign);
+
+    playerSection?.classList.toggle('my-turn', isMyTurn());
+    gameEl?.classList.toggle('my-turn', isMyTurn());
+    gameEl?.classList.toggle('can-draw-mazo', canDrawMazo);
+    gameEl?.classList.toggle('can-draw-fondo', canDrawFondo);
+}
+
 function renderOpponents() {
     const opEl = document.getElementById('opponents');
     opEl.innerHTML = '';
-    G.jugadores.forEach((j, i) => {
-        if (i === myIdx) return;
+    const opponents = getOpponentsInTurnOrder();
+    const slots = getOppSeatSlots(opponents.length);
+
+    opponents.forEach(({ jugador: j, idx: i }, pos) => {
+        const seat = slots[pos] || 'top';
+        const design = getPlayerDesign(j, i);
         const d = document.createElement('div');
-        d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
+        d.className = `opp opp-seat-${seat} ${getDeckClass(design)}${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}`;
         d.dataset.idx = i;
+        d.dataset.seat = seat;
+        const cardCount = j.num_cartas ?? j.mano?.length ?? 0;
+        const visibleBacks = Math.min(cardCount, 4);
         d.innerHTML = `
             <div class="opp-name">${j.nombre}${j.bajado ? ' ✓' : ''}${!j.conectado ? ' (desconectado)' : ''} · ${j.pts_t}pts</div>
             <div class="opp-backs">${(j.mano || []).map(() => '<div class="cback-xs"></div>').join('')}</div>
             ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
+        `;
+        d.innerHTML = `
+            <div class="opp-head">
+                <div class="opp-avatar">${playerInitials(j.nombre, 'J')}</div>
+                <div>
+                    <div class="opp-name">${escHtml(j.nombre)}${j.conectado === false ? ' (off)' : ''}</div>
+                    <div class="opp-meta">${cardCount} cartas · ${j.pts_t || 0} pts</div>
+                </div>
+            </div>
+            <div class="opp-states">
+                ${i === G.turno ? '<span class="seat-pill turn">Turno</span>' : ''}
+                ${j.bajado ? '<span class="seat-pill ready">Bajado</span>' : '<span class="seat-pill">Esperando</span>'}
+                ${j.jugadas?.length ? `<span class="seat-pill">${j.jugadas.length} jugada(s)</span>` : ''}
+                <span class="opp-backs">${Array.from({ length: visibleBacks }, () => '<span class="cback-xs"></span>').join('')}</span>
+            </div>
         `;
         opEl.appendChild(d);
     });
@@ -950,12 +1059,53 @@ function renderTableBajadas() {
         });
         bajEl.appendChild(wrap);
     });
+    requestAnimationFrame(updateTableBajadasScroll);
+}
+
+function updateTableBajadasScroll() {
+    const bajEl = document.getElementById('table-bajadas');
+    if (!bajEl) return;
+    bajEl.classList.toggle('has-scroll', bajEl.scrollHeight > bajEl.clientHeight + 8);
+}
+
+function updatePlayerPanelWidth() {
+    const playerSection = document.getElementById('player-section');
+    const buildingRow = document.getElementById('building-row');
+    if (!playerSection || !buildingRow) return;
+
+    const slots = Array.from(buildingRow.querySelectorAll('.building-slot'));
+    const slotCount = Math.max(slots.length, 1);
+    const isMidViewport = window.innerWidth <= 1380;
+    const basePanel = isMidViewport ? 1040 : 1220;
+    const maxPanel = Math.max(320, window.innerWidth - 56);
+    const cardW = 74;
+    const cardGap = 4;
+    const slotChrome = 18;
+    const minSlotW = slotCount >= 3 ? 190 : 270;
+    const slotGap = Math.max(0, slotCount - 1) * 6;
+
+    let neededSlotW = minSlotW;
+    slots.forEach(slot => {
+        const cardCount = slot.querySelectorAll('.card, .joker-card').length;
+        const cardsWidth = cardCount > 0
+            ? cardCount * cardW + Math.max(0, cardCount - 1) * cardGap + slotChrome
+            : minSlotW;
+        neededSlotW = Math.max(neededSlotW, cardsWidth);
+    });
+
+    const neededSlotsWidth = slotCount * neededSlotW + slotGap;
+    const leftColumn = isMidViewport ? 430 : 520;
+    const contentChrome = 20 + 8 + 78 + leftColumn;
+    const desired = Math.ceil(Math.max(basePanel, contentChrome + neededSlotsWidth));
+    playerSection.style.setProperty('--player-panel-width', `${Math.min(desired, maxPanel)}px`);
 }
 
 function renderMazo() {
     document.getElementById('mazo-count').textContent = `${G.mazo_count} cartas`;
     const mazoW = document.getElementById('mazo-wrap');
-    mazoW.style.cursor = isMyTurn() && G.estado === 'esperando_robo' ? 'pointer' : 'default';
+    const canDraw = isMyTurn() && G.estado === 'esperando_robo';
+    mazoW.style.cursor = canDraw ? 'pointer' : 'default';
+    mazoW.onclick = canDraw ? acMazo : null;
 }
 
 function renderFondo(me) {
@@ -985,6 +1135,10 @@ function renderFondo(me) {
 function renderPlayerInfo(me) {
     document.getElementById('my-name').textContent    = me?.nombre || '—';
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+    const avatar = document.getElementById('my-avatar');
+    if (avatar) avatar.textContent = playerInitials(me?.nombre, 'TU');
+    const turnName = document.getElementById('turn-name');
+    if (turnName) turnName.textContent = isMyTurn() ? 'Tu turno' : (G.jugadores[G.turno]?.nombre || '-');
     const dot = document.getElementById('pulse-dot');
     if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';
     document.getElementById('turn-tag').textContent   = isMyTurn() ? '' : `Turno de ${G.jugadores[G.turno]?.nombre || '…'}`;
@@ -1025,6 +1179,7 @@ function renderBuildingRow() {
 
     buildingRow.innerHTML = htmlMap[G.ronda] || '';
     buildingCards.forEach((cards, slotIndex) => updateSlotUI(slotIndex, cards));
+    requestAnimationFrame(updatePlayerPanelWidth);
 }
 
 function renderHand() {
@@ -1044,6 +1199,7 @@ function renderHand() {
     });
 
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+    requestAnimationFrame(updatePlayerPanelWidth);
 }
 
 function createCardElement(c, fromSlot = null) {
@@ -1155,6 +1311,7 @@ function updateSlotUI(slotIndex, cards) {
         countSpan.classList.toggle('valid', esValido);
         slot.classList.toggle('complete', esValido);
     }
+    requestAnimationFrame(updatePlayerPanelWidth);
 }
 
 function handleRemoveFromSlot(cartaId, slotIndex) {
@@ -1314,7 +1471,7 @@ function renderActions() {
       cb.style.display = 'flex';
       cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
       if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-      add('Si, castigarme', 'warning', () => acCastigo(true));
+      add('Si', 'warning', () => acCastigo(true));
       add('No', 'danger', () => acCastigo(false));
     }
     return;
@@ -1327,8 +1484,6 @@ function renderActions() {
       if (instr) instr.textContent = me?.bajado
         ? `${me.nombre} (bajado) — roba del mazo.`
         : 'Tu turno — toma del fondo o roba del mazo.';
-      if (!me?.bajado) add('Tomar fondo', 'warning', acFondo, !G.fondo_top);
-      add('Robar mazo', 'info', acMazo);
       break;
 
     case 'fase_castigo': {
@@ -1338,7 +1493,7 @@ function renderActions() {
         cb.style.display = 'flex';
         cb.innerHTML = `¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
         if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-        add('Si, castigarme', 'warning', () => acCastigo(true));
+        add('Si', 'warning', () => acCastigo(true));
         add('No', 'danger', () => acCastigo(false));
       } else {
         if (cb) cb.style.display = 'none';
@@ -1586,4 +1741,8 @@ window.cancelIntercambio         = cancelIntercambio;
 window.ejecutarIntercambioDirecto  = ejecutarIntercambioDirecto;
 window.ejecutarIntercambioDesdeKey = ejecutarIntercambioDesdeKey;
 
+window.addEventListener('resize', () => {
+    requestAnimationFrame(updateTableBajadasScroll);
+    requestAnimationFrame(updatePlayerPanelWidth);
+});
 document.addEventListener('DOMContentLoaded', init);

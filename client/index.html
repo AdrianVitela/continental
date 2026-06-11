@@ -3,182 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Continental - Lobby</title>
+    <title>Continental | Mundial 2026</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/lobby.css">
 </head>
 <body>
-    <div class="lobby-wrap">
-
-        <!-- LOGO — título cambia según juego seleccionado -->
-        <div class="logo">
-            <h1 id="lobby-title">Continental</h1>
-            <p id="lobby-subtitle">Juego de cartas multijugador</p>
-        </div>
-
-        <!-- ===== SELECTOR DE JUEGO ===== -->
-        <div class="game-selector">
-            <div class="game-sel-btn active" id="gsb-continental" data-game-select="continental">
-                <span class="gsb-icon">🎩</span>
-                <div class="gsb-name">Continental</div>
-                <div class="gsb-desc">Tercias y corridas</div>
-            </div>
-            <div class="game-sel-btn" id="gsb-pesca" data-game-select="pesca">
-                <span class="gsb-icon">🎣</span>
-                <div class="gsb-name">Pesca</div>
-                <div class="gsb-desc">¿Tienes un...?</div>
-            </div>
-        </div>
-
-        <!-- ===== FORMULARIO ===== -->
-        <div class="card-box" id="lobby-setup">
-            <h2>Unirse o Crear Sala</h2>
-            <div class="tabs">
-                <div class="tab active" data-tab-target="crear">Crear sala</div>
-                <div class="tab" data-tab-target="unirse">Unirse</div>
-            </div>
-
-            <!-- CREAR -->
-            <div class="tab-panel active" id="panel-crear">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="crear-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               data-sanitize="name"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" data-open-names="crear" title="Nombres predefinidos">🎲</button>
-                    </div>
-                    <span class="field-hint" id="hint-crear-nombre"></span>
+    <main class="app-wrapper">
+        <section class="dashboard-container" aria-label="Lobby de juegos">
+            <div class="left-col">
+                <div class="watermark" aria-hidden="true">
+                    <span>2</span>
+                    <svg viewBox="0 0 200 450" class="watermark-trophy" fill="currentColor">
+                        <defs>
+                            <mask id="trophy-mask">
+                                <rect width="100%" height="100%" fill="white"/>
+                                <path d="M100 105Q60 110 20 120M100 105Q120 60 150 25M100 105Q110 150 80 180"
+                                      fill="none" stroke="black" stroke-width="8" stroke-linecap="round"/>
+                                <path d="M70 40l3 10 10-3-5 12 10 2-12 8 2 12-8-8-8 8 2-12-12-8 10-2-5-12 10 3z" fill="black"/>
+                                <polygon points="55,130 59,140 70,140 61,147 65,157 55,151 45,157 49,147 40,140 51,140"
+                                         fill="black" transform="rotate(-15 55 145)"/>
+                                <circle cx="145" cy="110" r="14" fill="none" stroke="black" stroke-width="7"/>
+                            </mask>
+                        </defs>
+                        <circle cx="100" cy="100" r="80" mask="url(#trophy-mask)"/>
+                        <path d="M85 195Q110 280 60 380h65q-15-100-30-185z"/>
+                        <path d="M115 220q25 60 20 120-15-60-30-105z"/>
+                        <path d="M55 395a150 20 0 0 0 75 0l10 35a160 25 0 0 1-95 0z"/>
+                    </svg>
+                    <span>6</span>
                 </div>
 
-                <!-- Solo visible en Continental -->
-                <div class="field-group" id="mode-group">
-                    <label>Modo de juego</label>
-                    <div class="mode-row">
-                        <div class="mode-btn active" data-mode="realtime">
-                            Tiempo real <small>Todos conectados</small>
+                <header class="lobby-brand">
+                    <div class="subtitle">Torneo oficial</div>
+                    <h1 id="lobby-title">Continental</h1>
+                    <p id="lobby-subtitle">Juego de cartas multijugador</p>
+                </header>
+
+                <div class="game-selector-grid" aria-label="Selecciona un juego">
+                    <button class="game-card active" id="gsb-continental" data-game-select="continental" type="button">
+                        <svg class="game-card-icon" viewBox="0 0 32 32" aria-hidden="true">
+                            <rect x="4.5" y="9.5" width="14" height="18" rx="2.5"/>
+                            <rect x="9" y="6.5" width="14" height="18" rx="2.5"/>
+                            <rect x="13.5" y="3.5" width="14" height="18" rx="2.5"/>
+                            <path d="M17.5 9.5h6M17.5 13h6M17.5 16.5h3.5"/>
+                        </svg>
+                        <span>
+                            <strong>Continental</strong>
+                            <small>Arma tercias y corridas antes que el rival.</small>
+                        </span>
+                    </button>
+
+                    <button class="game-card" id="gsb-pesca" data-game-select="pesca" type="button">
+                        <svg class="game-card-icon" viewBox="0 0 32 32" aria-hidden="true">
+                            <path d="M5 16c4.2-6 11.5-8.2 18-3.4l4-3.1v13l-4-3.1C16.5 24.2 9.2 22 5 16Z"/>
+                            <circle cx="18.8" cy="14.2" r="1"/>
+                            <path d="M10 13.2c1.5 1.8 1.5 3.8 0 5.6M5 16H2.5"/>
+                        </svg>
+                        <span>
+                            <strong>Pesca</strong>
+                            <small>Busca pares y roba cartas a tus oponentes.</small>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <section id="lobby-setup">
+                    <div class="tabs" role="tablist">
+                        <button class="tab active" data-tab-target="crear" type="button">Nueva sala</button>
+                        <button class="tab" data-tab-target="unirse" type="button">Unirse</button>
+                    </div>
+
+                    <div class="tab-panel active" id="panel-crear">
+                        <div class="field-group">
+                            <label for="crear-nombre">Jugador titular</label>
+                            <div class="input-row">
+                                <input type="text" id="crear-nombre" placeholder="Tu nombre" maxlength="18"
+                                       data-sanitize="name" autocomplete="off" autocorrect="off" spellcheck="false">
+                                <button class="btn-random-name" data-open-names="crear" type="button" title="Nombres predefinidos" aria-label="Elegir nombre predefinido">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="3" y="3" width="18" height="18" rx="3"/>
+                                        <circle cx="8" cy="8" r="1.3"/><circle cx="16" cy="16" r="1.3"/>
+                                        <circle cx="16" cy="8" r="1.3"/><circle cx="8" cy="16" r="1.3"/>
+                                        <circle cx="12" cy="12" r="1.3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <span class="field-hint" id="hint-crear-nombre"></span>
                         </div>
-                        <div class="mode-btn" data-mode="async">
-                            Asíncrono <small>Juega cuando puedas</small>
+
+                        <div class="row-group">
+                            <div class="field-group half-width" id="mode-group">
+                                <label>Ritmo de juego</label>
+                                <div class="mode-row">
+                                    <button class="mode-btn active" data-mode="realtime" type="button">
+                                        Tiempo real
+                                        <small>Todos conectados</small>
+                                    </button>
+                                    <button class="mode-btn" data-mode="async" type="button">
+                                        Asíncrono
+                                        <small>A tu ritmo</small>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="field-group player-count half-width">
+                                <label>Cupo máximo</label>
+                                <div class="pc-ctrl">
+                                    <button class="pc-btn" data-max-delta="-1" type="button" aria-label="Restar jugador">−</button>
+                                    <span class="pc-val" id="max-val">4</span>
+                                    <button class="pc-btn" data-max-delta="1" type="button" aria-label="Agregar jugador">+</button>
+                                </div>
+                            </div>
                         </div>
+
+                        <div class="field-group design-row">
+                            <label>Diseño de baraja</label>
+                            <div class="design-dropdown">
+                                <button class="design-dropdown-btn" id="design-dropdown-btn" type="button" aria-expanded="false">
+                                    <span class="design-current-preview" id="current-design-preview"></span>
+                                    <span class="design-current-copy">
+                                        <span id="current-design-name">México (Día de Muertos)</span>
+                                        <span id="current-design-tag">Edición especial</span>
+                                    </span>
+                                    <span class="design-dropdown-arrow" aria-hidden="true">›</span>
+                                </button>
+                                <div class="design-dropdown-menu" id="design-dropdown-menu"></div>
+                            </div>
+                        </div>
+
+                        <button class="btn-main btn-create-room" data-action="crear-sala" type="button">Crear partido</button>
                     </div>
-                </div>
 
-                <div class="player-count">
-                    <label>Jugadores máx.</label>
-                    <div class="pc-ctrl">
-                        <button class="pc-btn" data-max-delta="-1">−</button>
-                        <span class="pc-val" id="max-val">4</span>
-                        <button class="pc-btn" data-max-delta="1">+</button>
+                    <div class="tab-panel" id="panel-unirse">
+                        <div class="field-group">
+                            <label for="unirse-nombre">Jugador titular</label>
+                            <div class="input-row">
+                                <input type="text" id="unirse-nombre" placeholder="Tu nombre" maxlength="18"
+                                       data-sanitize="name" autocomplete="off" autocorrect="off" spellcheck="false">
+                                <button class="btn-random-name" data-open-names="unirse" type="button" title="Nombres predefinidos" aria-label="Elegir nombre predefinido">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <rect x="3" y="3" width="18" height="18" rx="3"/>
+                                        <circle cx="8" cy="8" r="1.3"/><circle cx="16" cy="16" r="1.3"/>
+                                        <circle cx="16" cy="8" r="1.3"/><circle cx="8" cy="16" r="1.3"/>
+                                        <circle cx="12" cy="12" r="1.3"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <span class="field-hint" id="hint-unirse-nombre"></span>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="unirse-code">Código de invitación</label>
+                            <input type="text" id="unirse-code" placeholder="ABC12" maxlength="5"
+                                   data-sanitize="code" autocomplete="off" autocorrect="off" spellcheck="false">
+                            <span class="field-hint" id="hint-unirse-code"></span>
+                        </div>
+
+                        <button class="btn-main btn-full" data-action="unirse-sala" type="button">Ingresar a la sala</button>
                     </div>
-                </div>
+                </section>
 
-                <!-- Selector de diseño de cartas - versión compacta -->
-<div class="field-group design-row">
-    <label>Estilo de cartas</label>
-    <div class="design-dropdown">
-        <button class="design-dropdown-btn" id="design-dropdown-btn">
-            <span id="current-design-icon"></span>
-            <span id="current-design-name">México (Día de Muertos)</span>
-            <span class="design-dropdown-arrow">▼</span>
-        </button>
-        <div class="design-dropdown-menu" id="design-dropdown-menu">
-            <div class="design-option" data-design="default">
-                <span>🃏</span> Predeterminado
-                <span class="design-check">✓</span>
-            </div>
-            <div class="design-option" data-design="usa">
-                <span>🇺🇸</span> Estados Unidos
-                <span class="design-check">✓</span>
-            </div>
-            <div class="design-option" data-design="mexico_dm">
-                <span>💀</span> México (Día de Muertos)
-                <span class="design-check">✓</span>
-            </div>
-            <div class="design-option" data-design="mexico_mundial">
-                <span>🌎</span> México (Mundial)
-                <span class="design-check">✓</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-                <button class="btn btn-gold btn-create-room" data-action="crear-sala">Crear Sala</button>
-            </div>
-
-            <!-- UNIRSE -->
-            <div class="tab-panel" id="panel-unirse">
-                <div class="field-group">
-                    <label>Tu nombre</label>
-                    <div class="input-row">
-                        <input type="text" id="unirse-nombre"
-                               placeholder="Nombre de jugador"
-                               maxlength="18"
-                               data-sanitize="name"
-                               autocomplete="off" autocorrect="off" spellcheck="false">
-                        <button class="btn-random-name" data-open-names="unirse" title="Nombres predefinidos">🎲</button>
+                <section id="lobby-room">
+                    <div class="room-kicker">Sala preparada</div>
+                    <div class="room-code-display">
+                        <div class="code" id="room-code-display" data-action="copy-code" title="Clic para copiar">????</div>
+                        <p>Comparte este código con tus amigos</p>
                     </div>
-                    <span class="field-hint" id="hint-unirse-nombre"></span>
-                </div>
-
-                <div class="field-group">
-                    <label>Código de sala</label>
-                    <input type="text" id="unirse-code"
-                           placeholder="Ej: ABC12"
-                           maxlength="5"
-                           data-sanitize="code"
-                           autocomplete="off" autocorrect="off" spellcheck="false">
-                    <span class="field-hint" id="hint-unirse-code"></span>
-                </div>
-
-                <button class="btn btn-gold btn-full" data-action="unirse-sala">Unirse →</button>
+                    <div class="separator"></div>
+                    <div class="player-list" id="player-list"></div>
+                    <div class="waiting-msg" id="waiting-msg">Esperando jugadores<span class="dot-pulse"></span></div>
+                    <button class="btn-main" id="btn-start" data-action="iniciar-juego" type="button">Iniciar partida</button>
+                </section>
             </div>
-        </div>
+        </section>
+    </main>
 
-        <!-- ===== SALA DE ESPERA ===== -->
-        <div class="card-box" id="lobby-room">
-            <div class="room-code-display">
-                <div class="code" id="room-code-display" data-action="copy-code" title="Clic para copiar">????</div>
-                <p>Comparte este código con tus amigos</p>
-            </div>
-            <div class="separator"></div>
-            <div class="player-list" id="player-list"></div>
-            <div class="separator"></div>
-            <div class="waiting-msg" id="waiting-msg">
-                Esperando jugadores<span class="dot-pulse"></span>
-            </div>
-            <button class="btn btn-gold" id="btn-start" data-action="iniciar-juego">
-                ▶ Iniciar Partida
-            </button>
-        </div>
-
-    </div>
-
-    <!-- ===== MODAL NOMBRES PREDEFINIDOS ===== -->
     <div class="names-modal-overlay" id="names-modal">
         <div class="names-modal">
-            <h3>🎲 Elige un nombre</h3>
+            <h3>Elige un nombre</h3>
             <div class="names-grid" id="names-grid"></div>
             <div class="names-modal-footer">
-                <button class="btn-modal-close" data-action="close-names-modal">Cancelar</button>
-                <button class="btn-modal-shuffle" data-action="shuffle-names">🔀 Otros nombres</button>
+                <button class="btn-modal-close" data-action="close-names-modal" type="button">Cancelar</button>
+                <button class="btn-modal-shuffle" data-action="shuffle-names" type="button">Otros nombres</button>
             </div>
         </div>
     </div>
 
     <div id="toast"></div>
+    <div class="page-version lobby-version">beta v0.5.0</div>
+    <div id="notification-container" class="notification-container"></div>
 
     <script src="js/lobby-game-selector.js"></script>
-
     <script src="js/lobby-design-dropdown.js"></script>
-
     <script src="js/socket.js"></script>
     <script src="js/lobby.js"></script>
     <script src="js/notifications.js"></script>
-    <div class="page-version lobby-version">beta v0.5.0</div>
-        <!-- Notification container for modern notifications -->
-<div id="notification-container" class="notification-container"></div>
 </body>
 </html>

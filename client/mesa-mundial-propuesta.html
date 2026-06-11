@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Continental - Mesa Mundial Propuesta</title>
+  <style>
+    :root {
+      --bg: #080b0d;
+      --felt: #183428;
+      --felt-2: #10251d;
+      --rail: #1b1110;
+      --rail-hi: #5b3425;
+      --gold: #c8a045;
+      --gold-hi: #e8c870;
+      --ink: #f5f0e7;
+      --muted: #a99f8f;
+      --red: #ec4d2b;
+      --blue: #006ce3;
+      --warning: #ef9400;
+      --success: #3ebd61;
+      --danger: #ec4d2b;
+      --white: #f4efe6;
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: Inter, "Segoe UI", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(214,169,76,.18), transparent 34%),
+        radial-gradient(circle at 16% 28%, rgba(29,78,143,.18), transparent 24%),
+        radial-gradient(circle at 84% 30%, rgba(216,58,58,.15), transparent 24%),
+        linear-gradient(180deg, #101616, #050607 72%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, #000, transparent 78%);
+    }
+
+    .screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 18px 22px 20px;
+      display: grid;
+      grid-template-rows: 54px 1fr;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      z-index: 5;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.35rem, 2vw, 1.95rem);
+      letter-spacing: .08em;
+      color: var(--gold-hi);
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .round-chip {
+      min-width: 220px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      text-align: center;
+      color: #fff0d0;
+      background: rgba(239,148,0,.16);
+      border: 1px solid rgba(239,148,0,.62);
+      box-shadow: 0 10px 26px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.05), 0 0 18px rgba(239,148,0,.18);
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .turn-board {
+      justify-self: end;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid color-mix(in srgb, var(--deck-a, var(--blue)) 62%, transparent);
+      border-radius: 14px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--deck-a, var(--blue)) 16%, transparent), color-mix(in srgb, var(--deck-b, var(--blue)) 10%, transparent)),
+        rgba(0,0,0,.26);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 0 22px var(--deck-glow, rgba(0,108,227,.14));
+    }
+
+    .turn-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--deck-a, var(--blue));
+      box-shadow: 0 0 14px var(--deck-a, var(--blue));
+    }
+
+    .turn-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .turn-label {
+      color: #d7eaff;
+      font-size: .73rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .turn-name {
+      color: var(--white);
+      font-size: .9rem;
+      font-weight: 700;
+    }
+
+    .arena {
+      position: relative;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+    }
+
+    .table-wrap {
+      position: relative;
+      width: min(1120px, 96vw);
+      height: min(660px, calc(100vh - 104px));
+      min-height: 500px;
+    }
+
+    .stadium-ring {
+      position: absolute;
+      inset: -44px -64px;
+      border-radius: 52px;
+      opacity: .5;
+      background:
+        linear-gradient(90deg, transparent 0 8%, rgba(255,255,255,.12) 8% 9%, transparent 9% 18%),
+        radial-gradient(ellipse at center, transparent 58%, rgba(214,169,76,.14) 59%, transparent 63%);
+      mask-image: radial-gradient(ellipse at center, transparent 0 58%, #000 59% 70%, transparent 77%);
+      pointer-events: none;
+    }
+
+    .table {
+      position: absolute;
+      inset: 36px 92px;
+      border-radius: 42px;
+      background:
+        radial-gradient(ellipse at center, rgba(255,255,255,.08), transparent 46%),
+        linear-gradient(135deg, var(--felt), var(--felt-2));
+      border: 18px solid transparent;
+      box-shadow:
+        var(--shadow),
+        inset 0 0 0 2px rgba(255,255,255,.08),
+        inset 0 0 0 16px rgba(0,0,0,.14);
+    }
+
+    .table::before {
+      content: "";
+      position: absolute;
+      inset: -22px;
+      border-radius: 52px;
+      z-index: -1;
+      background:
+        linear-gradient(135deg, #70442b, var(--rail), #392019 60%, #855133);
+      box-shadow:
+        inset 0 5px 12px rgba(255,255,255,.14),
+        inset 0 -16px 28px rgba(0,0,0,.45),
+        0 22px 54px rgba(0,0,0,.6);
+    }
+
+    .table::after {
+      content: "";
+      position: absolute;
+      inset: 22px;
+      border-radius: 28px;
+      border: 1px solid rgba(214,169,76,.22);
+      pointer-events: none;
+    }
+
+    .world-lines {
+      position: absolute;
+      inset: 42px;
+      border-radius: 30px;
+      pointer-events: none;
+      opacity: .35;
+      background:
+        linear-gradient(90deg, transparent calc(50% - 1px), rgba(244,239,230,.18) calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+        radial-gradient(circle at center, transparent 0 74px, rgba(244,239,230,.17) 75px 77px, transparent 78px);
+    }
+
+    .center-felt {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(340px, 42%);
+      min-height: 202px;
+      transform: translate(-50%, -50%);
+      border-radius: 24px;
+      border: 1px solid rgba(214,169,76,.2);
+      background: rgba(0,0,0,.12);
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: center;
+      justify-items: center;
+      padding: 18px 22px;
+    }
+
+    .meld-board {
+      position: absolute;
+      left: 70px;
+      right: 70px;
+      top: 58px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .meld-pile {
+      position: relative;
+      overflow: hidden;
+      min-width: 142px;
+      padding: 8px 9px 9px;
+      border-radius: 12px;
+      border: 1px solid rgba(214,169,76,.2);
+      background: rgba(0,0,0,.24);
+      box-shadow: 0 10px 22px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    .meld-pile::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--deck-a), var(--deck-b));
+    }
+
+    .meld-title {
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: .56rem;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .meld-cards {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .meld-card {
+      width: 32px;
+      height: 46px;
+      border-radius: 5px;
+      padding: 4px;
+      display: grid;
+      place-items: center;
+      color: #171717;
+      background: var(--white);
+      border: 1px solid rgba(0,0,0,.14);
+      box-shadow: 0 5px 10px rgba(0,0,0,.25);
+      font-family: Georgia, serif;
+      font-size: .72rem;
+      font-weight: 900;
+      line-height: .95;
+      text-align: center;
+    }
+
+    .center-title {
+      color: var(--gold-hi);
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .deck-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 38px;
+    }
+
+    .deck-item {
+      position: relative;
+      display: grid;
+      justify-items: center;
+    }
+
+    .deck-stack,
+    .discard-card {
+      width: 78px;
+      height: 112px;
+      border-radius: 9px;
+      box-shadow: 0 14px 24px rgba(0,0,0,.42);
+    }
+
+    .deck-stack {
+      position: relative;
+      background: linear-gradient(135deg, #102a5c, #07152e);
+      border: 2px solid rgba(255,255,255,.8);
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+
+    .deck-stack::before,
+    .deck-stack::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: inherit;
+      border: inherit;
+      z-index: -1;
+    }
+
+    .deck-stack::before { transform: translate(5px, 5px); opacity: .78; }
+    .deck-stack::after { transform: translate(10px, 10px); opacity: .45; }
+
+    .deck-pattern {
+      position: absolute;
+      inset: 10px;
+      border-radius: 6px;
+      background:
+        linear-gradient(90deg, transparent 0 42%, rgba(255,255,255,.72) 42% 58%, transparent 58%),
+        linear-gradient(0deg, transparent 0 42%, rgba(255,255,255,.72) 42% 58%, transparent 58%),
+        radial-gradient(circle, rgba(214,169,76,.9) 0 8px, transparent 9px);
+      opacity: .7;
+    }
+
+    .discard-card {
+      background: var(--white);
+      color: #161616;
+      border: 1px solid rgba(0,0,0,.18);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 8px;
+      font-family: Georgia, serif;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+
+    .deck-stack:hover,
+    .discard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 18px 30px rgba(0,0,0,.48), 0 0 0 2px rgba(214,169,76,.48);
+    }
+
+    .discard-card .mid {
+      display: grid;
+      place-items: center;
+      color: var(--red);
+      font-size: 2.1rem;
+    }
+
+    .discard-card .bot {
+      justify-self: end;
+      transform: rotate(180deg);
+    }
+
+    .deck-label {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: .62rem;
+      letter-spacing: .13em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .deck-callout {
+      position: absolute;
+      right: calc(100% + 12px);
+      top: 50%;
+      transform: translateY(-50%);
+      min-width: max-content;
+      padding: 7px 10px;
+      border-radius: 999px;
+      color: var(--callout-text, #dcecff);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--callout-a, var(--blue)) 18%, transparent), color-mix(in srgb, var(--callout-b, var(--blue)) 10%, transparent)),
+        rgba(0,0,0,.48);
+      border: 1px solid color-mix(in srgb, var(--callout-a, var(--blue)) 68%, transparent);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 10px 24px rgba(0,0,0,.35),
+        0 0 20px color-mix(in srgb, var(--callout-a, var(--blue)) 28%, transparent);
+      font-size: .62rem;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      animation: calloutFloat 1.2s ease-in-out infinite;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+      --callout-a: var(--blue);
+      --callout-b: #6db2ff;
+      --callout-text: #dcecff;
+    }
+
+    body.my-turn .deck-callout {
+      opacity: 1;
+    }
+
+    .deck-callout::after {
+      content: "";
+      position: absolute;
+      left: 100%;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 7px solid transparent;
+      border-left-color: color-mix(in srgb, var(--callout-a, var(--blue)) 68%, transparent);
+    }
+
+    .deck-item + .deck-item .deck-callout {
+      right: auto;
+      left: calc(100% + 12px);
+      --callout-a: var(--warning);
+      --callout-b: var(--danger);
+      --callout-text: #fff0d0;
+    }
+
+    .deck-item + .deck-item .deck-callout::after {
+      left: auto;
+      right: 100%;
+      border-left-color: transparent;
+      border-right-color: color-mix(in srgb, var(--callout-a, var(--warning)) 68%, transparent);
+    }
+
+    @keyframes calloutFloat {
+      0%,100% { transform: translateY(-50%) translateX(0); }
+      50% { transform: translateY(-50%) translateX(-4px); }
+    }
+
+    .deck-item + .deck-item .deck-callout {
+      animation-name: calloutFloatRight;
+    }
+
+    @keyframes calloutFloatRight {
+      0%,100% { transform: translateY(-50%) translateX(0); }
+      50% { transform: translateY(-50%) translateX(4px); }
+    }
+
+    .player-seat {
+      position: absolute;
+      width: 214px;
+      min-height: 86px;
+      padding: 11px 12px 10px;
+      border: 1px solid color-mix(in srgb, var(--deck-a) 26%, rgba(255,255,255,.12));
+      border-radius: 16px;
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--deck-a) 26%, transparent), color-mix(in srgb, var(--deck-b) 18%, transparent)),
+        linear-gradient(180deg, rgba(255,255,255,.06), transparent 44%),
+        var(--deck-bg, rgba(10,12,14,.76));
+      box-shadow: 0 12px 28px rgba(0,0,0,.38), 0 0 26px var(--deck-glow, rgba(0,0,0,0));
+      backdrop-filter: blur(12px);
+      transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+      --deck-a: var(--gold);
+      --deck-b: #fff3c4;
+      --deck-bg: rgba(10,12,14,.76);
+      --deck-glow: rgba(200,160,69,.16);
+    }
+
+    .player-seat::before {
+      content: "";
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: -1px;
+      height: 4px;
+      border-radius: 0 0 999px 999px;
+      background: linear-gradient(90deg, var(--deck-a), var(--deck-b));
+      box-shadow: 0 0 18px color-mix(in srgb, var(--deck-a) 55%, transparent);
+    }
+
+    .deck-mexico {
+      --deck-a: #0f8f4d;
+      --deck-b: #d62434;
+      --deck-bg: rgba(6,54,32,.86);
+      --deck-glow: rgba(15,143,77,.22);
+    }
+
+    .deck-usa {
+      --deck-a: #234f9c;
+      --deck-b: #c92f3c;
+      --deck-bg: rgba(13,24,58,.88);
+      --deck-glow: rgba(35,79,156,.24);
+    }
+
+    .deck-canada {
+      --deck-a: #f4f0e8;
+      --deck-b: #d71920;
+      --deck-bg: rgba(70,19,22,.88);
+      --deck-glow: rgba(215,25,32,.2);
+    }
+
+    .player-seat.active {
+      border-color: color-mix(in srgb, var(--deck-a) 78%, white 10%);
+      box-shadow:
+        0 16px 36px rgba(0,0,0,.48),
+        0 0 0 1px color-mix(in srgb, var(--deck-b) 46%, transparent),
+        0 0 26px color-mix(in srgb, var(--deck-a) 42%, transparent),
+        0 0 34px color-mix(in srgb, var(--deck-b) 24%, transparent);
+    }
+
+    .player-seat.active::after {
+      content: "";
+      position: absolute;
+      inset: -7px;
+      border-radius: 21px;
+      border: 1px solid color-mix(in srgb, var(--deck-a) 52%, transparent);
+      box-shadow:
+        0 0 20px color-mix(in srgb, var(--deck-a) 34%, transparent),
+        inset 0 0 12px color-mix(in srgb, var(--deck-b) 18%, transparent);
+      animation: seatPulse 1.3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes seatPulse {
+      0%,100% { opacity: .35; transform: scale(.98); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+
+    .seat-bottom {
+      left: 50%;
+      bottom: -8px;
+      width: min(860px, 86vw);
+      min-height: 204px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .seat-bottom.active { transform: translateX(-50%) translateY(-4px); }
+
+    .seat-top {
+      left: 50%;
+      top: -28px;
+      transform: translateX(-50%);
+    }
+
+    .seat-top.active { transform: translateX(-50%) translateY(4px); }
+
+    .seat-left {
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .seat-left.active { transform: translateY(-50%) translateX(4px); }
+
+    .seat-right {
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .seat-right.active { transform: translateY(-50%) translateX(-4px); }
+
+    .seat-info {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 9px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--white);
+      background:
+        linear-gradient(135deg, color-mix(in srgb, var(--deck-a) 18%, transparent), color-mix(in srgb, var(--deck-b) 12%, transparent)),
+        rgba(0,0,0,.32);
+      font-weight: 900;
+      border: 1px solid color-mix(in srgb, var(--deck-a) 64%, rgba(255,255,255,.24));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 0 16px color-mix(in srgb, var(--deck-a) 30%, transparent);
+    }
+
+    .seat-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--white);
+      font-size: .92rem;
+      font-weight: 900;
+    }
+
+    .seat-meta {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .68rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .seat-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 8px;
+    }
+
+    .stat-pill {
+      padding: 3px 7px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.07);
+      font-size: .63rem;
+      font-weight: 800;
+    }
+
+    .stat-pill.ready {
+      color: #91edb8;
+      border-color: rgba(145,237,184,.28);
+      background: rgba(34,107,64,.18);
+    }
+
+    .card-fan {
+      display: flex;
+      justify-content: center;
+      margin-top: 9px;
+      padding-left: 16px;
+    }
+
+    .back-card {
+      width: 23px;
+      height: 34px;
+      margin-left: -8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,.5);
+      background:
+        linear-gradient(90deg, transparent 42%, rgba(255,255,255,.68) 42% 58%, transparent 58%),
+        linear-gradient(0deg, transparent 42%, rgba(255,255,255,.68) 42% 58%, transparent 58%),
+        linear-gradient(135deg, #112d60, #0b1734);
+      box-shadow: -2px 2px 6px rgba(0,0,0,.35);
+    }
+
+    .hand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .bottom-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .player-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 280px;
+    }
+
+    .action-pill,
+    .state-pill {
+      min-height: 28px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font: inherit;
+      font-size: .62rem;
+      font-weight: 950;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .state-pill {
+      display: inline-flex;
+      align-items: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.055);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+
+    .state-pill.ready {
+      color: #b9f8cf;
+      border-color: rgba(62,189,97,.48);
+      background: rgba(62,189,97,.14);
+    }
+
+    .action-pill {
+      cursor: pointer;
+      color: var(--ink);
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.13);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      transition: transform .16s ease, opacity .16s ease, box-shadow .16s ease;
+    }
+
+    .action-pill:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,.26);
+    }
+
+    .action-pill:disabled {
+      opacity: .42;
+      cursor: not-allowed;
+    }
+
+    .action-success {
+      color: #dfffe9;
+      border-color: rgba(62,189,97,.6);
+      background: rgba(62,189,97,.18);
+    }
+
+    .action-info {
+      color: #dcecff;
+      border-color: rgba(0,108,227,.62);
+      background: rgba(0,108,227,.18);
+    }
+
+    .action-warning {
+      color: #fff0d0;
+      border-color: rgba(239,148,0,.68);
+      background: rgba(239,148,0,.2);
+    }
+
+    .action-danger {
+      color: #ffe0d8;
+      border-color: rgba(236,77,43,.64);
+      background: rgba(236,77,43,.18);
+    }
+
+    .question-drawer {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      z-index: 1;
+      width: min(360px, calc(100% - 160px));
+      padding: 8px 14px;
+      border-radius: 14px 14px 0 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 16px);
+      transition: transform .34s cubic-bezier(.2,.85,.22,1), opacity .22s ease;
+      text-align: center;
+      background: rgba(10,12,14,.92);
+      border: 1px solid rgba(239,148,0,.62);
+      border-bottom: 0;
+      box-shadow: 0 -12px 28px rgba(0,0,0,.36), 0 0 20px rgba(239,148,0,.18);
+    }
+
+    .seat-bottom.prompt-open .question-drawer {
+      opacity: 1;
+      transform: translate(-50%, -92%);
+    }
+
+    .seat-bottom.prompt-closing .question-drawer {
+      transform: translate(-50%, 18px);
+      opacity: 0;
+    }
+
+    .question-drawer[data-tone="warning"] {
+      border-color: rgba(239,148,0,.68);
+      box-shadow: 0 -12px 28px rgba(0,0,0,.36), 0 0 22px rgba(239,148,0,.22);
+    }
+
+    .question-drawer[data-tone="info"] {
+      border-color: rgba(0,108,227,.68);
+      box-shadow: 0 -12px 28px rgba(0,0,0,.36), 0 0 22px rgba(0,108,227,.22);
+    }
+
+    .question-title {
+      display: block;
+      color: var(--white);
+      font-size: .82rem;
+      font-weight: 950;
+    }
+
+    .question-sub {
+      display: block;
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: .62rem;
+      font-weight: 700;
+    }
+
+    .play-area {
+      display: grid;
+      grid-template-rows: auto auto;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .zone-row {
+      display: grid;
+      grid-template-columns: 88px 1fr;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .zone-label {
+      color: var(--gold-hi);
+      font-size: .6rem;
+      font-weight: 950;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .zone-label span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: .52rem;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: none;
+    }
+
+    .card-strip,
+    .build-slots {
+      min-width: 0;
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .build-slot {
+      flex: 1 1 0;
+      min-width: 132px;
+      min-height: 66px;
+      padding: 5px;
+      border-radius: 10px;
+      border: 1px dashed rgba(214,169,76,.34);
+      background: rgba(0,0,0,.22);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .build-slot.complete {
+      border-style: solid;
+      border-color: rgba(94,213,139,.64);
+      background: rgba(30,96,56,.22);
+    }
+
+    .slot-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: .52rem;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .slot-cards {
+      display: flex;
+      justify-content: center;
+      gap: 3px;
+      min-height: 45px;
+    }
+
+    .card {
+      width: 62px;
+      height: 90px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      background: var(--white);
+      color: #151515;
+      border: 1px solid rgba(0,0,0,.16);
+      box-shadow: 0 8px 18px rgba(0,0,0,.35);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 7px;
+      font-family: Georgia, serif;
+      font-weight: 900;
+      transition: transform .16s ease, box-shadow .16s ease;
+      cursor: pointer;
+    }
+
+    .seat-bottom .card {
+      width: 42px;
+      height: 60px;
+      padding: 5px;
+      border-radius: 6px;
+      font-size: .72rem;
+    }
+
+    .seat-bottom .card .mid {
+      font-size: 1.15rem;
+    }
+
+    .ghost-card {
+      width: 34px;
+      height: 48px;
+      border-radius: 6px;
+      border: 1px dashed rgba(255,255,255,.22);
+      background: rgba(255,255,255,.035);
+    }
+
+    .card:hover {
+      transform: translateY(-12px);
+      box-shadow: 0 16px 26px rgba(0,0,0,.42), 0 0 0 2px rgba(214,169,76,.55);
+    }
+
+    .card .mid {
+      display: grid;
+      place-items: center;
+      font-size: 1.8rem;
+    }
+
+    .card .bot {
+      justify-self: end;
+      transform: rotate(180deg);
+    }
+
+    .red { color: var(--red); }
+    .black { color: #171717; }
+
+    .turn-path {
+      position: absolute;
+      inset: 78px 142px;
+      border-radius: 34px;
+      border: 1px dashed rgba(214,169,76,.26);
+      pointer-events: none;
+    }
+
+    .turn-marker {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--gold-hi);
+      box-shadow: 0 0 20px var(--gold), 0 0 40px rgba(214,169,76,.6);
+      transition: left .35s ease, top .35s ease;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+    }
+
+    .watermark {
+      position: fixed;
+      left: 16px;
+      bottom: 12px;
+      color: rgba(214,169,76,.38);
+      font-size: .65rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    @media (max-width: 860px) {
+      .screen {
+        padding: 10px;
+        grid-template-rows: auto 1fr;
+      }
+
+      .hud {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .round-chip,
+      .turn-board {
+        justify-self: stretch;
+        min-width: 0;
+      }
+
+      .table-wrap {
+        width: 100%;
+        min-height: 540px;
+        height: calc(100vh - 150px);
+      }
+
+      .table {
+        inset: 74px 28px 72px;
+        border-width: 12px;
+        border-radius: 30px;
+      }
+
+      .center-felt {
+        left: 50%;
+        top: 50%;
+        width: min(190px, calc(100% - 150px));
+        min-height: 92px;
+        padding: 8px;
+        transform: translate(-50%, -50%);
+      }
+
+      .meld-board {
+        left: 18px;
+        right: 18px;
+        top: 58px;
+        gap: 6px;
+      }
+
+      .meld-pile {
+        min-width: 0;
+        flex: 1;
+        padding: 7px 6px 8px;
+      }
+
+      .meld-title {
+        font-size: .46rem;
+      }
+
+      .meld-card {
+        width: 24px;
+        height: 35px;
+        font-size: .56rem;
+      }
+
+      .deck-row { gap: 14px; }
+      .deck-stack, .discard-card { width: 42px; height: 60px; }
+      .discard-card { padding: 5px; font-size: .58rem; }
+      .discard-card .mid { font-size: 1.2rem; }
+      .deck-label { margin-top: 5px; font-size: .45rem; }
+      .deck-pattern { inset: 7px; }
+
+      .player-seat {
+        width: 174px;
+        min-height: 74px;
+        padding: 8px;
+      }
+
+      .player-seat:not(.seat-bottom) {
+        width: 122px;
+        min-height: 68px;
+        padding: 7px;
+      }
+
+      .seat-bottom {
+        width: calc(100% - 16px);
+        min-height: 188px;
+        bottom: 58px;
+      }
+
+      .seat-top { top: 6px; }
+      .seat-left { left: 4px; top: 45%; }
+      .seat-right { right: 4px; top: 45%; }
+
+      .avatar { width: 34px; height: 34px; font-size: .72rem; }
+      .seat-info { grid-template-columns: 34px 1fr; gap: 7px; }
+      .seat-name { font-size: .78rem; }
+      .seat-meta, .stat-pill { font-size: .56rem; }
+      .card-fan { margin-top: 7px; }
+      .back-card { width: 18px; height: 27px; }
+      .player-seat:not(.seat-bottom) .card-fan { display: none; }
+      .player-seat:not(.seat-bottom) .seat-stats { display: none; }
+      .card { width: 42px; height: 62px; padding: 5px; }
+      .card .mid { font-size: 1.2rem; }
+      .hand { gap: 4px; }
+
+      .bottom-head {
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .player-actions {
+        min-width: 0;
+        max-width: 174px;
+        gap: 4px;
+      }
+
+      .action-pill,
+      .state-pill {
+        min-height: 24px;
+        padding: 4px 7px;
+        font-size: .48rem;
+      }
+
+      .question-drawer {
+        width: min(286px, calc(100% - 34px));
+        padding: 7px 10px;
+      }
+
+      .question-title {
+        font-size: .68rem;
+      }
+
+      .question-sub {
+        font-size: .52rem;
+      }
+
+      .zone-row {
+        grid-template-columns: 78px 1fr;
+        gap: 6px;
+      }
+
+      .zone-label {
+        font-size: .52rem;
+      }
+
+      .zone-label span {
+        font-size: .46rem;
+      }
+
+      .build-slots {
+        gap: 5px;
+      }
+
+      .build-slot {
+        min-width: 118px;
+        min-height: 58px;
+      }
+
+      .seat-bottom .card {
+        width: 34px;
+        height: 49px;
+        padding: 4px;
+      }
+
+      .seat-bottom .card .mid {
+        font-size: .9rem;
+      }
+
+      .ghost-card {
+        width: 28px;
+        height: 40px;
+      }
+
+      .deck-callout,
+      .deck-item + .deck-item .deck-callout {
+        left: auto;
+        right: calc(100% + 7px);
+        top: 50%;
+        padding: 4px 6px;
+        font-size: .42rem;
+        transform: translateY(-50%);
+      }
+
+      .deck-item + .deck-item .deck-callout {
+        left: calc(100% + 7px);
+        right: auto;
+      }
+
+      .deck-callout::after,
+      .deck-item + .deck-item .deck-callout::after {
+        left: 100%;
+        right: auto;
+        top: 50%;
+        bottom: auto;
+        transform: translateY(-50%);
+        border: 5px solid transparent;
+        border-left-color: color-mix(in srgb, var(--callout-a, var(--blue)) 68%, transparent);
+        border-top-color: transparent;
+      }
+
+      .deck-item + .deck-item .deck-callout::after {
+        left: auto;
+        right: 100%;
+        border-left-color: transparent;
+        border-right-color: color-mix(in srgb, var(--callout-a, var(--warning)) 68%, transparent);
+      }
+
+      @keyframes calloutFloat {
+        0%,100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(-3px); }
+      }
+
+      @keyframes calloutFloatRight {
+        0%,100% { transform: translateY(-50%) translateX(0); }
+        50% { transform: translateY(-50%) translateX(3px); }
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <header class="hud">
+      <div class="brand">
+        <h1 class="brand-title">Continental</h1>
+        <div class="brand-sub">Mesa Mundial 2026</div>
+      </div>
+
+      <div class="round-chip">Ronda 2 · Tercia + Corrida</div>
+
+      <div class="turn-board deck-mexico" id="turn-board" aria-live="polite">
+        <span class="turn-dot"></span>
+        <span class="turn-copy">
+          <span class="turn-label">Turno actual</span>
+          <span class="turn-name" id="turn-name">Tu turno</span>
+        </span>
+      </div>
+    </header>
+
+    <section class="arena" aria-label="Mesa de juego">
+      <div class="table-wrap">
+        <div class="stadium-ring"></div>
+        <div class="turn-path"></div>
+        <div class="turn-marker" id="turn-marker"></div>
+
+        <div class="table">
+          <div class="world-lines"></div>
+
+          <div class="meld-board" aria-label="Jugadas bajadas de ejemplo">
+            <div class="meld-pile deck-mexico">
+              <div class="meld-title">theshock · Tercia</div>
+              <div class="meld-cards">
+                <div class="meld-card red">7<br>♥</div>
+                <div class="meld-card black">7<br>♣</div>
+                <div class="meld-card red">7<br>♦</div>
+              </div>
+            </div>
+            <div class="meld-pile deck-canada">
+              <div class="meld-title">GamerPro99 · Corrida</div>
+              <div class="meld-cards">
+                <div class="meld-card black">8<br>♠</div>
+                <div class="meld-card black">9<br>♠</div>
+                <div class="meld-card black">10<br>♠</div>
+                <div class="meld-card black">J<br>♠</div>
+              </div>
+            </div>
+            <div class="meld-pile deck-usa">
+              <div class="meld-title">LuisRM · Tercia</div>
+              <div class="meld-cards">
+                <div class="meld-card red">Q<br>♦</div>
+                <div class="meld-card red">Q<br>♥</div>
+                <div class="meld-card black">Q<br>♣</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="center-felt">
+            <div class="center-title">Centro de mesa</div>
+            <div class="deck-row">
+              <div class="deck-item">
+                <div class="deck-callout">Tomar mazo</div>
+                <div class="deck-stack" title="Mazo"><span class="deck-pattern"></span></div>
+                <div class="deck-label">Mazo · 84</div>
+              </div>
+              <div class="deck-item">
+                <div class="deck-callout">Tomar fondo</div>
+                <div class="discard-card red" title="Fondo">
+                  <div>2<br>♦</div>
+                  <div class="mid">♦</div>
+                  <div class="bot">2<br>♦</div>
+                </div>
+                <div class="deck-label">Fondo</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <article class="player-seat seat-bottom deck-mexico active" data-turn="0">
+          <div class="question-drawer" id="question-drawer" data-tone="warning">
+            <span class="question-title" id="question-title">¿Te castigas el 2♦?</span>
+            <span class="question-sub" id="question-sub">Carta extra tomada del fondo</span>
+          </div>
+          <div class="bottom-head">
+            <div class="seat-info">
+              <div class="avatar">TU</div>
+              <div>
+                <div class="seat-name">theshock</div>
+                <div class="seat-meta">10 cartas · 0 pts</div>
+              </div>
+            </div>
+            <div class="player-actions" id="player-actions">
+              <span class="state-pill ready">Listo para jugar</span>
+              <button class="action-pill action-success" disabled>Bajarme</button>
+              <button class="action-pill action-danger">Pagar</button>
+              <span class="state-pill">Host</span>
+            </div>
+          </div>
+          <div class="play-area">
+            <div class="zone-row">
+              <div class="zone-label">Sobrantes<span>Cartas no usadas</span></div>
+              <div class="card-strip">
+                <div class="card red"><div>A<br>♥</div><div class="mid">♥</div><div class="bot">A<br>♥</div></div>
+                <div class="card red"><div>Q<br>♦</div><div class="mid">♦</div><div class="bot">Q<br>♦</div></div>
+                <div class="card black"><div>8<br>♣</div><div class="mid">♣</div><div class="bot">8<br>♣</div></div>
+                <div class="card black"><div>5<br>♠</div><div class="mid">♠</div><div class="bot">5<br>♠</div></div>
+                <div class="card red"><div>10<br>♥</div><div class="mid">♥</div><div class="bot">10<br>♥</div></div>
+                <div class="card black"><div>K<br>♣</div><div class="mid">♣</div><div class="bot">K<br>♣</div></div>
+              </div>
+            </div>
+            <div class="zone-row">
+              <div class="zone-label">Construcción<span>Arrastra aquí</span></div>
+              <div class="build-slots">
+                <div class="build-slot complete">
+                  <div class="slot-head"><span>Tercia</span><span>3/3</span></div>
+                  <div class="slot-cards">
+                    <div class="card red"><div>4<br>♦</div><div class="mid">♦</div><div class="bot">4<br>♦</div></div>
+                    <div class="card red"><div>4<br>♥</div><div class="mid">♥</div><div class="bot">4<br>♥</div></div>
+                    <div class="card black"><div>4<br>♠</div><div class="mid">♠</div><div class="bot">4<br>♠</div></div>
+                  </div>
+                </div>
+                <div class="build-slot">
+                  <div class="slot-head"><span>Corrida</span><span>3/4+</span></div>
+                  <div class="slot-cards">
+                    <div class="card black"><div>8<br>♣</div><div class="mid">♣</div><div class="bot">8<br>♣</div></div>
+                    <div class="card black"><div>9<br>♣</div><div class="mid">♣</div><div class="bot">9<br>♣</div></div>
+                    <div class="card black"><div>10<br>♣</div><div class="mid">♣</div><div class="bot">10<br>♣</div></div>
+                    <div class="ghost-card" title="Espacio para soltar"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="player-seat seat-left deck-usa" data-turn="1">
+          <div class="seat-info">
+            <div class="avatar">CM</div>
+            <div>
+              <div class="seat-name">CardMaster</div>
+              <div class="seat-meta">10 cartas · 12 pts</div>
+            </div>
+          </div>
+          <div class="seat-stats">
+            <span class="stat-pill">Siguiente</span>
+          </div>
+          <div class="card-fan">
+            <span class="back-card"></span><span class="back-card"></span><span class="back-card"></span><span class="back-card"></span>
+          </div>
+        </article>
+
+        <article class="player-seat seat-top deck-canada" data-turn="2">
+          <div class="seat-info">
+            <div class="avatar">GP</div>
+            <div>
+              <div class="seat-name">GamerPro99</div>
+              <div class="seat-meta">12 cartas · 7 pts</div>
+            </div>
+          </div>
+          <div class="seat-stats">
+            <span class="stat-pill ready">Bajado</span>
+          </div>
+          <div class="card-fan">
+            <span class="back-card"></span><span class="back-card"></span><span class="back-card"></span><span class="back-card"></span><span class="back-card"></span>
+          </div>
+        </article>
+
+        <article class="player-seat seat-right deck-usa" data-turn="3">
+          <div class="seat-info">
+            <div class="avatar">LR</div>
+            <div>
+              <div class="seat-name">LuisRM</div>
+              <div class="seat-meta">14 cartas · 4 pts</div>
+            </div>
+          </div>
+          <div class="seat-stats">
+            <span class="stat-pill">Esperando</span>
+          </div>
+          <div class="card-fan">
+            <span class="back-card"></span><span class="back-card"></span><span class="back-card"></span><span class="back-card"></span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="watermark">Propuesta visual · Mesa poker mundialista</div>
+
+  <script>
+    const turnOrder = [
+      { index: 0, name: 'Tu turno' },
+      { index: 1, name: 'CardMaster' },
+      { index: 2, name: 'GamerPro99' },
+      { index: 3, name: 'LuisRM' }
+    ];
+
+    const markerPositions = {
+      0: { left: '50%', top: '91%' },
+      1: { left: '9%', top: '50%' },
+      2: { left: '50%', top: '9%' },
+      3: { left: '91%', top: '50%' }
+    };
+
+    let currentTurn = 0;
+    let promptTimer;
+    let promptDemo = 0;
+    const seats = [...document.querySelectorAll('.player-seat')];
+    const bottomSeat = document.querySelector('.seat-bottom');
+    const turnName = document.getElementById('turn-name');
+    const turnBoard = document.getElementById('turn-board');
+    const marker = document.getElementById('turn-marker');
+    const playerActions = document.getElementById('player-actions');
+    const questionDrawer = document.getElementById('question-drawer');
+    const questionTitle = document.getElementById('question-title');
+    const questionSub = document.getElementById('question-sub');
+
+    const prompts = [
+      {
+        tone: 'warning',
+        title: '¿Te castigas el 2 de diamantes?',
+        sub: 'Carta extra tomada del fondo',
+        yesTone: 'action-warning'
+      },
+      {
+        tone: 'info',
+        title: '¿Intercambiar comodín?',
+        sub: 'Tomas el comodín y acomodas tu carta',
+        yesTone: 'action-info'
+      }
+    ];
+
+    function closePrompt() {
+      bottomSeat.classList.remove('prompt-open');
+      bottomSeat.classList.add('prompt-closing');
+      window.setTimeout(() => bottomSeat.classList.remove('prompt-closing'), 360);
+    }
+
+    function setNormalActions(isMyTurn) {
+      playerActions.innerHTML = `
+        <span class="state-pill ready">Listo para jugar</span>
+        <button class="action-pill action-success" disabled>Bajarme</button>
+        <button class="action-pill action-danger" ${isMyTurn ? '' : 'disabled'}>Pagar</button>
+        <span class="state-pill">Host</span>
+      `;
+    }
+
+    function showPrompt(prompt) {
+      questionDrawer.dataset.tone = prompt.tone;
+      questionTitle.textContent = prompt.title;
+      questionSub.textContent = prompt.sub;
+      playerActions.innerHTML = `
+        <span class="state-pill ready">Listo para jugar</span>
+        <button class="action-pill ${prompt.yesTone}" data-answer="yes">Si</button>
+        <button class="action-pill action-danger" data-answer="no">No</button>
+        <span class="state-pill">Host</span>
+      `;
+      playerActions.querySelectorAll('[data-answer]').forEach(button => {
+        button.addEventListener('click', () => {
+          closePrompt();
+          setNormalActions(true);
+        });
+      });
+      bottomSeat.classList.remove('prompt-closing');
+      bottomSeat.classList.add('prompt-open');
+    }
+
+    function renderTurn() {
+      const turn = turnOrder[currentTurn];
+      window.clearTimeout(promptTimer);
+      seats.forEach(seat => seat.classList.toggle('active', Number(seat.dataset.turn) === turn.index));
+      const activeSeat = seats.find(seat => Number(seat.dataset.turn) === turn.index);
+      const activeDeck = [...activeSeat.classList].find(className => className.startsWith('deck-'));
+      turnBoard.classList.remove('deck-mexico', 'deck-usa', 'deck-canada');
+      turnBoard.classList.add(activeDeck);
+      document.body.classList.toggle('my-turn', turn.index === 0);
+      turnName.textContent = turn.name;
+      closePrompt();
+      setNormalActions(turn.index === 0);
+      if (turn.index === 0) {
+        const prompt = prompts[promptDemo % prompts.length];
+        promptDemo += 1;
+        promptTimer = window.setTimeout(() => showPrompt(prompt), 950);
+      }
+      marker.style.left = markerPositions[turn.index].left;
+      marker.style.top = markerPositions[turn.index].top;
+      currentTurn = (currentTurn + 1) % turnOrder.length;
+    }
+
+    renderTurn();
+    setInterval(renderTurn, 3200);
+  </script>
+</body>
+</html>

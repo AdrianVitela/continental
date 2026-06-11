@@ -76,6 +76,7 @@ let maxPlayers  = 4;
 let gameMode    = 'realtime';
 let myId        = null;
 let myCode      = null;
+let isHost      = false;
 let playersList = [];
 let currentGame = 'continental'; // 'continental' | 'pesca'
 
@@ -173,8 +174,11 @@ function chgMax(d) {
 }
 
 // Función para cambiar el diseño de cartas
-function setDesign(design) {
+function setDesign(design, opts = {}) {
     localStorage.setItem('cardDesign', design);
+    const designMeta = typeof window.applyCardDesign === 'function'
+        ? window.applyCardDesign(design)
+        : null;
     
     // Actualizar estilo visual de los botones en el menú dropdown
     document.querySelectorAll('[data-design]').forEach(btn => {
@@ -193,6 +197,10 @@ function setDesign(design) {
             displayName = 'Estados Unidos'; 
             icon = '🇺🇸';
             break;
+        case 'canada':
+            displayName = 'Canada';
+            icon = '';
+            break;
         case 'mexico_dm': 
             displayName = 'México (Día de Muertos)'; 
             icon = '💀';
@@ -210,10 +218,10 @@ function setDesign(design) {
     const iconSpan = document.getElementById('current-design-icon');
     const nameSpan = document.getElementById('current-design-name');
     if (iconSpan) iconSpan.textContent = icon;
-    if (nameSpan) nameSpan.textContent = displayName;
+    if (nameSpan) nameSpan.textContent = designMeta?.name || displayName;
     
     // Usar notificación moderna
-    if (typeof Notify !== 'undefined') {
+    if (!opts.silent && typeof Notify !== 'undefined') {
         Notify.success(`${icon} Diseño cambiado a ${displayName}`);
     }
 }
@@ -239,7 +247,7 @@ function renderNamesGrid() {
     const entry = NOMBRE_POOL[(_shuffleOffset + i) % NOMBRE_POOL.length];
     const div   = document.createElement('div');
     div.className = 'name-option';
-    div.innerHTML = `<span class="nicon">${entry.icon}</span>${entry.nombre}`;
+    div.textContent = entry.nombre;
     div.onclick = () => pickName(entry.nombre);
     grid.appendChild(div);
   }
@@ -358,7 +366,7 @@ function updateLobbyState(lobbyState) {
       </div>`).join('');
   }
   const canStart = playersList.length >= 2 && lobbyState.status === 'lobby';
-  const soyHost  = playersList.length > 0 && myId && playersList[0].id === myId;
+  const soyHost  = isHost || (playersList.length > 0 && myId && playersList[0].id === myId);
   const btn = document.getElementById('btn-start');
   if (btn) btn.style.display = canStart && soyHost ? 'block' : 'none';
   const waiting = document.getElementById('waiting-msg');
@@ -374,10 +382,12 @@ function updateLobbyState(lobbyState) {
    ================================================================ */
 function setupSocketEvents() {
   WS.on('room_created', ({ code, playerId, lobbyState }) => {
+    isHost = true;
     showLobby(lobbyState, playerId, code);
     try { localStorage.setItem('cid_' + code, playerId); } catch(_) {}
   });
   WS.on('room_joined', ({ code, playerId, lobbyState }) => {
+    isHost = Boolean(lobbyState?.players?.length && lobbyState.players[0].id === playerId);
     showLobby(lobbyState, playerId, code);
     try { localStorage.setItem('cid_' + code, playerId); } catch(_) {}
   });
@@ -436,11 +446,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Inicializar el diseño guardado (ahora usa mexico_dm por defecto)
   const savedDesign = localStorage.getItem('cardDesign');
   if (savedDesign && savedDesign !== 'mexico') {
-    setDesign(savedDesign);
+    setDesign(savedDesign, { silent: true });
   } else if (savedDesign === 'mexico') {
     // Migrar del diseño antiguo 'mexico' al nuevo 'mexico_dm'
-    setDesign('mexico_dm');
+    setDesign('mexico_dm', { silent: true });
   } else {
-    setDesign('mexico_dm');
+    setDesign('mexico_dm', { silent: true });
   }
 });

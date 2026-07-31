@@ -27,6 +27,7 @@ app.get('/login',    (_, res) => res.sendFile(path.join(__dirname, '../client/lo
 app.get('/register', (_, res) => res.sendFile(path.join(__dirname, '../client/register.html')));
 app.get('/game',     (_, res) => res.sendFile(path.join(__dirname, '../client/game.html')));
 app.get('/admin',    (_, res) => res.sendFile(path.join(__dirname, '../client/admin.html')));
+app.get('/perfil',   (_, res) => res.sendFile(path.join(__dirname, '../client/perfil.html')));
 
 const rooms   = new Map();
 const clients = new Map();
@@ -62,6 +63,23 @@ function genCode() {
 const NAME_RE = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const CODE_RE = /^[A-Z0-9]{4,5}$/;
 
+async function fetchPlayerProfile(userId, nombre) {
+  try {
+    const query = userId
+      ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
+      : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
+    const r = await pool.query(query, [userId || nombre]);
+    return {
+      badge: r.rows[0]?.badge || null,
+      skin:  r.rows[0]?.skin  || 'clasico',
+      rol:   r.rows[0]?.rol   || 'jugador',
+    };
+  } catch (e) {
+    console.error('[badge] profile error:', e.message);
+    return { badge: null, skin: 'clasico', rol: 'jugador' };
+  }
+}
+
 function validateNombre(nombre) {
   if (typeof nombre !== 'string') return 'Nombre inválido.';
   const v = nombre.trim();
@@ -78,6 +96,31 @@ function validateCode(code) {
   if (!v)               return 'El código no puede estar vacío.';
   if (!CODE_RE.test(v)) return 'El código solo puede contener letras y números (4-5 caracteres).';
   return null;
+}
+
+function serializePublicRoom (room) {
+  return {
+    code:        room.code,
+    hot:         room.maxPlayers === 5,
+    maxPlayers:  room.maxPlayers,
+    playerCount: room.players.length,
+    tableColor:  room.tableColor || 'green',
+    host:        room.players[0]?.nombre || room.host?.nombre || 'Anfitrión',
+  };
+}
+
+function publicRoomsList () {
+  const list = [];
+  for (const room of rooms.values()) {
+    if (!room.public || room.status !== 'lobby' || room.players.length === 0) continue;
+    list.push(serializePublicRoom(room));
+  }
+  return list.sort((a, b) => b.hot - a.hot || b.playerCount - a.playerCount);
+}
+
+function broadcastRoomsList () {
+  const list = publicRoomsList();
+  for (const ws of clients.keys()) send(ws, { type: 'rooms_list', rooms: list });
 }
 
 setInterval(() => {
@@ -138,7 +181,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'create_room': {
-          const { nombre, mode = 'realtime', maxPlayers = 5 } = msg;
+          const { nombre, mode = 'realtime', maxPlayers = 5, public: publicRoom = false } = msg;
           const nameErr = validateNombre(nombre);
           if (nameErr) return send(ws, { type: 'error', msg: nameErr });
 
@@ -152,31 +195,29 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          let hostBadge = null, hostSkin = 'clasico', hostRole = 'jugador';
-          try {
-            const query = msg.userId
-              ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
-              : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
-            const param = msg.userId || safeNombre;
-            const r = await pool.query(query, [param]);
-            hostBadge = r.rows[0]?.badge || null;
-            hostSkin  = r.rows[0]?.skin  || 'clasico';
-            hostRole  = r.rows[0]?.rol   || 'jugador';
-          } catch (e) { console.error('[badge] create_room error:', e.message); }
+          const { badge: hostBadge, skin: hostSkin, rol: hostRole } = await fetchPlayerProfile(msg.userId, safeNombre);
 
           const room = new GameRoom({
             code,
             host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
+            publicRoom,
           });
           rooms.set(code, room);
           logWs(`socket#${ws._socketId} creó sala ${code}`, {
             host: safeNombre,
             mode,
             maxPlayers: room.maxPlayers,
+            public: room.public,
           });
           send(ws, { type: 'room_created', code, playerId, lobbyState: room.lobbyState() });
+          if (room.public) broadcastRoomsList();
+          break;
+        }
+
+        case 'list_rooms': {
+          send(ws, { type: 'rooms_list', rooms: publicRoomsList() });
           break;
         }
 
@@ -200,17 +241,7 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          let joinBadge = null, joinSkin = 'clasico', joinRole = 'jugador';
-          try {
-            const query = msg.userId
-              ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
-              : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
-            const param = msg.userId || safeNombre;
-            const r = await pool.query(query, [param]);
-            joinBadge = r.rows[0]?.badge || null;
-            joinSkin  = r.rows[0]?.skin  || 'clasico';
-            joinRole  = r.rows[0]?.rol   || 'jugador';
-          } catch (e) { console.error('[badge] join_room error:', e.message); }
+          const { badge: joinBadge, skin: joinSkin, rol: joinRole } = await fetchPlayerProfile(msg.userId, safeNombre);
 
           const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
@@ -226,6 +257,7 @@ wss.on('connection', (ws, req) => {
           });
 
           send(ws, { type: 'room_joined', code: safeCode, playerId: player.id, lobbyState: room.lobbyState() });
+          if (room.public) broadcastRoomsList();
 
           if (room.engine && wasReconnecting) {
             send(ws, {
@@ -246,6 +278,7 @@ wss.on('connection', (ws, req) => {
           const result = room.startGame();
           if (!result.ok) return send(ws, { type: 'error', msg: result.error });
           room._broadcastState('game_started', {});
+          if (room.public) broadcastRoomsList();
           break;
         }
 
@@ -289,6 +322,26 @@ wss.on('connection', (ws, req) => {
 
           room.forceClose('Mesa cerrada por el host para iniciar una nueva partida.');
           rooms.delete(ctx.roomCode);
+          broadcastRoomsList();
+          break;
+        }
+
+        case 'leave_room': {
+          const room = rooms.get(ctx.roomCode);
+          if (!room || !ctx.playerId)
+            return send(ws, { type: 'error', msg: 'No estás en una sala.' });
+          const code = ctx.roomCode;
+          const wasPublic = room.public;
+          room.removeSeat(ctx.playerId);
+          ctx.roomCode = null;
+          ctx.playerId = null;
+          send(ws, { type: 'room_left' });
+          if (room.isEmpty() && room.status === 'lobby') {
+            rooms.delete(code);
+            if (wasPublic) broadcastRoomsList();
+          } else if (wasPublic) {
+            broadcastRoomsList();
+          }
           break;
         }
 
@@ -320,7 +373,14 @@ wss.on('connection', (ws, req) => {
     });
     if (ctx?.roomCode) {
       const room = rooms.get(ctx.roomCode);
-      if (room) room.removePlayer(ctx.playerId, ws);
+      if (room) {
+        const wasPublic = room.public;
+        room.removePlayer(ctx.playerId, ws);
+        if (room.isEmpty() && room.status === 'lobby') {
+          rooms.delete(ctx.roomCode);
+          if (wasPublic) broadcastRoomsList();
+        }
+      }
     }
     clients.delete(ws);
   });

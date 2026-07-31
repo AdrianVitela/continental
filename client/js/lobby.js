@@ -5,14 +5,10 @@
    CONSTANTES
    ================================================================ */
 
-/** Sólo letras (incluyendo acentos y ñ) y números. Sin espacios ni especiales. */
-const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]+$/;
-
 /** Código de sala: sólo letras mayúsculas y números (sin caracteres ambiguos) */
 const CODE_RE  = /^[A-Z0-9]+$/;
 
 const COOKIE_KEY  = 'continental_nombre';
-const COOKIE_DAYS = 365;
 const ACTIVE_LOBBY_KEY = 'continental_active_lobby';
 const ACTIVE_GAME_KEY = 'continental_active_game';
 const GUIDE_ENABLED_KEY = 'continental_guide_enabled';
@@ -20,137 +16,12 @@ const GUIDE_DONE_LOBBY_SETUP_KEY = 'continental_guide_done_lobby_setup';
 const GUIDE_DONE_LOBBY_ROOM_KEY = 'continental_guide_done_lobby_room';
 
 /* ================================================================
-   POOL DE NOMBRES PREDEFINIDOS
-   120 opciones agrupadas con icono + nombre base
-   ================================================================ */
-const NOMBRE_POOL = [
-  // Míticos / épicos
-  { icon: '⚔️',  nombre: 'AceViper'    },
-  { icon: '🦁',  nombre: 'LeonBravo'   },
-  { icon: '🐉',  nombre: 'DrakeFuego'  },
-  { icon: '👑',  nombre: 'ReyNegro'    },
-  { icon: '🌪️',  nombre: 'TormentaSK'  },
-  { icon: '🔱',  nombre: 'PosidonX'    },
-  { icon: '🌊',  nombre: 'MareaBrava'  },
-  { icon: '⚡',  nombre: 'RayoZeta'   },
-  { icon: '🌙',  nombre: 'LunaCruda'   },
-  { icon: '🦅',  nombre: 'AguilaReal'  },
-  { icon: '🐺',  nombre: 'LoboNoche'   },
-  { icon: '🦊',  nombre: 'ZorroAstuto' },
-  { icon: '🐍',  nombre: 'SerpenteFria'},
-  { icon: '🦈',  nombre: 'TiburonRojo' },
-  { icon: '🦂',  nombre: 'EscorpionX'  },
-  { icon: '🔥',  nombre: 'Incendio99'  },
-  { icon: '💀',  nombre: 'CalaveraN'   },
-  { icon: '🏴‍☠️', nombre: 'CorsarioK'   },
-  { icon: '🗡️',  nombre: 'EspadaVerde' },
-  { icon: '🛡️',  nombre: 'EscudoFirme' },
-  // Cartas / apuestas
-  { icon: '🃏',  nombre: 'Joker777'    },
-  { icon: '🎴',  nombre: 'CartaMaestra'},
-  { icon: '♠️',  nombre: 'EspadaNegra' },
-  { icon: '♣️',  nombre: 'TrebolFatal' },
-  { icon: '♦️',  nombre: 'DiamanteDro' },
-  { icon: '♥️',  nombre: 'CorazonRojo' },
-  { icon: '🎰',  nombre: 'CasinoKing'  },
-  { icon: '🎲',  nombre: 'DadosMalos'  },
-  { icon: '🏆',  nombre: 'CampeonPuro' },
-  { icon: '🥇',  nombre: 'OroMexicano' },
-  // Sabor picante / bravucón
-  { icon: '🌶️',  nombre: 'ChileVerde'  },
-  { icon: '🔫',  nombre: 'GatilloX'    },
-  { icon: '💣',  nombre: 'BombaLista'  },
-  { icon: '🤠',  nombre: 'VaqueroCool' },
-  { icon: '😈',  nombre: 'DiabloCool'  },
-  { icon: '👹',  nombre: 'OgreBreaker' },
-  { icon: '🤡',  nombre: 'PayadoPro'   },
-  { icon: '🦾',  nombre: 'BrazoFuerte' },
-  { icon: '🥊',  nombre: 'BoxerBravo'  },
-  { icon: '💪',  nombre: 'MuscleKing'  },
-  // Naturaleza / animales
-  { icon: '🐻',  nombre: 'OsoFuerte'   },
-  { icon: '🐯',  nombre: 'TigreSalvaj' },
-  { icon: '🦋',  nombre: 'MariposaMal' },
-  { icon: '🦉',  nombre: 'BuhoSabio'   },
-  { icon: '🐊',  nombre: 'CocodriloZ'  },
-  { icon: '🦓',  nombre: 'CebraLoca'   },
-  { icon: '🦏',  nombre: 'RinoBravo'   },
-  { icon: '🐘',  nombre: 'ElefanteK'   },
-  { icon: '🦁',  nombre: 'Simba2025'   },
-  { icon: '🐆',  nombre: 'GuepaVeloz'  },
-  // Espacial / tech
-  { icon: '🚀',  nombre: 'RocketMan'   },
-  { icon: '🛸',  nombre: 'OvniRider'   },
-  { icon: '🤖',  nombre: 'RobotMalo'   },
-  { icon: '👾',  nombre: 'AlienPlayer' },
-  { icon: '💻',  nombre: 'HackerX99'   },
-  { icon: '🧬',  nombre: 'ADNPURO'     },
-  { icon: '⚛️',  nombre: 'AtomFusion'  },
-  { icon: '🌌',  nombre: 'GalaxiaPro'  },
-  { icon: '🪐',  nombre: 'SaturnoK'    },
-  { icon: '☄️',  nombre: 'CometaRoja'  },
-  // Mexicano / latam
-  { icon: '🎸',  nombre: 'GuitarHero'  },
-  { icon: '🌮',  nombre: 'TacoFuerte'  },
-  { icon: '🍺',  nombre: 'CervezaBrav' },
-  { icon: '🎺',  nombre: 'TrompetaK'   },
-  { icon: '🪗',  nombre: 'AccordionX'  },
-  { icon: '💃',  nombre: 'SalsaQueen'  },
-  { icon: '🕺',  nombre: 'BailadorPro' },
-  { icon: '🏜️',  nombre: 'DesiertoRex' },
-  { icon: '🌵',  nombre: 'CactusFiero' },
-  { icon: '🦅',  nombre: 'AguilaCalli' },
-  // Comida / random divertido
-  { icon: '🍕',  nombre: 'PizzaKing'   },
-  { icon: '🍣',  nombre: 'SushiMaster' },
-  { icon: '🌯',  nombre: 'BurritoX'    },
-  { icon: '🥩',  nombre: 'ArrachKing'  },
-  { icon: '🍜',  nombre: 'RamenBoss'   },
-  { icon: '🍉',  nombre: 'SandiaFres'  },
-  { icon: '🥑',  nombre: 'AguacateGod' },
-  { icon: '🧃',  nombre: 'JugoMango'   },
-  { icon: '☕',  nombre: 'CafeSolo'    },
-  { icon: '🍫',  nombre: 'ChocoLoco'   },
-  // Legendarios / histórico
-  { icon: '🏛️',  nombre: 'CesarPRO'    },
-  { icon: '⚔️',  nombre: 'AquilesX'   },
-  { icon: '🗺️',  nombre: 'ColonMaster' },
-  { icon: '🔭',  nombre: 'GalileoX'    },
-  { icon: '📐',  nombre: 'PitagorasK'  },
-  { icon: '🎭',  nombre: 'ShakespaerK' },
-  { icon: '🎨',  nombre: 'PicassoMov'  },
-  { icon: '🎻',  nombre: 'MozartBeat'  },
-  { icon: '⚗️',  nombre: 'AlquimistaZ' },
-  { icon: '📜',  nombre: 'ManuscritoK' },
-  // Sport / competencia
-  { icon: '⚽',  nombre: 'GolazoK'     },
-  { icon: '🏀',  nombre: 'DunkMaster'  },
-  { icon: '🎾',  nombre: 'ServeAce'    },
-  { icon: '🏊',  nombre: 'NadadorX'    },
-  { icon: '🧗',  nombre: 'EscaladoR'   },
-  { icon: '🤺',  nombre: 'EsgrimaK'    },
-  { icon: '🏋️',  nombre: 'PesoPesado'  },
-  { icon: '🥋',  nombre: 'KarateKid2'  },
-  { icon: '🎯',  nombre: 'TiroAlBlanco'},
-  { icon: '🏇',  nombre: 'JineteRex'   },
-  // Humor / random
-  { icon: '🤓',  nombre: 'NerdPower'   },
-  { icon: '😎',  nombre: 'CoolDude99'  },
-  { icon: '🥸',  nombre: 'DisguisePro' },
-  { icon: '🥶',  nombre: 'IceKingX'    },
-  { icon: '🤯',  nombre: 'MindBlown1'  },
-  { icon: '🧠',  nombre: 'CerebroX'    },
-  { icon: '👀',  nombre: 'OjosPros'    },
-  { icon: '🫀',  nombre: 'CorazonXL'   },
-  { icon: '🧲',  nombre: 'ImanFatal'   },
-  { icon: '🪄',  nombre: 'MagoTruco'   },
-];
-
-/* ================================================================
    ESTADO DEL MÓDULO
    ================================================================ */
 let maxPlayers  = 4;
-let gameMode    = 'realtime';
+let roomPublic  = false;
+let publicRooms = [];
+let myRoomPublic = false;
 let myId        = null;
 let myCode      = null;
 let isHost      = false;
@@ -161,12 +32,6 @@ let musicAudio = null;
 let lobbyActionPending = false;
 let guideAutoTimer = null;
 let guideState = { active: false, steps: [], index: 0, doneKey: null, restoreTab: null };
-
-// Para el modal de nombres: qué input está activo
-let _activeNameTarget = 'crear';
-// Índice de inicio del shuffle actual
-let _shuffleOffset = 0;
-const NAMES_PER_PAGE = 12;
 
 function setLobbyActionPending (pending) {
   lobbyActionPending = pending;
@@ -265,54 +130,14 @@ function rejoinActiveLobbyIfNeeded () {
 /* ================================================================
    COOKIES
    ================================================================ */
-function setCookie (key, value, days) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${key}=${encodeURIComponent(value)};expires=${expires};path=/;SameSite=Lax`;
-}
-
 function getCookie (key) {
   const match = document.cookie.match(new RegExp('(?:^|; )' + key + '=([^;]*)'));
   return match ? decodeURIComponent(match[1]) : '';
 }
 
-/* Carga el nombre guardado en ambos inputs al iniciar */
-function loadSavedName () {
-  const saved = getCookie(COOKIE_KEY);
-  if (!saved) return;
-  const a = document.getElementById('crear-nombre');
-  const b = document.getElementById('unirse-nombre');
-  if (a) a.value = saved;
-  if (b) b.value = saved;
-}
-
-/* Guarda el nombre en cookie y sincroniza los dos inputs */
-function saveName (nombre) {
-  if (!nombre) return;
-  setCookie(COOKIE_KEY, nombre, COOKIE_DAYS);
-  // Sincronizar ambos campos para que siempre estén iguales
-  const a = document.getElementById('crear-nombre');
-  const b = document.getElementById('unirse-nombre');
-  if (a && a.value !== nombre) a.value = nombre;
-  if (b && b.value !== nombre) b.value = nombre;
-}
-
 /* ================================================================
    VALIDACIÓN / SANITIZACIÓN
    ================================================================ */
-
-/**
- * Limpia un input de nombre:
- * - Elimina todo lo que no sea letra (incluyendo acentos/ñ) o número
- * - Actualiza el campo y la cookie
- */
-function sanitizeName (input) {
-  const raw   = input.value;
-  const clean = raw.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ]/g, '');
-  if (raw !== clean) input.value = clean;
-  hideHint(input.id === 'crear-nombre' ? 'crear-nombre' : 'unirse-nombre');
-  // Guardar en cookie mientras escribe
-  if (clean.length >= 2) saveName(clean);
-}
 
 /**
  * Limpia un input de código de sala:
@@ -337,25 +162,6 @@ function showHint (id, msg) {
 function hideHint (id) {
   const el = document.getElementById('hint-' + id);
   if (el) el.classList.remove('show');
-}
-
-/** Valida nombre, retorna true si es válido */
-function validateName (value, hintId) {
-  const v = value.trim();
-  if (!v) {
-    showHint(hintId, 'El nombre no puede estar vacío.');
-    return false;
-  }
-  if (v.length < 2) {
-    showHint(hintId, 'Mínimo 2 caracteres.');
-    return false;
-  }
-  if (!NAME_RE.test(v)) {
-    showHint(hintId, 'Solo letras y números, sin espacios ni símbolos.');
-    return false;
-  }
-  hideHint(hintId);
-  return true;
 }
 
 /** Valida código de sala, retorna true si es válido */
@@ -384,66 +190,89 @@ function switchTab (t) {
   document.getElementById('panel-unirse').classList.toggle('active', t === 'unirse');
 }
 
-function setMode (el) {
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  gameMode = el.dataset.mode;
-}
-
 function chgMax (d) {
   maxPlayers = Math.max(2, Math.min(5, maxPlayers + d));
   document.getElementById('max-val').textContent = maxPlayers;
+  updateHotBadge();
+}
+
+function updateHotBadge () {
+  const badge = document.getElementById('hot-badge');
+  if (badge) badge.style.display = maxPlayers === 5 ? 'inline-flex' : 'none';
 }
 
 /* ================================================================
-   MODAL DE NOMBRES PREDEFINIDOS
+   VISIBILIDAD DE SALA (pública / privada)
    ================================================================ */
-
-/** Abre el modal y muestra una página de nombres */
-function openNamesModal (target) {
-  _activeNameTarget = target;
-  _shuffleOffset    = Math.floor(Math.random() * NOMBRE_POOL.length); // inicio aleatorio
-  renderNamesGrid();
-  document.getElementById('names-modal').classList.add('show');
+function setRoomPublic (v) {
+  roomPublic = !!v;
+  document.getElementById('seg-publica')?.classList.toggle('active', roomPublic);
+  document.getElementById('seg-privada')?.classList.toggle('active', !roomPublic);
 }
 
-/** Muestra la siguiente tanda de nombres */
-function shuffleNames () {
-  _shuffleOffset = (_shuffleOffset + NAMES_PER_PAGE) % NOMBRE_POOL.length;
-  renderNamesGrid();
+/* ================================================================
+   EXPLORAR MESAS PÚBLICAS
+   ================================================================ */
+function openRoomsBrowser () {
+  const ov = document.getElementById('rooms-overlay');
+  if (!ov) return;
+  renderRoomsList(publicRooms, true);
+  ov.classList.add('show');
+  WS.send({ type: 'list_rooms' });
 }
 
-function renderNamesGrid () {
-  const grid = document.getElementById('names-grid');
-  grid.innerHTML = '';
-  for (let i = 0; i < NAMES_PER_PAGE; i++) {
-    const entry = NOMBRE_POOL[(_shuffleOffset + i) % NOMBRE_POOL.length];
-    const div   = document.createElement('div');
-    div.className = 'name-option';
-    div.innerHTML = `<span class="nicon">${entry.icon}</span>${entry.nombre}`;
-    div.onclick = () => pickName(entry.nombre);
-    grid.appendChild(div);
+function closeRoomsBrowser () {
+  document.getElementById('rooms-overlay')?.classList.remove('show');
+}
+
+function refreshRoomsBrowser () {
+  WS.send({ type: 'list_rooms' });
+}
+
+function renderRoomsList (rooms, loading = false) {
+  const list = document.getElementById('rooms-list');
+  if (!list) return;
+  if (loading && rooms.length === 0) {
+    list.innerHTML = '<div class="rooms-empty">Cargando mesas…</div>';
+    return;
   }
-}
-
-/** El usuario eligió un nombre del modal */
-function pickName (nombre) {
-  const inputId = _activeNameTarget === 'crear' ? 'crear-nombre' : 'unirse-nombre';
-  const input   = document.getElementById(inputId);
-  if (input) {
-    input.value = nombre;
-    saveName(nombre);
-    hideHint(_activeNameTarget === 'crear' ? 'crear-nombre' : 'unirse-nombre');
+  if (rooms.length === 0) {
+    list.innerHTML = '<div class="rooms-empty">No hay mesas públicas abiertas ahora mismo.<br>Crea una con <i class="ph ph-eye"></i><strong>Pública</strong> y déjala aparecer aquí.</div>';
+    return;
   }
-  closeNamesModal();
+  const tableColorName = { green: 'Verde', navy: 'Azul', wine: 'Vino', black: 'Negro' };
+  list.innerHTML = rooms.map(r => {
+    const full = r.playerCount >= r.maxPlayers;
+    const meta = `
+      <span>${r.playerCount}/${r.maxPlayers} jugadores</span>
+      <span class="room-table-dot" data-color="${r.tableColor}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span>
+      <span>${tableColorName[r.tableColor] || 'Verde'}</span>
+      ${r.hot ? '<span class="room-flame"><i class="ph ph-fire"></i>Caliente</span>' : ''}
+    `;
+    return `
+      <div class="room-row ${full ? 'full' : ''}">
+        <div class="room-info">
+          <div class="room-host"><i class="ph ph-user-circle"></i> ${esc(r.host)}</div>
+          <div class="room-meta">${meta}</div>
+        </div>
+        <div class="room-join">
+          ${full
+            ? '<button class="btn btn-hub" disabled style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-dim)">Llena</button>'
+            : `<button class="btn btn-hub btn-hub--ghost" onclick="joinPublicRoom('${r.code}')"><i class="ph ph-sign-in"></i>Unirse</button>`}
+        </div>
+      </div>`;
+  }).join('');
 }
 
-function closeNamesModal () {
-  document.getElementById('names-modal').classList.remove('show');
+function joinPublicRoom (code) {
+  closeRoomsBrowser();
+  const input = document.getElementById('unirse-code');
+  if (input) input.value = code;
+  unirse();
 }
 
-function closeNamesModalOutside (e) {
-  if (e.target === document.getElementById('names-modal')) closeNamesModal();
+function esc (s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 /* ================================================================
@@ -475,11 +304,11 @@ function toggleMusic () {
   if (musicPlaying) {
     musicAudio.pause();
     musicPlaying = false;
-    document.getElementById('music-toggle').textContent = '▶ Play';
+    document.getElementById('music-toggle').innerHTML = '<i class="ph ph-play"></i><span>Play</span>';
   } else {
     musicAudio.play().catch(() => {});
     musicPlaying = true;
-    document.getElementById('music-toggle').textContent = '⏸ Pausa';
+    document.getElementById('music-toggle').innerHTML = '<i class="ph ph-pause"></i><span>Pausa</span>';
   }
 }
 
@@ -509,7 +338,7 @@ function syncGuidePreferenceUi () {
   const status = document.getElementById('guide-settings-status');
 
   if (btn) {
-    btn.textContent = enabled ? '📘 Guía ON' : '📘 Guía OFF';
+    btn.innerHTML = enabled ? '<i class="ph ph-books"></i><span>Guía ON</span>' : '<i class="ph ph-books"></i><span>Guía OFF</span>';
     btn.style.borderColor = enabled ? 'rgba(200,160,69,.42)' : 'rgba(255,255,255,.15)';
     btn.style.color = enabled ? 'var(--gold)' : 'var(--text-dim)';
   }
@@ -582,14 +411,14 @@ function getCurrentGuideConfig () {
     doneKey: GUIDE_DONE_LOBBY_SETUP_KEY,
     steps: [
       {
-        selector: '.logo',
-        title: 'Entrada al juego',
-        text: 'Esta es la pantalla de acceso rápido. Desde aquí creas una sala nueva o te unes a una existente.',
+        selector: '.hub-title',
+        title: 'Bienvenido al lobby',
+        text: 'Esta es tu mesa de mando. Desde la izquierda navegas y a la derecha creas o te unes a una sala.',
       },
       {
-        selector: '.tabs',
+        selector: '.hub-grid',
         title: 'Crear o unirte',
-        text: 'Usa estas pestañas para cambiar entre crear una sala y entrar con un código.',
+        text: 'Elige entre crear una sala nueva o entrar con un código. A un lado tienes un resumen rápido del juego.',
       },
       {
         selector: '#panel-crear',
@@ -748,7 +577,7 @@ function crearSala () {
   if (!nombre) { window.location.href = '/login'; return; }
   if (lobbyActionPending) return;
   setLobbyActionPending(true);
-  WS.send({ type: 'create_room', nombre, userId, mode: gameMode, maxPlayers });
+  WS.send({ type: 'create_room', nombre, userId, mode: 'realtime', maxPlayers, public: roomPublic });
 }
 
 function unirse () {
@@ -768,6 +597,12 @@ function iniciarJuego () {
   WS.send({ type: 'start_game' });
 }
 
+function salirDeLaMesa () {
+  if (lobbyActionPending) return;
+  setLobbyActionPending(true);
+  WS.send({ type: 'leave_room' });
+}
+
 /* ================================================================
    SALA DE ESPERA
    ================================================================ */
@@ -776,12 +611,22 @@ function showLobby (lobbyState, pid, code, host) {
   myId   = pid;
   myCode = code;
   isHost = host;
+  myRoomPublic = !!lobbyState?.public;
   saveActiveLobbySession();
 
   document.getElementById('lobby-setup').style.display = 'none';
   const lr = document.getElementById('lobby-room');
   lr.classList.add('show');
-  document.getElementById('room-code-display').textContent = code;
+  document.getElementById('room-code-text').textContent = code;
+  // En mesas públicas el código se oculta: se entra desde el lobby
+  const codeBox = document.getElementById('room-code-display');
+  const hintEl  = document.getElementById('room-code-hint');
+  const pubBadge = document.getElementById('room-public-badge');
+  if (codeBox)  codeBox.style.display = myRoomPublic ? 'none' : '';
+  if (pubBadge) pubBadge.style.display = myRoomPublic ? 'inline-flex' : 'none';
+  if (hintEl)   hintEl.textContent = myRoomPublic
+    ? 'Mesa pública · cualquiera puede unirse desde el lobby'
+    : 'Comparte este código con tus amigos';
   // Mostrar selector de color solo al host
   const pickerWrap = document.getElementById('mesa-picker-wrap');
   if (pickerWrap) pickerWrap.style.display = host ? 'block' : 'none';
@@ -799,16 +644,40 @@ function updateLobbyState (lobbyState) {
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
   };
+  const SKIN_AVATAR_BG = {
+    'clasico':   'linear-gradient(135deg,#1a3a80,#0d2050)',
+    'rojo':      'linear-gradient(135deg,#7a1a1a,#3d0a0a)',
+    'obsidiana': 'linear-gradient(135deg,#1a1a1a,#0a0a0a)',
+    'esmeralda': 'linear-gradient(135deg,#0d3320,#061a10)',
+    'plata':     'linear-gradient(135deg,#8b96a6,#4d5663)',
+    'bronce':    'linear-gradient(135deg,#8a5630,#4a2815)',
+    'zafiro':    'linear-gradient(135deg,#0b2458,#07122d)',
+    'dorado':    'linear-gradient(135deg,#c8a045,#7a5c00)',
+    'neon':      'linear-gradient(135deg,#001a33,#003366)',
+    'imperial':  'linear-gradient(135deg,#3f0018,#160008)',
+    'arcoiris':  'linear-gradient(135deg,#ff4d6d,#ff9f1c,#2ec4b6,#4d96ff)',
+    'amatista':  'linear-gradient(135deg,#35105e,#170728)',
+    'cobalto':   'linear-gradient(135deg,#0a1e46,#071024)',
+    'marfil':    'linear-gradient(135deg,#8a7b63,#4a4134)',
+  };
+  const SKIN_AVATAR_BORDER = {
+    'clasico':   'rgba(255,255,255,.25)',  'rojo':    'rgba(255,100,100,.4)',
+    'obsidiana': 'rgba(200,160,69,.4)',    'esmeralda':'rgba(46,204,113,.4)',
+    'plata':     'rgba(225,235,245,.6)',   'bronce':  'rgba(206,139,85,.55)',
+    'zafiro':    'rgba(93,152,255,.6)',    'dorado':  'rgba(200,160,69,.7)',
+    'neon':      'rgba(0,200,255,.6)',     'imperial':'rgba(255,133,183,.6)',
+    'arcoiris':  'rgba(255,255,255,.72)',  'amatista':'rgba(186,132,255,.65)',
+    'cobalto':   'rgba(88,151,255,.62)',   'marfil':  'rgba(240,225,194,.62)',
+  };
   list.innerHTML = playersList.map((p, i) => {
-    const badge = p.badge && BADGES_LOBBY[p.badge]
-      ? `<span title="${BADGES_LOBBY[p.badge].label}" style="cursor:default;font-size:.95rem">${BADGES_LOBBY[p.badge].emoji}</span>`
-      : '';
+    const badge = p.badge && BADGES_LOBBY[p.badge] ? BADGES_LOBBY[p.badge] : null;
+    const av = badge ? badge.emoji : (p.nombre.trim()[0] || '?').toUpperCase();
     return `
     <div class="player-item">
-      <div class="player-dot ${p.conectado ? '' : 'away'}"></div>
-      <span>${escHtml(p.nombre)}</span>
-      ${badge}
+      <div class="player-avatar" title="${badge ? badge.label : ''}" style="background:${SKIN_AVATAR_BG[p.skin] || SKIN_AVATAR_BG.clasico};border-color:${SKIN_AVATAR_BORDER[p.skin] || 'rgba(255,255,255,.25)'}">${av}</div>
+      <span class="player-name">${escHtml(p.nombre)}</span>
       ${i === 0 ? '<span class="player-badge">HOST</span>' : ''}
+      <div class="player-dot ${p.conectado ? '' : 'away'}" title="${p.conectado ? 'Conectado' : 'Desconectado'}"></div>
     </div>`;
   }).join('');
 
@@ -816,6 +685,14 @@ function updateLobbyState (lobbyState) {
   const btn      = document.getElementById('btn-start');
   const soyHost  = playersList.length > 0 && myId && playersList[0].id === myId;
   btn.style.display = canStart && soyHost ? 'block' : 'none';
+
+  // Si el host sale, el siguiente jugador toma el rol
+  if (isHost !== soyHost) {
+    isHost = soyHost;
+    const pickerWrap = document.getElementById('mesa-picker-wrap');
+    if (pickerWrap) pickerWrap.style.display = soyHost ? 'block' : 'none';
+    if (soyHost) toast('Ahora eres el host de esta mesa.', 'green');
+  }
 
   const waiting = document.getElementById('waiting-msg');
   waiting.innerHTML = canStart
@@ -850,6 +727,11 @@ function setupSocketEvents () {
     localStorage.setItem('cid_' + code, playerId);
   });
 
+  WS.on('rooms_list', ({ rooms }) => {
+    publicRooms = Array.isArray(rooms) ? rooms : [];
+    renderRoomsList(publicRooms);
+  });
+
   WS.on('player_joined', ({ lobbyState }) => {
     if (lobbyState) updateLobbyState(lobbyState);
   });
@@ -860,6 +742,21 @@ function setupSocketEvents () {
 
   WS.on('player_disconnected', ({ lobbyState }) => {
     if (lobbyState) updateLobbyState(lobbyState);
+  });
+
+  WS.on('player_left', ({ lobbyState }) => {
+    if (lobbyState) updateLobbyState(lobbyState);
+  });
+
+  WS.on('room_left', () => {
+    setLobbyActionPending(false);
+    clearActiveLobbySession();
+    myCode = null;
+    myId   = null;
+    isHost = false;
+    document.getElementById('lobby-room').classList.remove('show');
+    document.getElementById('lobby-setup').style.display = 'block';
+    toast('Saliste de la mesa.', 'green');
   });
 
   WS.on('table_color_changed', ({ color, lobbyState }) => {
@@ -932,14 +829,27 @@ function escHtml (str) {
 }
 
 function init () {
-  loadSavedName();
   syncGuidePreferenceUi();
   renderActiveGameCard();
+  updateHotBadge();
   window.addEventListener('resize', refreshGuideLayout);
   window.addEventListener('scroll', refreshGuideLayout, { passive: true });
   setupSocketEvents();
   WS.connect();
   queueAutoGuide(700);
+
+  const qp = new URLSearchParams(window.location.search);
+  if (qp.get('open') === 'guia') openGuideSettings();
+  else if (qp.get('open') === 'feedback') window.openFeedback?.();
+  else if (qp.get('open') === 'mesas') setTimeout(openRoomsBrowser, 400);
+
+  const favColor = localStorage.getItem('continental_mesa_fav');
+  if (favColor && ['green', 'navy', 'wine', 'black'].includes(favColor)) {
+    currentTableColor = favColor;
+    document.querySelectorAll('.mesa-swatch').forEach(s => {
+      s.classList.toggle('active', s.dataset.color === favColor);
+    });
+  }
 }
 
 /* Exponer globales que usa el HTML */
@@ -947,18 +857,13 @@ window.setMesaColor        = setMesaColor;
 window.toggleMusic         = toggleMusic;
 window.setVolume           = setVolume;
 window.switchTab           = switchTab;
-window.setMode             = setMode;
 window.chgMax              = chgMax;
 window.copyCode            = copyCode;
 window.crearSala           = crearSala;
 window.unirse              = unirse;
 window.iniciarJuego        = iniciarJuego;
-window.sanitizeName        = sanitizeName;
+window.salirDeLaMesa       = salirDeLaMesa;
 window.sanitizeCode        = sanitizeCode;
-window.openNamesModal      = openNamesModal;
-window.closeNamesModal     = closeNamesModal;
-window.closeNamesModalOutside = closeNamesModalOutside;
-window.shuffleNames        = shuffleNames;
 window.openGuideSettings   = openGuideSettings;
 window.closeGuideSettings  = closeGuideSettings;
 window.toggleGuideAuto     = toggleGuideAuto;
@@ -966,5 +871,10 @@ window.startGuideFromSettings = startGuideFromSettings;
 window.closeGuide          = closeGuide;
 window.nextGuideStep       = nextGuideStep;
 window.resumeActiveGame    = resumeActiveGame;
+window.setRoomPublic       = setRoomPublic;
+window.openRoomsBrowser    = openRoomsBrowser;
+window.closeRoomsBrowser   = closeRoomsBrowser;
+window.refreshRoomsBrowser = refreshRoomsBrowser;
+window.joinPublicRoom      = joinPublicRoom;
 
 document.addEventListener('DOMContentLoaded', init);

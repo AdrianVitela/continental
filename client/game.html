@@ -1548,7 +1548,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     <span class="pill pill-dim"  id="req-pill">2 tercias</span>
     <span class="pill pill-dim"  id="mode-pill">●</span>
     <div class="scoreboard" id="scoreboard"></div>
-    <button class="guide-topbar-btn" id="btn-guide-game" onclick="openGuideSettings()">📘 Guía</button>
+    <button class="guide-topbar-btn" id="btn-guide-game" onclick="openGuideSettings()"><i class="ph ph-books"></i>Guía</button>
   </div>
 
   <!-- MESA -->
@@ -1680,7 +1680,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   <div class="guide-settings-overlay" id="guide-settings-overlay">
     <div class="guide-settings-backdrop" onclick="closeGuideSettings()"></div>
     <div class="guide-settings-modal">
-      <h3>📘 Guía de juego</h3>
+      <h3><i class="ph ph-books"></i>Guía de juego</h3>
       <p id="guide-settings-status">Activa la guía para verla automáticamente una vez al entrar a la mesa.</p>
       <label class="guide-inline-toggle">
         <input type="checkbox" id="guide-auto-toggle" onchange="toggleGuideAuto(this.checked)">
@@ -1722,10 +1722,10 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 
   <!-- ===== CHAT / REACCIONES ===== (fuera del #game) -->
   <!-- ===== CHAT / REACCIONES ===== -->
-  <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes">💬</button>
+  <button id="chat-toggle" onclick="toggleChat()" title="Reacciones y mensajes"><i class="ph ph-chats"></i></button>
 
   <div id="chat-panel">
-    <div class="chat-header">💬 Reacciones</div>
+    <div class="chat-header"><i class="ph ph-chats"></i>Reacciones</div>
     <div class="chat-messages" id="chat-messages"></div>
 
     <div class="chat-section-label">Emojis</div>
@@ -1753,14 +1753,14 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   <!-- Reproductor de música flotante — FUERA del #game para z-index correcto -->
   <!-- Desktop music player -->
   <div id="music-player">
-    <button id="music-btn" onclick="toggleGameMusic()">🎷 ▶</button>
+    <button id="music-btn" onclick="toggleGameMusic()"><i class="ph ph-music-notes"></i><i class="ph ph-play"></i></button>
     <input type="range" id="game-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)">
   </div>
   <!-- Mobile: bolita + panel popup -->
-  <button id="music-toggle-btn" onclick="toggleMusicPanel()" title="Música">🎷</button>
+  <button id="music-toggle-btn" onclick="toggleMusicPanel()" title="Música"><i class="ph ph-music-notes"></i></button>
   <div id="music-panel-mobile">
     <div class="mp-playrow">
-      <button id="mp-btn" onclick="toggleGameMusic()">▶</button>
+      <button id="mp-btn" onclick="toggleGameMusic()"><i class="ph ph-play-fill"></i></button>
       <input type="range" id="mp-vol" min="0" max="100" value="25" oninput="setGameVolume(this.value)">
     </div>
   </div>
@@ -1770,6 +1770,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 <script src="js/animations.js"></script>
 <script src="js/dragdrop.js"></script>
 <script src="js/game.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="js/gsap-enhance.js"></script>
 
 <script>
 /* ================================================================
@@ -1787,7 +1789,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     const panel = document.getElementById('chat-panel');
     panel.classList.toggle('open');
     if (panel.classList.contains('open')) {
-      document.getElementById('chat-toggle').textContent = '💬';
+      document.getElementById('chat-toggle').innerHTML = '<i class="ph ph-chats"></i>';
     }
   };
 
@@ -1962,9 +1964,10 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     const panel  = document.getElementById('chat-panel');
     const toggle = document.getElementById('chat-toggle');
     if (!panel.classList.contains('open')) {
-      toggle.textContent = '💬🔴';
+      toggle.innerHTML = '<i class="ph ph-chats"></i><i class="ph ph-circle-fill" style="position:absolute;top:2px;right:2px;font-size:.5rem;color:#e74c3c"></i>';
+      toggle.classList.add('has-unread');
       clearTimeout(toggle._badgeT);
-      toggle._badgeT = setTimeout(() => { toggle.textContent = '💬'; }, 5000);
+      toggle._badgeT = setTimeout(() => { toggle.innerHTML = '<i class="ph ph-chats"></i>'; toggle.classList.remove('has-unread'); }, 5000);
     }
   }
 
@@ -2097,8 +2100,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     if (wasPlaying) {
       audio.play().then(() => {
         playing = true;
-        document.getElementById('music-btn').textContent = '🎷 ⏸';
-        const mpb = document.getElementById('mp-btn'); if(mpb) mpb.textContent = '⏸';
+        document.getElementById('music-btn').innerHTML = '<i class="ph ph-music-notes"></i><i class="ph ph-pause"></i>';
+        const mpb = document.getElementById('mp-btn'); if(mpb) mpb.innerHTML = '<i class="ph ph-pause-fill"></i>';
       }).catch(() => {});
     }
     sessionStorage.removeItem('musicTime');
@@ -2116,12 +2119,12 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     if (playing) {
       audio.pause();
       playing = false;
-      document.getElementById('music-btn').textContent = '🎷 ▶';
-        const mpb2 = document.getElementById('mp-btn'); if(mpb2) mpb2.textContent = '▶';
+      document.getElementById('music-btn').innerHTML = '<i class="ph ph-music-notes"></i><i class="ph ph-play"></i>';
+        const mpb2 = document.getElementById('mp-btn'); if(mpb2) mpb2.innerHTML = '<i class="ph ph-play-fill"></i>';
     } else {
       audio.play().catch(() => {});
       playing = true;
-      document.getElementById('music-btn').textContent = '🎷 ⏸';
+      document.getElementById('music-btn').innerHTML = '<i class="ph ph-music-notes"></i><i class="ph ph-pause"></i>';
     }
   };
 

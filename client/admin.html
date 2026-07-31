@@ -6,475 +6,653 @@
   <title>Continental – Admin</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @layer theme, base, components, utilities;
+    @import "tailwindcss/theme.css" layer(theme);
+    @import "tailwindcss/utilities.css" layer(utilities);
+  </style>
   <style>
+    /* ============================================================
+       ADMIN — fondo sobrio con aurora (igual que el lobby)
+       ============================================================ */
     body {
+      display: block;
       min-height: 100vh;
-      background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
-      padding: 24px 16px;
-      overflow-y: auto;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(200,160,69,.45) rgba(255,255,255,.06);
+      background:
+        radial-gradient(ellipse 70% 55% at 12% -8%, rgba(200,160,69,.10) 0%, transparent 55%),
+        radial-gradient(ellipse 60% 55% at 105% 18%, rgba(46,204,113,.07) 0%, transparent 55%),
+        radial-gradient(ellipse 90% 70% at 50% 115%, rgba(0,0,0,.5) 0%, transparent 60%),
+        linear-gradient(180deg, #12301f 0%, #0b1e12 100%);
     }
+    body::before { content: none; }
 
-    body::-webkit-scrollbar {
-      width: 10px;
-    }
-
-    body::-webkit-scrollbar-track {
-      background: rgba(255,255,255,.05);
-    }
-
-    body::-webkit-scrollbar-thumb {
-      background: linear-gradient(180deg, rgba(200,160,69,.58), rgba(160,122,24,.42));
-      border-radius: 999px;
-      border: 2px solid rgba(0,0,0,.16);
-    }
-
-    .admin-wrap {
-      max-width: 860px;
+    .admin-shell {
+      max-width: 1000px;
       margin: 0 auto;
+      padding: 34px clamp(16px, 4vw, 40px) 64px;
       display: flex;
       flex-direction: column;
-      gap: 20px;
-      animation: fadeDown .6s var(--eout) both;
+      gap: 22px;
     }
 
-    .admin-wrap > * {
-      flex-shrink: 0;
-    }
-
+    /* Header */
     .admin-header {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       justify-content: space-between;
+      gap: 14px;
       flex-wrap: wrap;
-      gap: 10px;
+      animation: fadeDown .5s var(--eout) both;
     }
     .admin-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(1.8rem, 5vw, 2.8rem);
-      color: var(--gold);
+      font-size: clamp(1.8rem, 5vw, 2.6rem);
+      color: var(--text);
       margin: 0;
-      letter-spacing: 2px;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
+    .admin-title i { color: var(--gold); font-size: 1.6rem; }
     .admin-subtitle {
-      font-size: .75rem;
+      font-size: .72rem;
       color: var(--text-dim);
       letter-spacing: 3px;
       text-transform: uppercase;
-      margin-top: 2px;
+      margin-top: 4px;
     }
-
     .btn-back {
-      background: none;
-      border: 1px solid rgba(255,255,255,.15);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(200,160,69,.2);
       color: var(--text-dim);
-      border-radius: 8px;
-      padding: 6px 14px;
+      border-radius: 10px;
+      padding: 9px 14px;
       font-size: .8rem;
       cursor: pointer;
       transition: all .2s;
       font-family: inherit;
     }
-    .btn-back:hover { border-color: rgba(200,160,69,.4); color: var(--gold); }
+    .btn-back:hover { border-color: rgba(200,160,69,.45); color: var(--gold-hi); background: rgba(200,160,69,.08); }
 
     /* Stats */
-    .stats-row {
-      display: flex; gap: 12px; flex-wrap: wrap;
-    }
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
     .stat-card {
-      flex: 1; min-width: 120px;
-      background: rgba(0,0,0,.3);
-      border: 1px solid rgba(200,160,69,.15);
-      border-radius: 12px;
-      padding: 14px 18px;
-      text-align: center;
+      --accent: var(--gold);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+      border: 1px solid rgba(200,160,69,.16);
+      border-radius: 14px;
+      padding: 16px 18px;
+      animation: fadeUp .5s var(--eout) both;
+      transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(200,160,69,.35);
+      box-shadow: 0 14px 30px rgba(0,0,0,.28);
+    }
+    .stat-card:nth-child(2) { animation-delay: .06s; }
+    .stat-card:nth-child(3) { animation-delay: .12s; }
+    .stat-card:nth-child(4) { animation-delay: .18s; }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      right: -30px; top: -30px;
+      width: 90px; height: 90px;
+      border-radius: 50%;
+      background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%);
+      pointer-events: none;
+    }
+    .stat-icon {
+      width: 42px; height: 42px;
+      flex-shrink: 0;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      background: color-mix(in srgb, var(--accent) 16%, transparent);
+      border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+      color: var(--accent);
+    }
+    .stat-card.green  { --accent: #2ecc71; }
+    .stat-card.blue   { --accent: #6ea8ff; }
+    .stat-card.gold   { --accent: #e0b84f; }
+    .stat-card.wine   { --accent: #ff8f7a; }
     .stat-num {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 2rem;
-      color: var(--gold);
+      font-size: 1.7rem;
+      color: var(--text);
       line-height: 1;
+      font-weight: 700;
     }
     .stat-label {
-      font-size: .68rem;
+      font-size: .64rem;
       color: var(--text-dim);
       text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 4px;
+      letter-spacing: 1.2px;
+      margin-top: 3px;
     }
 
-    /* Tabla */
-    .table-card {
-      background: rgba(0,0,0,.3);
-      border: 1px solid rgba(200,160,69,.15);
-      border-radius: 14px;
+    /* Paneles */
+    .panel {
+      background: linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+      border: 1px solid rgba(200,160,69,.16);
+      border-radius: 16px;
       overflow: hidden;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 40px rgba(0,0,0,.24);
+      animation: fadeUp .55s var(--eout) both;
     }
-    .table-header {
+    .panel-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
       padding: 16px 20px;
       border-bottom: 1px solid rgba(255,255,255,.06);
-      gap: 10px;
-      flex-wrap: wrap;
     }
-    .table-header h3 {
+    .panel-head h3 {
       font-family: 'Cormorant Garamond', serif;
       color: var(--gold);
       margin: 0;
       font-size: 1.1rem;
       letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+    .panel-head h3 i { color: var(--gold-hi); font-size: 1.1rem; }
+    .count-label { font-size: .72rem; color: var(--text-muted); }
+
+    .search-wrap { position: relative; }
+    .search-wrap i {
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: .95rem;
+      pointer-events: none;
     }
     .search-input {
       background: rgba(0,0,0,.3);
       border: 1px solid rgba(200,160,69,.2);
-      border-radius: 8px;
+      border-radius: 10px;
       color: var(--text);
       font-size: .82rem;
-      padding: 7px 12px;
+      padding: 8px 12px 8px 34px;
       outline: none;
       font-family: inherit;
-      width: min(200px, 100%);
-      transition: border-color .2s;
+      width: min(220px, 100%);
+      transition: border-color .2s, box-shadow .2s;
     }
-    .search-input:focus { border-color: rgba(200,160,69,.5); }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    thead th {
-      font-size: .68rem;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      color: var(--text-dim);
-      padding: 10px 20px;
-      text-align: left;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      font-weight: 500;
-    }
-    tbody tr {
-      border-bottom: 1px solid rgba(255,255,255,.04);
-      transition: background .15s;
-    }
-    tbody tr:hover { background: rgba(255,255,255,.03); }
-    tbody tr:last-child { border-bottom: none; }
-    td {
-      padding: 12px 20px;
-      font-size: .85rem;
-      vertical-align: middle;
-    }
-    .td-nombre {
-      font-weight: 600;
-      color: var(--text);
-    }
-    .td-email { color: var(--text-dim); font-size: .78rem; }
-    .td-fecha { color: var(--text-dim); font-size: .75rem; }
-
-    .badge-display {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: .78rem;
-      background: rgba(200,160,69,.1);
-      border: 1px solid rgba(200,160,69,.25);
-      border-radius: 20px;
-      padding: 3px 10px;
-      color: var(--gold);
-    }
-    .badge-none {
-      font-size: .75rem;
-      color: var(--text-muted);
-      font-style: italic;
-    }
-
-    .rol-pill {
-      display: inline-block;
-      font-size: .68rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      border-radius: 20px;
-      padding: 2px 8px;
-      font-weight: 600;
-    }
-    .rol-owner   { background: rgba(200,160,69,.2); color: var(--gold); border: 1px solid rgba(200,160,69,.3); }
-    .rol-jugador { background: rgba(255,255,255,.06); color: var(--text-dim); border: 1px solid rgba(255,255,255,.1); }
-
-    /* Badge selector */
-    .badge-select {
-      background: rgba(0,0,0,.4);
-      border: 1px solid rgba(200,160,69,.2);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: .8rem;
-      padding: 5px 8px;
-      outline: none;
-      cursor: pointer;
-      font-family: inherit;
-      transition: border-color .2s;
-    }
-    .badge-select:focus { border-color: rgba(200,160,69,.5); }
-
-    .btn-save {
-      background: linear-gradient(135deg, var(--gold), #b8920a);
-      color: #0b1e12;
-      border: none;
-      border-radius: 7px;
-      padding: 5px 12px;
-      font-size: .78rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity .2s;
-      font-family: inherit;
-    }
-    .btn-save:hover { opacity: .85; }
-    .btn-save:disabled { opacity: .4; cursor: not-allowed; }
-
-    .btn-danger {
-      background: linear-gradient(135deg, #d85a4f, #a92e2e);
-      color: #fff7ef;
-      border: none;
-      border-radius: 7px;
-      padding: 7px 12px;
-      font-size: .78rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity .2s;
-      font-family: inherit;
-    }
-    .btn-danger:hover { opacity: .88; }
-    .btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+    .search-input:focus { border-color: rgba(200,160,69,.55); box-shadow: 0 0 0 3px rgba(200,160,69,.1); }
 
     .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       background: rgba(255,255,255,.04);
       color: var(--text);
       border: 1px solid rgba(255,255,255,.1);
-      border-radius: 7px;
-      padding: 7px 12px;
+      border-radius: 9px;
+      padding: 8px 13px;
       font-size: .78rem;
       font-weight: 600;
       cursor: pointer;
       transition: all .2s;
       font-family: inherit;
     }
-    .btn-ghost:hover { border-color: rgba(200,160,69,.35); color: var(--gold); }
+    .btn-ghost:hover { border-color: rgba(200,160,69,.35); color: var(--gold-hi); }
 
-    .save-ok { color: #2ecc71; font-size: .75rem; margin-left: 4px; }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-dim);
-      font-size: .9rem;
-    }
-
+    /* Tabla */
     .table-scroll {
       max-height: min(62vh, 680px);
       overflow: auto;
-    }
-
-    .rooms-scroll {
-      max-height: min(40vh, 420px);
-      overflow: auto;
-    }
-
-    .table-scroll,
-    .rooms-scroll {
       scrollbar-width: thin;
       scrollbar-color: rgba(200,160,69,.45) rgba(255,255,255,.06);
     }
-
-    .table-scroll::-webkit-scrollbar,
-    .rooms-scroll::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
-    }
-
-    .table-scroll::-webkit-scrollbar-track,
-    .rooms-scroll::-webkit-scrollbar-track {
-      background: rgba(255,255,255,.05);
+    .table-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+    .table-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,.05); border-radius: 999px; }
+    .table-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(200,160,69,.58), rgba(160,122,24,.42));
       border-radius: 999px;
+      border: 2px solid rgba(0,0,0,.16);
     }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: rgba(12,28,18,.97);
+      font-size: .64rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      padding: 11px 20px;
+      text-align: left;
+      border-bottom: 1px solid rgba(200,160,69,.18);
+      font-weight: 600;
+    }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,.04); transition: background .15s; }
+    tbody tr:hover { background: rgba(200,160,69,.05); }
+    tbody tr:last-child { border-bottom: none; }
+    td { padding: 12px 20px; font-size: .85rem; vertical-align: middle; }
 
-    .table-scroll::-webkit-scrollbar-thumb,
+    .user-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .user-avatar {
+      width: 34px; height: 34px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .9rem;
+      font-weight: 700;
+      background: radial-gradient(circle at 30% 30%, #c8a045, #6b4e10 58%, #3d2e00);
+      border: 2px dashed rgba(255,220,140,.6);
+      color: #fff;
+      text-shadow: 0 1px 2px rgba(0,0,0,.5);
+    }
+    .user-meta { min-width: 0; }
+    .td-nombre { font-weight: 600; color: var(--text); }
+    .td-email { color: var(--text-dim); font-size: .76rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 220px; }
+    .td-fecha { color: var(--text-dim); font-size: .75rem; }
+    .td-fecha small { display: block; color: var(--text-muted); font-size: .68rem; margin-top: 2px; }
+
+    .rol-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .66rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-weight: 600;
+    }
+    .rol-owner   { background: rgba(200,160,69,.16); color: var(--gold); border: 1px solid rgba(200,160,69,.3); }
+    .rol-jugador { background: rgba(255,255,255,.06); color: var(--text-dim); border: 1px solid rgba(255,255,255,.1); }
+
+    .badge-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .76rem;
+      background: rgba(200,160,69,.1);
+      border: 1px solid rgba(200,160,69,.25);
+      border-radius: 999px;
+      padding: 3px 10px;
+      color: var(--gold);
+    }
+    .badge-none { font-size: .74rem; color: var(--text-muted); font-style: italic; }
+
+    .badge-select {
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(200,160,69,.2);
+      border-radius: 9px;
+      color: var(--text);
+      font-size: .8rem;
+      padding: 6px 9px;
+      outline: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color .2s, box-shadow .2s;
+      max-width: 150px;
+    }
+    .badge-select:focus { border-color: rgba(200,160,69,.55); box-shadow: 0 0 0 3px rgba(200,160,69,.1); }
+
+    .btn-save {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, var(--gold), #b8920a);
+      color: #0b1e12;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: .76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      font-family: inherit;
+    }
+    .btn-save:hover { opacity: .85; }
+    .btn-save:disabled { opacity: .4; cursor: not-allowed; }
+    .save-ok { color: #2ecc71; font-size: .8rem; margin-left: 2px; }
+
+    /* Mesas */
+    .rooms-scroll {
+      max-height: min(40vh, 440px);
+      overflow: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(200,160,69,.45) rgba(255,255,255,.06);
+    }
+    .rooms-scroll::-webkit-scrollbar { width: 10px; }
+    .rooms-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,.05); border-radius: 999px; }
     .rooms-scroll::-webkit-scrollbar-thumb {
       background: linear-gradient(180deg, rgba(200,160,69,.58), rgba(160,122,24,.42));
       border-radius: 999px;
       border: 2px solid rgba(0,0,0,.16);
     }
-
-    .table-scroll thead th {
-      position: sticky;
-      top: 0;
-      background: rgba(10,24,15,.96);
-      z-index: 1;
-    }
-
-    .room-list {
-      display: grid;
-      gap: 12px;
-      padding: 18px;
-    }
+    .room-list { display: grid; gap: 12px; padding: 18px; }
     .room-card {
-      background: rgba(255,255,255,.03);
+      background: linear-gradient(165deg, rgba(255,255,255,.04), rgba(255,255,255,.012));
       border: 1px solid rgba(255,255,255,.07);
-      border-radius: 12px;
+      border-radius: 13px;
       padding: 16px;
       display: grid;
-      gap: 12px;
+      gap: 13px;
+      transition: border-color .18s ease, transform .18s ease;
+      animation: popIn .3s var(--spring) both;
     }
-    .room-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+    .room-card:hover { border-color: rgba(200,160,69,.28); transform: translateY(-1px); }
+    .room-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .room-code-row { display: flex; align-items: center; gap: 10px; }
     .room-code {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.45rem;
+      font-size: 1.5rem;
       color: var(--gold);
-      letter-spacing: 2px;
+      letter-spacing: 3px;
+      font-weight: 700;
     }
-    .room-meta {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .table-dot {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.25);
+      box-shadow: inset 0 0 5px rgba(0,0,0,.4);
     }
+    .table-dot.green  { background: #0e2419; }
+    .table-dot.navy   { background: #0a1628; }
+    .table-dot.wine   { background: #2a0a0f; }
+    .table-dot.black  { background: #111111; }
+    .room-meta { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 6px; }
     .room-pill {
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      font-size: .68rem;
+      font-size: .66rem;
       text-transform: uppercase;
       letter-spacing: 1px;
-      padding: 4px 9px;
+      padding: 3px 9px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.1);
       background: rgba(0,0,0,.22);
       color: var(--text-dim);
     }
-    .room-pill.playing { border-color: rgba(200,160,69,.28); color: var(--gold); }
-    .room-pill.lobby { border-color: rgba(84,199,139,.24); color: #8ce4b5; }
-    .room-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 10px;
+    .room-pill.playing { border-color: rgba(200,160,69,.3); color: var(--gold); background: rgba(200,160,69,.08); }
+    .room-pill.lobby   { border-color: rgba(84,199,139,.24); color: #8ce4b5; background: rgba(46,204,113,.06); }
+    .room-pill .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+      animation: statusPulse 2s ease-in-out infinite;
     }
-    .room-field {
-      background: rgba(0,0,0,.2);
-      border: 1px solid rgba(255,255,255,.05);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
+    @keyframes statusPulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+    .room-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 9px; }
+    .room-field { background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.05); border-radius: 10px; padding: 9px 12px; }
     .room-field-label {
-      font-size: .64rem;
+      font-size: .6rem;
       text-transform: uppercase;
       letter-spacing: 1.4px;
       color: var(--text-dim);
-      margin-bottom: 5px;
-    }
-    .room-field-value {
-      font-size: .85rem;
-      color: var(--text);
-      font-weight: 600;
-    }
-    .room-players {
+      margin-bottom: 4px;
       display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+      align-items: center;
+      gap: 5px;
     }
+    .room-field-value { font-size: .84rem; color: var(--text); font-weight: 600; }
+    .room-players { display: flex; gap: 6px; flex-wrap: wrap; }
     .room-player {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: .72rem;
       color: var(--text-dim);
       border: 1px solid rgba(255,255,255,.08);
       border-radius: 999px;
-      padding: 4px 8px;
+      padding: 4px 10px;
       background: rgba(255,255,255,.03);
     }
-    .room-player.offline {
-      opacity: .65;
-      text-decoration: line-through;
+    .room-player .dot { width: 7px; height: 7px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,.6); }
+    .room-player.offline { opacity: .6; }
+    .room-player.offline .dot { background: var(--text-muted); box-shadow: none; }
+
+    .btn-danger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, rgba(216,90,79,.9), rgba(169,46,46,.9));
+      color: #fff7ef;
+      border: none;
+      border-radius: 9px;
+      padding: 8px 13px;
+      font-size: .76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .15s;
+      font-family: inherit;
     }
-    .room-actions {
+    .btn-danger:hover { opacity: .88; }
+    .btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Estados de carga / vacío */
+    .loading, .empty {
       display: flex;
-      justify-content: flex-end;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 42px 20px;
+      color: var(--text-dim);
+      font-size: .86rem;
+      text-align: center;
     }
+    .loading i, .empty i { font-size: 1.6rem; color: var(--gold-dim); }
+    .spin { animation: rot 1s linear infinite; display: inline-block; }
+    @keyframes rot { to { transform: rotate(360deg); } }
 
+    /* Modal de confirmación */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      background: rgba(3,10,7,.72);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.show { display: flex; animation: fadeIn .2s ease both; }
+    .modal-box {
+      width: min(380px, 100%);
+      background: linear-gradient(160deg, rgba(28,60,40,.97), rgba(10,22,15,.98));
+      border: 1px solid rgba(200,160,69,.32);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.45);
+      padding: 24px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-align: center;
+      animation: modalPop .28s var(--spring) both;
+    }
+    .modal-icon {
+      width: 52px; height: 52px;
+      margin: 0 auto;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      background: rgba(216,90,79,.14);
+      border: 1px solid rgba(216,90,79,.35);
+      color: #ff9a8c;
+    }
+    .modal-box h3 { font-family: 'Cormorant Garamond', serif; color: var(--text); margin: 0; font-size: 1.2rem; letter-spacing: .5px; }
+    .modal-box p { margin: 0; color: var(--text-dim); line-height: 1.5; font-size: .82rem; }
+    .modal-actions { display: flex; gap: 9px; }
+    .modal-actions .btn-ghost { flex: 1; justify-content: center; }
+    .modal-actions .btn-danger { flex: 1.3; justify-content: center; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%) translateY(16px);
+      z-index: 1200;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      max-width: min(92vw, 420px);
+      background: linear-gradient(160deg, rgba(28,60,40,.97), rgba(10,22,15,.98));
+      border: 1px solid rgba(200,160,69,.35);
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: .84rem;
+      color: var(--text);
+      box-shadow: 0 16px 40px rgba(0,0,0,.4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .25s ease, transform .25s ease;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .toast i { font-size: 1.1rem; }
+    .toast.ok  i { color: #2ecc71; }
+    .toast.err i { color: #ff6b5e; }
+
+    /* Responsive */
     @media (max-width: 600px) {
-      body {
-        padding: 16px 12px;
-      }
-
+      .admin-shell { padding: 20px 12px 48px; }
       thead th:nth-child(3),
       td:nth-child(3) { display: none; }
-
-      .room-actions {
-        justify-content: stretch;
-      }
-
-      .room-actions button {
-        width: 100%;
-      }
+      .search-input { width: 100%; }
+      .panel-head { flex-direction: column; align-items: stretch; }
+      .search-wrap { width: 100%; }
+      .td-email { max-width: 120px; }
     }
   </style>
 </head>
 <body>
-  <div class="admin-wrap">
-
-    <div class="admin-header">
-      <div>
-        <h1 class="admin-title">👑 Panel Admin</h1>
-        <div class="admin-subtitle">Continental — Gestión de usuarios y mesas</div>
-      </div>
-      <button class="btn-back" onclick="window.location.href='/'">← Volver al lobby</button>
-    </div>
-
-    <!-- Stats -->
-    <div class="stats-row" id="stats-row">
-      <div class="stat-card"><div class="stat-num" id="stat-total">—</div><div class="stat-label">Usuarios</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-badges">—</div><div class="stat-label">Con badge</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-rooms">—</div><div class="stat-label">Mesas activas</div></div>
-      <div class="stat-card"><div class="stat-num" id="stat-hoy">—</div><div class="stat-label">Hoy</div></div>
-    </div>
-
-    <div class="table-card">
-      <div class="table-header">
-        <h3>Mesas activas</h3>
-        <button class="btn-ghost" onclick="cargarMesas()">Actualizar</button>
-      </div>
-      <div id="mesas-wrap">
-        <div class="loading">Cargando mesas...</div>
-      </div>
-    </div>
-
-    <!-- Tabla usuarios -->
-    <div class="table-card">
-      <div class="table-header">
-        <h3>Usuarios registrados</h3>
-        <input class="search-input" type="text" placeholder="🔍 Buscar..." oninput="filtrar(this.value)">
-      </div>
-      <div id="tabla-wrap">
-        <div class="loading">Cargando usuarios...</div>
-      </div>
-    </div>
-
-  </div>
-
   <script>
+    // Verificar que sea owner
     const token   = localStorage.getItem('token');
     const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
-
-    // Verificar que sea owner
     if (!token || !usuario || usuario.rol !== 'owner') {
       window.location.href = '/';
     }
+  </script>
 
+  <div class="admin-shell">
+
+    <header class="admin-header">
+      <div>
+        <h1 class="admin-title"><i class="ph ph-crown"></i>Panel Admin</h1>
+        <div class="admin-subtitle mb-4">Continental — Gestión de usuarios y mesas</div>
+      </div>
+      <button class="btn-back" onclick="window.location.href='/'"><i class="ph ph-arrow-left"></i>Volver al lobby</button>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card gold"><div class="stat-icon"><i class="ph ph-users-three"></i></div><div><div class="stat-num" id="stat-total">—</div><div class="stat-label">Usuarios</div></div></div>
+      <div class="stat-card blue"><div class="stat-icon"><i class="ph ph-medal"></i></div><div><div class="stat-num" id="stat-badges">—</div><div class="stat-label">Con badge</div></div></div>
+      <div class="stat-card green"><div class="stat-icon"><i class="ph ph-table"></i></div><div><div class="stat-num" id="stat-rooms">—</div><div class="stat-label">Mesas activas</div></div></div>
+      <div class="stat-card wine"><div class="stat-icon"><i class="ph ph-calendar-blank"></i></div><div><div class="stat-num" id="stat-hoy">—</div><div class="stat-label">Hoy</div></div></div>
+    </div>
+
+    <!-- Mesas activas -->
+    <section class="panel">
+      <div class="panel-head">
+        <h3><i class="ph ph-table"></i>Mesas activas</h3>
+        <button class="btn-ghost" onclick="cargarMesas()"><i class="ph ph-arrows-clockwise"></i>Actualizar</button>
+      </div>
+      <div id="mesas-wrap">
+        <div class="loading"><i class="ph ph-circle-notch spin"></i>Cargando mesas...</div>
+      </div>
+    </section>
+
+    <!-- Usuarios -->
+    <section class="panel">
+      <div class="panel-head" style="align-items:center">
+        <h3><i class="ph ph-users-three"></i>Usuarios registrados <span class="count-label" id="tabla-count"></span></h3>
+        <div class="search-wrap">
+          <i class="ph ph-magnifying-glass"></i>
+          <input class="search-input" type="text" placeholder="Buscar..." oninput="filtrar(this.value)">
+        </div>
+      </div>
+      <div id="tabla-wrap">
+        <div class="loading"><i class="ph ph-circle-notch spin"></i>Cargando usuarios...</div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Modal de confirmación -->
+  <div class="modal-backdrop" id="confirm-backdrop" onclick="cancelConfirm(event)">
+    <div class="modal-box">
+      <div class="modal-icon"><i class="ph ph-warning"></i></div>
+      <h3 id="confirm-title">¿Confirmar acción?</h3>
+      <p id="confirm-msg"></p>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="cancelConfirm()"><i class="ph ph-x"></i>Cancelar</button>
+        <button class="btn-danger" id="confirm-ok" onclick="confirmOk()"><i class="ph ph-x-circle"></i>Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="js/gsap-enhance.js"></script>
+
+  <script>
     let todosUsuarios = [];
     let badges = {};
     let mesas = [];
+    let confirmCallback = null;
+
+    function toast(msg, type = 'ok') {
+      const el = document.getElementById('toast');
+      el.innerHTML = type === 'ok'
+        ? '<i class="ph ph-check-circle"></i>' + msg
+        : '<i class="ph ph-warning-circle"></i>' + msg;
+      el.className = 'toast ' + type + ' show';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    function confirmar(title, msg, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-msg').textContent = msg;
+      confirmCallback = onConfirm;
+      document.getElementById('confirm-backdrop').classList.add('show');
+    }
+    function cancelConfirm(e) {
+      if (e && e.target !== document.getElementById('confirm-backdrop')) return;
+      document.getElementById('confirm-backdrop').classList.remove('show');
+      confirmCallback = null;
+    }
+    function confirmOk() {
+      const cb = confirmCallback;
+      confirmCallback = null;
+      document.getElementById('confirm-backdrop').classList.remove('show');
+      if (typeof cb === 'function') cb();
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') cancelConfirm();
+    });
 
     async function cargarDatos() {
       try {
@@ -494,7 +672,6 @@
         badges        = bData.badges;
         mesas         = mData.mesas || [];
 
-        // Stats
         const hoy = new Date().toDateString();
         document.getElementById('stat-total').textContent  = todosUsuarios.length;
         document.getElementById('stat-badges').textContent = todosUsuarios.filter(u => u.badge).length;
@@ -506,62 +683,98 @@
         renderTabla(todosUsuarios);
       } catch (err) {
         document.getElementById('mesas-wrap').innerHTML =
-          '<div class="loading">Error al cargar mesas.</div>';
+          '<div class="empty"><i class="ph ph-warning-circle"></i>Error al cargar mesas.</div>';
         document.getElementById('tabla-wrap').innerHTML =
-          '<div class="loading">Error al cargar datos.</div>';
+          '<div class="empty"><i class="ph ph-warning-circle"></i>Error al cargar datos.</div>';
+        toast('Error al cargar los datos.', 'err');
       }
+    }
+
+    function tiempoRelativo(iso) {
+      if (!iso) return '—';
+      const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (s < 60) return 'hace un momento';
+      const m = Math.floor(s / 60);
+      if (m < 60) return `hace ${m} min`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `hace ${h} h`;
+      const d = Math.floor(h / 24);
+      return `hace ${d} d`;
     }
 
     function formatFecha(fecha) {
       if (!fecha) return '—';
       return new Date(fecha).toLocaleString('es-MX', {
-        day: '2-digit',
-        month: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit', month: '2-digit', year: '2-digit',
+        hour: '2-digit', minute: '2-digit'
       });
     }
 
+    const MODE_META = {
+      realtime: { label: 'Tiempo real', icon: 'ph-lightning' },
+    };
+    const STATUS_META = {
+      playing: { label: 'En juego', icon: 'ph-play-fill' },
+      lobby:   { label: 'Esperando', icon: 'ph-hourglass-medium' },
+    };
+
     function renderMesas(items) {
+      const wrap = document.getElementById('mesas-wrap');
       if (!items.length) {
-        document.getElementById('mesas-wrap').innerHTML =
-          '<div class="loading">No hay mesas activas.</div>';
+        wrap.innerHTML = '<div class="empty"><i class="ph ph-tray"></i>No hay mesas activas.</div>';
         return;
       }
 
-      const cards = items.map(mesa => `
+      const cards = items.map(mesa => {
+        const mode = MODE_META[mesa.mode] || { label: mesa.mode, icon: 'ph-sliders-horizontal' };
+        const status = STATUS_META[mesa.status] || { label: mesa.status, icon: 'ph-question' };
+        const dot = mesa.tableColor ? `<span class="table-dot ${mesa.tableColor}" title="Mesa ${mesa.tableColor}"></span>` : '';
+        const ronda = mesa.status === 'playing' ? (mesa.ronda != null ? `Ronda ${mesa.ronda}` : 'Ronda —') : 'No iniciada';
+        return `
         <div class="room-card" id="room-card-${mesa.code}">
           <div class="room-top">
             <div>
-              <div class="room-code">${mesa.code}</div>
+              <div class="room-code-row">
+                <span class="room-code">${mesa.code}</span>
+                ${dot}
+              </div>
               <div class="room-meta">
-                <span class="room-pill ${mesa.status}">${mesa.status}</span>
-                <span class="room-pill">${mesa.mode}</span>
-                <span class="room-pill">${mesa.connectedCount}/${mesa.playerCount} conectados</span>
+                <span class="room-pill ${mesa.status}"><span class="dot"></span>${status.label}</span>
+                <span class="room-pill"><i class="ph ${mode.icon}"></i>${mode.label}</span>
+                <span class="room-pill"><i class="ph ph-users-three"></i>${mesa.connectedCount}/${mesa.playerCount} conectados</span>
               </div>
             </div>
-            <div class="room-actions">
-              <button class="btn-danger" onclick="cerrarMesa('${mesa.code}')" id="kill-${mesa.code}">Matar mesa</button>
-            </div>
+            <button class="btn-danger" onclick="preguntarCierre('${mesa.code}')" id="kill-${mesa.code}"><i class="ph ph-x-circle"></i>Matar mesa</button>
           </div>
           <div class="room-grid">
-            <div class="room-field"><div class="room-field-label">Host</div><div class="room-field-value">${mesa.host}</div></div>
-            <div class="room-field"><div class="room-field-label">Creada</div><div class="room-field-value">${formatFecha(mesa.createdAt)}</div></div>
-            <div class="room-field"><div class="room-field-label">Ronda</div><div class="room-field-value">${mesa.ronda || '—'}</div></div>
-            <div class="room-field"><div class="room-field-label">Turno</div><div class="room-field-value">${mesa.turnoJugador || '—'}</div></div>
+            <div class="room-field"><div class="room-field-label"><i class="ph ph-user-circle"></i>Host</div><div class="room-field-value">${mesa.host}</div></div>
+            <div class="room-field"><div class="room-field-label"><i class="ph ph-clock"></i>Creada</div><div class="room-field-value">${tiempoRelativo(mesa.createdAt)}</div></div>
+            <div class="room-field"><div class="room-field-label"><i class="ph ph-sort-ascending"></i>Ronda</div><div class="room-field-value">${ronda}</div></div>
+            <div class="room-field"><div class="room-field-label"><i class="ph ph-user-switch"></i>Turno</div><div class="room-field-value">${mesa.turnoJugador || '—'}</div></div>
           </div>
           <div class="room-players">
-            ${mesa.players.map(player => `<span class="room-player ${player.conectado ? '' : 'offline'}">${player.nombre}${player.conectado ? '' : ' · off'}</span>`).join('')}
+            ${mesa.players.map(player =>
+              `<span class="room-player ${player.conectado ? '' : 'offline'}" title="${player.conectado ? 'Conectado' : 'Desconectado'}">
+                <span class="dot"></span>${player.nombre}${player.conectado ? '' : ' · off'}
+              </span>`).join('')}
           </div>
-        </div>
-      `).join('');
+        </div>`;
+      }).join('');
 
-      document.getElementById('mesas-wrap').innerHTML = `<div class="rooms-scroll"><div class="room-list">${cards}</div></div>`;
+      wrap.innerHTML = `<div class="rooms-scroll"><div class="room-list">${cards}</div></div>`;
+    }
+
+    function preguntarCierre(code) {
+      confirmar(
+        'Cerrar mesa ' + code,
+        `Todos los jugadores serán expulsados de la sala y la partida se perderá. Esta acción no se puede deshacer.`,
+        () => cerrarMesa(code)
+      );
     }
 
     async function cargarMesas() {
       const wrap = document.getElementById('mesas-wrap');
-      wrap.innerHTML = '<div class="loading">Actualizando mesas...</div>';
+      wrap.innerHTML = '<div class="loading"><i class="ph ph-circle-notch spin"></i>Actualizando mesas...</div>';
 
       try {
         const res = await fetch('/api/admin/mesas', {
@@ -574,28 +787,22 @@
         document.getElementById('stat-rooms').textContent = mesas.length;
         renderMesas(mesas);
       } catch (err) {
-        wrap.innerHTML = '<div class="loading">Error al cargar mesas.</div>';
-        alert(err.message || 'Error al cargar mesas.');
+        wrap.innerHTML = '<div class="empty"><i class="ph ph-warning-circle"></i>Error al cargar mesas.</div>';
+        toast(err.message || 'Error al cargar mesas.', 'err');
       }
     }
 
     async function cerrarMesa(code) {
-      const ok = window.confirm(`Vas a cerrar la mesa ${code}. Todos los jugadores serán expulsados. ¿Continuar?`);
-      if (!ok) return;
-
       const btn = document.getElementById(`kill-${code}`);
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Cerrando...';
+        btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>Cerrando...';
       }
 
       try {
         const res = await fetch(`/api/admin/mesas/${encodeURIComponent(code)}/cerrar`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cerrar la mesa.');
@@ -603,19 +810,23 @@
         mesas = mesas.filter(mesa => mesa.code !== code);
         document.getElementById('stat-rooms').textContent = mesas.length;
         renderMesas(mesas);
+        toast(`Mesa ${code} cerrada.`);
       } catch (err) {
-        alert(err.message || 'No se pudo cerrar la mesa.');
+        toast(err.message || 'No se pudo cerrar la mesa.', 'err');
         if (btn) {
           btn.disabled = false;
-          btn.textContent = 'Matar mesa';
+          btn.innerHTML = '<i class="ph ph-x-circle"></i>Matar mesa';
         }
       }
     }
 
     function renderTabla(usuarios) {
+      const wrap = document.getElementById('tabla-wrap');
+      const countEl = document.getElementById('tabla-count');
+      if (countEl) countEl.textContent = `· ${usuarios.length} ${usuarios.length === 1 ? 'usuario' : 'usuarios'}`;
+
       if (!usuarios.length) {
-        document.getElementById('tabla-wrap').innerHTML =
-          '<div class="loading">No se encontraron usuarios.</div>';
+        wrap.innerHTML = '<div class="empty"><i class="ph ph-user-minus"></i>No se encontraron usuarios.</div>';
         return;
       }
 
@@ -624,34 +835,43 @@
       ).join('');
 
       const rows = usuarios.map(u => {
-        const fecha  = new Date(u.created_at).toLocaleDateString('es-MX');
-        const rolPill = u.rol === 'owner'
-          ? `<span class="rol-pill rol-owner">👑 Owner</span>`
-          : `<span class="rol-pill rol-jugador">Jugador</span>`;
+        const fecha     = new Date(u.created_at).toLocaleDateString('es-MX');
+        const inicial   = (u.nombre || '?').trim()[0].toUpperCase();
+        const rolPill   = u.rol === 'owner'
+          ? `<span class="rol-pill rol-owner"><i class="ph ph-crown"></i>Owner</span>`
+          : `<span class="rol-pill rol-jugador"><i class="ph ph-user"></i>Jugador</span>`;
         const badgeDisplay = u.badge && badges[u.badge]
           ? `<span class="badge-display">${badges[u.badge].emoji} ${badges[u.badge].label}</span>`
           : `<span class="badge-none">Sin badge</span>`;
 
         return `
           <tr id="row-${u.id}">
-            <td><div class="td-nombre">${u.nombre}</div><div class="td-email">${u.email}</div></td>
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar">${inicial}</div>
+                <div class="user-meta">
+                  <div class="td-nombre">${u.nombre}</div>
+                  <div class="td-email">${u.email}</div>
+                </div>
+              </div>
+            </td>
             <td>${rolPill}</td>
-            <td class="td-fecha">${fecha}</td>
+            <td class="td-fecha">${fecha}<small>${tiempoRelativo(u.created_at)}</small></td>
             <td>${badgeDisplay}</td>
             <td>
-              <div style="display:flex;align-items:center;gap:6px">
+              <div style="display:flex;align-items:center;gap:7px">
                 <select class="badge-select" id="sel-${u.id}">
                   <option value="">Sin badge</option>
                   ${badgeOptions}
                 </select>
-                <button class="btn-save" onclick="asignarBadge(${u.id})" id="btn-${u.id}">Guardar</button>
+                <button class="btn-save" onclick="asignarBadge(${u.id})" id="btn-${u.id}"><i class="ph ph-check"></i>Guardar</button>
                 <span class="save-ok" id="ok-${u.id}" style="display:none">✓</span>
               </div>
             </td>
           </tr>`;
       }).join('');
 
-      document.getElementById('tabla-wrap').innerHTML = `
+      wrap.innerHTML = `
         <div class="table-scroll">
           <table>
             <thead>
@@ -667,7 +887,6 @@
           </table>
         </div>`;
 
-      // Pre-seleccionar badge actual
       usuarios.forEach(u => {
         const sel = document.getElementById(`sel-${u.id}`);
         if (sel && u.badge) sel.value = u.badge;
@@ -681,7 +900,7 @@
       const badge = sel.value || null;
 
       btn.disabled = true;
-      btn.textContent = '...';
+      btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
 
       try {
         const res = await fetch('/api/admin/badge', {
@@ -690,18 +909,16 @@
           body:    JSON.stringify({ usuarioId, badge }),
         });
         const data = await res.json();
-        if (!res.ok) { alert(data.error); return; }
+        if (!res.ok) { toast(data.error || 'No se pudo guardar el badge.', 'err'); return; }
         const updatedUser = data.usuario || { id: usuarioId, badge };
         todosUsuarios = todosUsuarios.map(u => u.id === usuarioId ? { ...u, ...updatedUser, badge } : u);
 
-        // Actualizar badge display en la fila
         const row = document.getElementById(`row-${usuarioId}`);
         const badgeTd = row.querySelectorAll('td')[3];
         badgeTd.innerHTML = badge && badges[badge]
           ? `<span class="badge-display">${badges[badge].emoji} ${badges[badge].label}</span>`
           : `<span class="badge-none">Sin badge</span>`;
 
-        // Actualizar stat
         const conBadge = todosUsuarios.filter(u => {
           if (u.id === usuarioId) return badge !== null;
           return u.badge !== null;
@@ -709,12 +926,13 @@
         document.getElementById('stat-badges').textContent = conBadge;
 
         ok.style.display = 'inline';
-        setTimeout(() => ok.style.display = 'none', 2000);
+        setTimeout(() => ok.style.display = 'none', 1800);
+        toast(badge ? 'Badge asignado.' : 'Badge eliminado.');
       } catch {
-        alert('Error de conexión.');
+        toast('Error de conexión.', 'err');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Guardar';
+        btn.innerHTML = '<i class="ph ph-check"></i>Guardar';
       }
     }
 
@@ -724,7 +942,6 @@
         u.nombre.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
       );
       renderTabla(filtrados);
-      // Re-seleccionar badges después de re-render
       filtrados.forEach(u => {
         const sel = document.getElementById(`sel-${u.id}`);
         if (sel && u.badge) sel.value = u.badge;

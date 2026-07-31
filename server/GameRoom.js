@@ -1,27 +1,21 @@
 'use strict';
 const { GameEngine } = require('./GameEngine');
 const { randomUUID } = require('crypto');
-const fs   = require('fs');
-const path = require('path');
-
-const SAVE_DIR = path.join(__dirname, '../saves');
-if (!fs.existsSync(SAVE_DIR)) fs.mkdirSync(SAVE_DIR, { recursive: true });
 
 const ROOM_TIMEOUT_MS  = 6 * 60 * 60 * 1000;
-const TURN_TIMEOUT_MS  = 5 * 60 * 1000;
 
 class GameRoom {
-  constructor({ code, host, mode = 'realtime', maxPlayers = 5 }) {
+  constructor({ code, host, mode = 'realtime', maxPlayers = 5, publicRoom = false }) {
     this.code       = code;
     this.mode       = mode;
     this.maxPlayers = maxPlayers;
+    this.public     = Boolean(publicRoom);
     this.status     = 'lobby';
     this.players    = [];
     this.readyAcks  = new Set();
     this.engine     = null;
     this.createdAt  = Date.now();
     this.host       = host;
-    this._turnTimer = null;
 
     this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico', host.rol || 'jugador');
   }
@@ -117,14 +111,25 @@ class GameRoom {
     }
   }
 
+  // Salida voluntaria: libera el asiento por completo (no solo desconexión)
+  removeSeat(id) {
+    const idx = this.players.findIndex(p => p.id === id);
+    if (idx === -1) return;
+    const [p] = this.players.splice(idx, 1);
+    if (this.engine) {
+      const ej = this.engine._findPlayer(id);
+      if (ej) ej.conectado = false;
+    }
+    console.log('[ROOM]', this.code, 'asiento liberado', { player: p.nombre });
+    this.broadcast({ type: 'player_left', nombre: p.nombre, lobbyState: this.lobbyState() });
+  }
+
   startGame() {
     if (this.status !== 'lobby') return { ok: false, error: 'Partida ya iniciada.' };
     if (this.players.length < 2) return { ok: false, error: 'Se necesitan al menos 2 jugadores.' };
     this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico' })));
     this.engine.repartir();
     this.status = 'playing';
-    this._startTurnTimer();
-    this._save();
     return { ok: true };
   }
 
@@ -217,9 +222,6 @@ class GameRoom {
       castigo_idx: this.engine.castigo_idx,
     });
 
-    this._resetTurnTimer();
-    this._save();
-
     if (this.engine._pendingReinicio) {
       this.engine._pendingReinicio = false;
       this._broadcastState('nueva_ronda', { ronda: this.engine.ronda, reinicio: true });
@@ -247,8 +249,6 @@ class GameRoom {
     if (connected.every(id => this.readyAcks.has(id))) {
       this.readyAcks.clear();
       const result = this.engine.finalizarRonda();
-      this._resetTurnTimer();
-      this._save();
       this._broadcastState(result.event, result.data);
     } else {
       const readyPlayerIds = connected.filter(id => this.readyAcks.has(id));
@@ -309,51 +309,6 @@ class GameRoom {
         player.conectado = false;
       });
     }
-
-    this._clearTurnTimer();
-  }
-
-  _startTurnTimer() {
-    if (this.mode !== 'async') return;
-    this._clearTurnTimer();
-    this._turnTimer = setTimeout(() => this._onTurnTimeout(), TURN_TIMEOUT_MS);
-  }
-
-  _resetTurnTimer() {
-    this._clearTurnTimer();
-    this._startTurnTimer();
-  }
-
-  _clearTurnTimer() {
-    if (this._turnTimer) {
-      clearTimeout(this._turnTimer);
-      this._turnTimer = null;
-    }
-  }
-
-  _onTurnTimeout() {
-    if (!this.engine || this.engine.estado === 'fin_juego') return;
-    const j = this.engine.jActivo;
-    if (j.mano.length > 0) {
-      this.engine.acPagar(j.id, j.mano[0].id);
-      this._broadcastState('timeout_auto_pago', { jugadorIdx: this.engine.turno });
-      this._save();
-    }
-  }
-
-  _save() {
-    if (this.mode !== 'async') return;
-    const data = {
-      code: this.code,
-      mode: this.mode,
-      status: this.status,
-      players: this.players.map(({ id, nombre, badge, skin, rol }) => ({ id, nombre, badge: badge || null, skin: skin || 'clasico', rol: rol || 'jugador' })),
-      engineState: this.engine ? JSON.stringify(this.engine) : null,
-      savedAt: Date.now(),
-    };
-    try {
-      fs.writeFileSync(path.join(SAVE_DIR, `${this.code}.json`), JSON.stringify(data));
-    } catch (_) {}
   }
 
   isExpired() { return Date.now() - this.createdAt > ROOM_TIMEOUT_MS; }
@@ -370,6 +325,7 @@ class GameRoom {
       code: this.code,
       mode: this.mode,
       status: this.status,
+      public: this.public,
       players: this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico', conectado: p.conectado })),
       maxPlayers: this.maxPlayers,
       tableColor: this.tableColor || 'green',

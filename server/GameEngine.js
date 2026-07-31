@@ -20,6 +20,13 @@ const VNUM = {
     '10': 10, 'J': 11, 'Q': 12, 'K': 13
 };
 
+const VALOR_POR_NUM = { 1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7', 8: '8', 9: '9', 10: '10', 11: 'J', 12: 'Q', 13: 'K', 14: 'A' };
+
+const numAValor = n => VALOR_POR_NUM[n] || '?';
+
+// El As se usa como 14 cuando convive con cartas altas (J-Q-K) y no hay 2.
+const usarAsComo14 = vals => vals.includes(1) && vals.some(v => v >= 11) && !vals.includes(2);
+
 let _uid = 1;
 
 const mkCard = (valor, palo = null, comodin = false) =>
@@ -66,9 +73,7 @@ function getValorComodinEnJugada(jugada) {
         return { valor: cartasNormales[0].valor, palo: null };
     } else {
         const valsRaw = cartasNormales.map(c => VNUM[c.valor]);
-        const tieneAs = valsRaw.includes(1);
-        const tieneCartasAltas = valsRaw.some(v => v >= 11);
-        const useA14 = tieneAs && tieneCartasAltas && !valsRaw.includes(2);
+        const useA14 = usarAsComo14(valsRaw);
 
         const valores = cartasNormales
             .map(c => ({ ...c, valorNum: (c.valor === 'A' && useA14) ? 14 : VNUM[c.valor] }))
@@ -76,12 +81,10 @@ function getValorComodinEnJugada(jugada) {
 
         const palo = valores[0].palo;
 
-        const VNUM_R = {'1':'A','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'J','12':'Q','13':'K','14':'A'};
-
         let valorEsperado = valores[0].valorNum;
         for (let i = 0; i < valores.length; i++) {
             if (valores[i].valorNum !== valorEsperado) {
-                return { valor: VNUM_R[String(valorEsperado)] || '?', palo };
+                return { valor: numAValor(valorEsperado), palo };
             }
             valorEsperado++;
         }
@@ -99,12 +102,12 @@ function getValorComodinEnJugada(jugada) {
         const jokerDespuesDeTodasNormales = idxJoker > Math.max(...idxsNormalesEnOriginal);
 
         if (jokerAntesDeAlgunaNormal && ante >= 1) {
-            return { valor: VNUM_R[String(ante)] || '?', palo };
+            return { valor: numAValor(ante), palo };
         }
         if ((jokerDespuesDeTodasNormales || !jokerAntesDeAlgunaNormal) && sig <= 14) {
-            return { valor: VNUM_R[String(sig)] || '?', palo };
+            return { valor: numAValor(sig), palo };
         }
-        if (ante >= 1) return { valor: VNUM_R[String(ante)] || '?', palo };
+        if (ante >= 1) return { valor: numAValor(ante), palo };
     }
     return null;
 }
@@ -252,72 +255,49 @@ function puedeAcomodarEnCorrida(carta, corrida) {
     if (carta.palo !== cartasNormales[0].palo) return false;
 
     const valsNorm = cartasNormales.map(c => VNUM[c.valor]);
+    const useA14base = usarAsComo14(valsNorm);
 
-    // Detectar si el As debe valer 14 en el contexto de las normales
-    const tieneAs = valsNorm.includes(1);
-    const tieneCartasAltas = valsNorm.some(v => v >= 11);
-    const useA14base = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
-
-    const valsNormAdj = valsNorm.map(v => (v === 1 && useA14base) ? 14 : v).sort((a, b) => a - b);
-
-    // Valor numérico del joker si existe
-    let valJoker = null;
-    if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
-        const vj = VNUM[comodin.valorReemplazado];
-        if (vj) {
-            // El joker puede reemplazar un As como 14 si la corrida tiene cartas altas
-            valJoker = (vj === 1 && useA14base) ? 14 : vj;
-        }
-    }
-
-    // Valor numérico de la carta que queremos acomodar
     // El As puede valer 1 o 14 — probar ambos
     const valorCartaRaw = VNUM[carta.valor];
     const posiblesValores = carta.valor === 'A' ? [1, 14] : [valorCartaRaw];
 
     for (const valCarta of posiblesValores) {
-        // Construir el conjunto de valores ocupados considerando este valor del As
         const useA14 = valCarta === 14 || useA14base;
         const valsAdj = valsNorm.map(v => (v === 1 && useA14) ? 14 : v).sort((a, b) => a - b);
 
-        // Calcular valJoker con el nuevo contexto de useA14
+        // Valor numérico del joker con el contexto de useA14 actual
         let valJokerAdj = null;
         if (comodin && comodin.valorReemplazado && comodin.paloReemplazado === cartasNormales[0].palo) {
             const vj = VNUM[comodin.valorReemplazado];
             if (vj) valJokerAdj = (vj === 1 && useA14) ? 14 : vj;
         }
 
-        // No incluir el valor del joker en "ocupados" si la carta tiene exactamente
-        // ese valor — eso sería un intercambio, no un acomodo. Aquí solo evaluamos
-        // si la carta puede ir en un extremo LIBRE (no ocupado por joker ni por normal).
+        // Si la carta ya ocupa ese valor sería un intercambio, no un acomodo.
+        // Aquí solo importan extremos LIBRES (no ocupados por normal ni joker).
         const valsOcupados = [...valsAdj];
         if (valJokerAdj !== null && valJokerAdj !== valCarta) {
             valsOcupados.push(valJokerAdj);
             valsOcupados.sort((a, b) => a - b);
         }
 
-        // La carta no puede ir donde ya hay una normal
         if (valsAdj.includes(valCarta)) continue;
 
         const minVal = valsOcupados[0];
         const maxVal = valsOcupados[valsOcupados.length - 1];
 
-        // La carta puede ir en el extremo inferior o superior
         if (valCarta === minVal - 1 || valCarta === maxVal + 1) return true;
     }
 
     return false;
 }
 
-function ordenarCorridaAcomodada(cartas) {
+function ordenarCorrida(cartas) {
     const normales = cartas.filter(c => !c.comodin);
     const comodines = cartas.filter(c => c.comodin);
     if (normales.length === 0) return cartas;
 
     const valsNorm = normales.map(c => VNUM[c.valor]);
-    const tieneAs = valsNorm.includes(1);
-    const tieneCartasAltas = valsNorm.some(v => v >= 11);
-    const useA14 = tieneAs && tieneCartasAltas && !valsNorm.includes(2);
+    const useA14 = usarAsComo14(valsNorm);
 
     const normalesConNum = normales.map(c => ({
         ...c,
@@ -364,28 +344,6 @@ function validarTercia(cartas) {
         if (f > maxFreq) { maxFreq = f; valorMayor = v; }
     }
     return normales.filter(c => c.valor === valorMayor).length + comodines.length >= 3;
-}
-
-function ordenarCorrida(cartas) {
-    const normales = cartas.filter(c => !c.comodin).map(c => ({ ...c, valorNum: VNUM[c.valor] }));
-    const comodines = cartas.filter(c => c.comodin);
-    if (normales.length === 0) return cartas;
-
-    const normalesOrdenadas = [...normales].sort((a, b) => a.valorNum - b.valorNum);
-    const resultado = [];
-    let comodinesRestantes = [...comodines];
-
-    for (let i = 0; i < normalesOrdenadas.length; i++) {
-        resultado.push(normalesOrdenadas[i]);
-        if (i < normalesOrdenadas.length - 1) {
-            const hueco = normalesOrdenadas[i + 1].valorNum - normalesOrdenadas[i].valorNum - 1;
-            for (let j = 0; j < hueco && comodinesRestantes.length > 0; j++) {
-                resultado.push(comodinesRestantes.shift());
-            }
-        }
-    }
-    resultado.push(...comodinesRestantes);
-    return resultado;
 }
 
 function validarCorrida(cartas) {
@@ -579,19 +537,19 @@ class GameEngine {
     // ─────────────────────────────────────────────────
     _reiniciarRonda() {
         this.addLog(`🔄 Ronda ${this.ronda} reiniciada — mazo insuficiente.`);
-        // Resetear estado de jugadores pero conservar pts_t
-        this.jugadores.forEach(j => {
-            j.mano = [];
-            j.bajado = false;
-            j.pts_r = 0;
-            j.jugadas = [];
-            j.penalizacion = null;
-            j.puedeBajar = true;
-        });
-        // Repartir de nuevo (repartir() ya construye mazo fresco y limpia fondoDescartado)
+        // repartir() ya resetea el estado de todos los jugadores (conserva pts_t)
         this.repartir({ resetAgotamientosDobles: false });
-        // Notificar via _broadcastReinicio (el caller — GameRoom — debe manejar el broadcast)
+        // El caller (GameRoom) maneja el broadcast del reinicio
         this._pendingReinicio = true;
+    }
+
+    // Antes de robar del mazo: si el mazo se agota y la ronda se reinicia
+    // o se termina, devuelve el resultado a retornar (o null para seguir).
+    _chequearMazo() {
+        const mazoStatus = this.chkMazo();
+        if (mazoStatus?.finRonda) return mazoStatus.result;
+        if (mazoStatus?.reinicio) return this._ok('reinicio_ronda', {}, false);
+        return null;
     }
 
     repartir({ resetAgotamientosDobles = true } = {}) {
@@ -637,19 +595,14 @@ class GameEngine {
     acTomarMazo(playerId) {
         const err = this._checkTurn(playerId, 'esperando_robo');
         if (err) return err;
-        const mazoStatus = this.chkMazo();
-        if (mazoStatus?.finRonda) return mazoStatus.result;
-        if (mazoStatus?.reinicio) return this._ok('reinicio_ronda', {}, false);
+        const resMazo = this._chequearMazo();
+        if (resMazo) return resMazo;
         const carta = this.mazo.pop();
         this.jActivo.mano.push(carta);
         this.addLog(`🎴 ${this.jActivo.nombre} robó del mazo.`);
 
-        // La carta que estaba visible en el fondo nadie la tomó en este turno.
-        // Si hay una carta en el fondo que no sea la que acaba de llegar,
-        // moverla a fondoDescartado (solo cuando NO hay mazoReciclado activo,
-        // porque en ese caso ya no guardamos para evitar loop infinito).
-        // En realidad la carta del fondo se queda visible hasta que alguien la tome
-        // o se pague otra carta. No la movemos aquí — se mueve cuando se paga (acPagar).
+        // La carta visible del fondo se queda hasta que alguien la tome
+        // o se pague otra; se pasa a fondoDescartado en acPagar.
 
         let idx = (this.turno + 1) % this.jugadores.length;
         while (this.jugadores[idx].bajado && idx !== this.turno) idx = (idx + 1) % this.jugadores.length;
@@ -669,9 +622,8 @@ class GameEngine {
         const jc = this.jugadores[this.castigo_idx];
         if (acepta) {
             const cartaFondo = this.fondo.pop();
-            const mazoStatus = this.chkMazo();
-            if (mazoStatus?.finRonda) return mazoStatus.result;
-            if (mazoStatus?.reinicio) return this._ok('reinicio_ronda', {}, false);
+            const resMazo = this._chequearMazo();
+            if (resMazo) return resMazo;
             const cartaMazo = this.mazo.pop();
             jc.mano.push(cartaFondo, cartaMazo);
             this.addLog(`⚡ ${jc.nombre} se castigó.`);
@@ -679,12 +631,8 @@ class GameEngine {
             this.lastAction = Date.now();
             return this._ok('castigo_acepta', { jugadorIdx: this.castigo_idx, cartaFondo, cartaMazo });
         } else {
-            // Nadie tomó la carta del fondo en este castigo — guardarla en fondoDescartado
-            // solo si el mazo aún no fue reciclado (para evitar duplicados).
-            if (this.fondo.length > 0 && !this.mazoReciclado) {
-                // Verificar si el siguiente jugador también pasará el castigo
-                // La carta se guarda cuando ya nadie la quiera (al llegar al turno activo)
-            }
+            // Si nadie toma la carta del fondo, se pasa a fondoDescartado
+            // cuando el turno vuelve al jugador activo (más abajo).
             this.addLog(`🙅 ${jc.nombre} pasó.`);
             let sig = (this.castigo_idx + 1) % this.jugadores.length;
             while (this.jugadores[sig].bajado && sig !== this.turno) sig = (sig + 1) % this.jugadores.length;
@@ -753,9 +701,7 @@ class GameEngine {
         if (corridasCount < req.c) return this._err(`Necesitas ${req.c} corrida(s) (tienes ${corridasCount})`);
 
         if (this.ronda === 7) {
-            const cartasEnJugadas = new Set();
-            jugadasConstruidas.forEach(jug => jug.cartas.forEach(c => cartasEnJugadas.add(c.id)));
-            const sobrantes = this.jActivo.mano.filter(c => !cartasEnJugadas.has(c.id));
+            const sobrantes = this.jActivo.mano.filter(c => !cartasEnJugadasIds.has(c.id));
             if (sobrantes.length > 0) {
                 this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
                 this.jActivo.puedeBajar = false;
@@ -958,7 +904,7 @@ class GameEngine {
             } else {
                 // Carta normal o joker sin posición elegida → ordenar automático
                 jug.cartas.push(carta);
-                jug.cartas = ordenarCorridaAcomodada(jug.cartas);
+                jug.cartas = ordenarCorrida(jug.cartas);
             }
         } else {
             // Tercia: siempre al final

@@ -6,6 +6,12 @@
   <title>Continental – Iniciar sesión</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @layer theme, base, components, utilities;
+    @import "tailwindcss/theme.css" layer(theme);
+    @import "tailwindcss/utilities.css" layer(utilities);
+  </style>
   <style>
     body {
       display: flex;
@@ -184,15 +190,15 @@
         <label>Contraseña</label>
         <div class="password-wrap">
           <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
-          <button class="eye-btn" type="button" onclick="toggleEye('password', this)" tabindex="-1">👁</button>
+          <button class="eye-btn" type="button" onclick="toggleEye('password', this)" tabindex="-1"><i class="ph ph-eye"></i></button>
         </div>
       </div>
 
-      <button class="btn-auth" id="btn-login" onclick="login()">Entrar</button>
+      <button class="btn-auth" id="btn-login" onclick="login()"><i class="ph ph-sign-in"></i>Entrar</button>
 
-      <div class="divider">o</div>
+      <div class="divider my-1">o</div>
 
-      <div class="auth-footer">
+      <div class="auth-footer mt-2">
         ¿No tienes cuenta? <a href="/register">Regístrate</a>
       </div>
     </div>
@@ -203,10 +209,10 @@
       const input = document.getElementById(id);
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '🙈';
+        btn.innerHTML = '<i class="ph ph-eye-slash"></i>';
       } else {
         input.type = 'password';
-        btn.textContent = '👁';
+        btn.innerHTML = '<i class="ph ph-eye"></i>';
       }
     }
 
@@ -229,7 +235,7 @@
       }
 
       btn.disabled = true;
-      btn.textContent = 'Entrando...';
+      btn.innerHTML = '<i class="ph ph-circle-notch ph-spin"></i>Entrando...';
 
       try {
         const res  = await fetch('/api/login', {
@@ -252,7 +258,7 @@
         mostrarError('Error de conexión. Intenta de nuevo.');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Entrar';
+        btn.innerHTML = '<i class="ph ph-sign-in"></i>Entrar';
       }
     }
 

@@ -6,6 +6,12 @@
   <title>Continental – Registro</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style type="text/tailwindcss">
+    @layer theme, base, components, utilities;
+    @import "tailwindcss/theme.css" layer(theme);
+    @import "tailwindcss/utilities.css" layer(utilities);
+  </style>
   <style>
     body {
       display: flex;
@@ -235,7 +241,7 @@
         <label>Contraseña</label>
         <div class="password-wrap">
           <input type="password" id="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" oninput="checkStrength()">
-          <button class="eye-btn" type="button" onclick="toggleEye('password', this)" tabindex="-1">👁</button>
+          <button class="eye-btn" type="button" onclick="toggleEye('password', this)" tabindex="-1"><i class="ph ph-eye"></i></button>
         </div>
         <div class="strength-bar">
           <span id="s1"></span><span id="s2"></span><span id="s3"></span><span id="s4"></span>
@@ -252,15 +258,15 @@
         <label>Confirmar contraseña</label>
         <div class="password-wrap">
           <input type="password" id="password2" placeholder="Repite tu contraseña" autocomplete="new-password">
-          <button class="eye-btn" type="button" onclick="toggleEye('password2', this)" tabindex="-1">👁</button>
+          <button class="eye-btn" type="button" onclick="toggleEye('password2', this)" tabindex="-1"><i class="ph ph-eye"></i></button>
         </div>
       </div>
 
-      <button class="btn-auth" id="btn-register" onclick="register()">Crear cuenta</button>
+      <button class="btn-auth" id="btn-register" onclick="register()"><i class="ph ph-user-plus"></i>Crear cuenta</button>
 
-      <div class="divider">o</div>
+      <div class="divider my-1">o</div>
 
-      <div class="auth-footer">
+      <div class="auth-footer mt-2">
         ¿Ya tienes cuenta? <a href="/login">Inicia sesión</a>
       </div>
     </div>
@@ -355,10 +361,10 @@
       const input = document.getElementById(id);
       if (input.type === 'password') {
         input.type = 'text';
-        btn.textContent = '🙈';
+        btn.innerHTML = '<i class="ph ph-eye-slash"></i>';
       } else {
         input.type = 'password';
-        btn.textContent = '👁';
+        btn.innerHTML = '<i class="ph ph-eye"></i>';
       }
     }
 
@@ -424,7 +430,7 @@
       if (pwErr) { mostrarError(pwErr); return; }
 
       btn.disabled = true;
-      btn.textContent = 'Creando cuenta...';
+      btn.innerHTML = '<i class="ph ph-circle-notch ph-spin"></i>Creando cuenta...';
 
       try {
         const res  = await fetch('/api/register', {
@@ -449,7 +455,7 @@
         mostrarError('Error de conexión. Intenta de nuevo.');
       } finally {
         btn.disabled = false;
-        btn.textContent = 'Crear cuenta';
+        btn.innerHTML = '<i class="ph ph-user-plus"></i>Crear cuenta';
       }
     }
 

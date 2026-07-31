@@ -37,7 +37,6 @@ let G = null;
 let myIdx = -1;
 let selId = null;
 let ackSent = false;
-let pendingReorderIdx = -1;
 let intercambioMode = false;
 let selectedComodinInfo = null;
 let hideHandDuringDeal = true;
@@ -128,17 +127,6 @@ function getRoundExampleData(ronda) {
                 { rank: '7', suit: '♥' },
             ],
             caption: 'Mismo palo y en secuencia. No mezcles corazones con tréboles.',
-        });
-    }
-    if (!examples.length) {
-        examples.push({
-            label: 'Comodín de ejemplo',
-            cards: [
-                { rank: '9', suit: '♠' },
-                { joker: true },
-                { rank: '9', suit: '♦' },
-            ],
-            caption: 'El joker solo ilustra una sustitución posible. El server sigue validando la jugada real.',
         });
     }
     return examples;
@@ -908,15 +896,7 @@ const SFX = (() => {
             return false;
         }
     }
-    function canPlay() {
-        try {
-            return getCtx().state === 'running';
-        } catch (e) {
-            return false;
-        }
-    }
-    function play(type) {
-        try {
+    function play(type) {        try {
             const ac = getCtx();
             if (ac.state === 'suspended') return false;
             const g  = ac.createGain();
@@ -1004,7 +984,7 @@ const SFX = (() => {
         } catch(e) {}
         return false;
     }
-    return { play, unlock, canPlay };
+    return { play, unlock };
 })();
 
 let _firstLoad = true;
@@ -1790,7 +1770,10 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
             opacity:0; transform:scale(.985);
             transition:opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1);
         `;
-        document.body.appendChild(overlay);
+    document.body.appendChild(overlay);
+
+    // Confeti (si la capa GSAP está disponible)
+    if (Anim.confetti) Anim.confetti(window.innerWidth / 2, window.innerHeight * 0.4, 80);
 
         // Título
         const titulo = document.createElement('div');
@@ -1998,9 +1981,8 @@ function acFondo() {
     WS.send({ type: 'tomar_fondo' });
 }
 
-function acFondoDrag(insertIdx) {
+function acFondoDrag() {
     WS.send({ type: 'tomar_fondo' });
-    pendingReorderIdx = insertIdx;
     cancelIntercambio();
 }
 
@@ -2426,13 +2408,6 @@ const BADGES = {
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
 };
-// Devuelve la clase del skin del jugador actual para los ghosts
-function getMySkinClass() {
-    if (!G || myIdx < 0) return '';
-    const skin = G.jugadores[myIdx]?.skin || 'clasico';
-    return skin !== 'clasico' ? `skin-${skin}` : '';
-}
-
 function skinClass(skin) {
     if (!skin || skin === 'clasico') return '';
     return `skin-${skin}`;
@@ -2592,8 +2567,6 @@ function renderTableBajadas() {
             const puedeIntercambiar = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
             const intercambiosPosibles = puedeIntercambiar ? detectarIntercambiosPosibles() : [];
 
-            // Marcar cartas nuevas para animar con CSS
-        const cartasIds = jug.cartas.map(c => c.id || c.comodinId || '').filter(Boolean);
         const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
                     const vr = c.valorReemplazado || '?';
@@ -2676,8 +2649,8 @@ function renderFondo(me) {
                 fc.classList.add('disabled');
             } else {
                 fc.onclick = acFondo;
-                fc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }));
-                fc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: idx => acFondoDrag(idx) }), { passive: false });
+                fc.addEventListener('mousedown', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: () => acFondoDrag() }));
+                fc.addEventListener('touchstart', e => DragDrop.startFondoDrag(e, fc, { onTakeFondo: () => acFondoDrag() }), { passive: false });
             }
         }
     } else {
@@ -2958,29 +2931,6 @@ function renderActions() {
         return;
     }
 
-    const hasDestForAcomodar = () => {
-        if (!me?.bajado || !selId) return false;
-        const carta = me?.mano?.find(c => c.id === selId);
-        if (!carta) return false;
-        return G.jugadores.some((j, ji) => {
-            if (!j.bajado || ji === myIdx) return false;
-            return j.jugadas?.some(jug => {
-                if (jug.tipo === 'tercia') {
-                    if (carta.comodin) return true;
-                    const vs = jug.cartas.filter(c => !c.comodin).map(c => c.valor);
-                    return vs.length > 0 && carta.valor === vs[0];
-                } else {
-                    if (carta.comodin) return true;
-                    const nats = jug.cartas.filter(c => !c.comodin);
-                    if (!nats.length || carta.palo !== nats[0].palo) return false;
-                    const vs = nats.map(c => ({ A: 1, J: 11, Q: 12, K: 13 }[c.valor] ?? parseInt(c.valor))).sort((a, b) => a - b);
-                    const v = ({ A: 1, J: 11, Q: 12, K: 13 }[carta.valor] ?? parseInt(carta.valor));
-                    return v === vs[0] - 1 || v === vs[vs.length - 1] + 1;
-                }
-            });
-        });
-    };
-
     const hasComodinesIntercambiables = () => {
         if (!selId) return false;
         const carta = me?.mano?.find(c => c.id === selId);
@@ -3067,7 +3017,6 @@ function renderActions() {
                     ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
                     : 'Selecciona una carta para acomodar o intercambiar.';
                 add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
 
                 // ── Intercambio post-bajada: detectar y mostrar botón ──
                 const intercambiosPosibles = detectarIntercambiosPosibles();
@@ -3087,30 +3036,24 @@ function renderActions() {
         }
 
         case 'esperando_pago':
-            if (!me?.bajado) {
-                if (instr) instr.textContent = 'Selecciona una carta para pagar al fondo.';
-                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-            } else {
-                // ── Post-bajada, esperando_pago ──
-                if (instr) instr.textContent = selId
-                    ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
-                    : 'Selecciona una carta para acomodar, intercambiar o pagar.';
-                add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
-                if (hasDestForAcomodar()) add('🃏 Acomodar → clic en jugada', 'abtn-green', () => {});
+            // ── Post-bajada, esperando_pago ──
+            if (instr) instr.textContent = selId
+                ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
+                : 'Selecciona una carta para acomodar, intercambiar o pagar.';
+            add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
 
-                // ── Intercambio post-bajada en esperando_pago ──
-                const intercambiosPosibles = detectarIntercambiosPosibles();
-                if (intercambiosPosibles.length > 0) {
-                    const ic = intercambiosPosibles[0];
-                    add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
-                    if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
-                } else if (selId && hasComodinesIntercambiables()) {
-                    add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
-                        toast('Haz clic en un comodín de las jugadas', 'green');
-                        intercambioMode = true;
-                        render();
-                    });
-                }
+            // ── Intercambio post-bajada en esperando_pago ──
+            const intercambiosPosibles = detectarIntercambiosPosibles();
+            if (intercambiosPosibles.length > 0) {
+                const ic = intercambiosPosibles[0];
+                add(`🔄 Intercambiar ${ic.cartaValor}${ic.cartaPalo} por Joker`, 'abtn-green', () => ejecutarIntercambioDirecto(ic));
+                if (instr) instr.textContent = `💡 Puedes intercambiar ${ic.cartaValor}${ic.cartaPalo} por el Joker — luego acomódalo donde lo necesites.`;
+            } else if (selId && hasComodinesIntercambiables()) {
+                add('🔄 Intercambiar por comodín', 'abtn-outline', () => {
+                    toast('Haz clic en un comodín de las jugadas', 'green');
+                    intercambioMode = true;
+                    render();
+                });
             }
             break;
     }
@@ -3238,7 +3181,7 @@ function showPodio(jugadores) {
 
     // Título
     const titulo = document.createElement('div');
-    titulo.innerHTML = '🏆 ¡Fin del juego!';
+    titulo.innerHTML = '<i class="ph ph-trophy" style="display:inline-flex;vertical-align:-.12em"></i> ¡Fin del juego!';
     titulo.style.cssText = `
         font-family:'Cormorant Garamond',serif;
         font-size:clamp(2rem,6vw,3rem); font-weight:700;
@@ -3307,7 +3250,10 @@ function showPodio(jugadores) {
                 requestAnimationFrame(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateX(0)';
-                    if (i === 0) SFX.play('victoria');
+                    if (i === 0) {
+                        SFX.play('victoria');
+                        if (Anim.confetti) Anim.confetti(card.getBoundingClientRect().left + card.offsetWidth / 2, card.getBoundingClientRect().top, 45);
+                    }
                 });
             });
         }, 300 + i * 300);

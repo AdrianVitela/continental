@@ -127,6 +127,48 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// ── POST /api/me/nombre ─────────────────────────────────────────
+router.post('/me/nombre', async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer '))
+      return res.status(401).json({ error: 'No autorizado.' });
+
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    const { nombre } = req.body;
+    const safeNombre = String(nombre || '').trim();
+
+    if (!safeNombre || !NAME_RE.test(safeNombre))
+      return res.status(400).json({ error: 'Nombre inválido (2-18 letras/números).' });
+
+    const existe = await pool.query(
+      'SELECT id FROM usuarios WHERE nombre = $1 AND id <> $2',
+      [safeNombre, payload.id]
+    );
+    if (existe.rows.length > 0)
+      return res.status(409).json({ error: 'Ese nombre ya está en uso.' });
+
+    const result = await pool.query(
+      `UPDATE usuarios
+          SET nombre = $1
+        WHERE id = $2
+        RETURNING id, nombre, badge, rol, skin`,
+      [safeNombre, payload.id]
+    );
+    const usuario = result.rows[0];
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    res.json({ ok: true, usuario });
+
+  } catch (err) {
+    console.error('[nombre]', err.message);
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token inválido o expirado.' });
+    }
+    res.status(500).json({ error: 'Error interno.' });
+  }
+});
+
 // ── POST /api/me/skin ────────────────────────────────────────────
 const SKINS_LIBRES     = ['clasico', 'rojo', 'obsidiana', 'esmeralda', 'plata', 'bronce', 'zafiro'];
 const SKINS_EXCLUSIVOS = {

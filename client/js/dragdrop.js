@@ -1,12 +1,9 @@
 'use strict';
 
 const DragDrop = (() => {
-  let dragId = null;
-  let dragSource = null;
   let ghost = null;
   let draggingFromSlot = false;
   let originalSlotIndex = null;
-  let originalCardEl = null;
 
   function getPoint(e) {
     if (e.touches?.length) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -134,10 +131,6 @@ const DragDrop = (() => {
   function startHandDrag(e, el, cid, callbacks) {
     if (e.type === 'touchstart') e.preventDefault();
 
-    dragId = cid;
-    dragSource = 'hand';
-    originalCardEl = el;
-
     draggingFromSlot = el?.hasAttribute('data-slot');
     originalSlotIndex = draggingFromSlot ? parseInt(el.dataset.slot) : null;
 
@@ -204,7 +197,7 @@ const DragDrop = (() => {
 
       if (isOverDiscard) {
         cbs.onReturnToHand?.(cid, originalSlotIndex);
-        dragId = null; draggingFromSlot = false; originalSlotIndex = null;
+        draggingFromSlot = false; originalSlotIndex = null;
         return;
       }
 
@@ -217,12 +210,12 @@ const DragDrop = (() => {
         } else {
           cbs.onMoveBetweenSlots?.(cid, originalSlotIndex, destSlotIndex, buildingSlot.dataset.slotType, insertIdx);
         }
-        dragId = null; draggingFromSlot = false; originalSlotIndex = null;
+        draggingFromSlot = false; originalSlotIndex = null;
         return;
       }
 
       // Lugar inválido — carta queda en su slot
-      dragId = null; draggingFromSlot = false; originalSlotIndex = null;
+      draggingFromSlot = false; originalSlotIndex = null;
       return;
     }
 
@@ -232,15 +225,15 @@ const DragDrop = (() => {
     if (buildingSlot) {
       const insertIdx = getSlotInsertIndex(buildingSlot, pt.x);
       cbs.onBuildingDrop?.(cid, buildingSlot.dataset.slotIndex, buildingSlot.dataset.slotType, insertIdx);
-      dragId = null; return;
+      return;
     }
     if (bajadaPile) {
       cbs.onAcomodar?.(cid, parseInt(bajadaPile.dataset.pi), parseInt(bajadaPile.dataset.ji));
-      dragId = null; return;
+      return;
     }
     if (isOverFondo && cbs.isPayable?.()) {
       cbs.onPagar?.(cid);
-      dragId = null; return;
+      return;
     }
     if (isOverDiscard) {
       const cards = [...hz.querySelectorAll('.card:not(.dragging)')];
@@ -250,15 +243,14 @@ const DragDrop = (() => {
         if (pt.x < r.left + r.width / 2) { insertIdx = i; break; }
       }
       cbs.onReorder?.(cid, insertIdx);
-      dragId = null; return;
+      return;
     }
 
-    dragId = null; draggingFromSlot = false; originalSlotIndex = null;
+    draggingFromSlot = false; originalSlotIndex = null;
   }
 
   function startFondoDrag(e, cardEl, callbacks) {
     if (e.type === 'touchstart') e.preventDefault();
-    dragSource = 'fondo';
     draggingFromSlot = false;
     originalSlotIndex = null;
     ghost = mkGhost(cardEl, getPoint(e));
@@ -291,15 +283,8 @@ const DragDrop = (() => {
     if (!hz) return;
     const hr = hz.getBoundingClientRect();
     if (pt.x >= hr.left && pt.x <= hr.right && pt.y >= hr.top && pt.y <= hr.bottom) {
-      const cards = [...hz.querySelectorAll('.card')];
-      let insertIdx = cards.length;
-      for (let i = 0; i < cards.length; i++) {
-        const r = cards[i].getBoundingClientRect();
-        if (pt.x < r.left + r.width / 2) { insertIdx = i; break; }
-      }
-      cbs.onTakeFondo?.(insertIdx);
+      cbs.onTakeFondo?.();
     }
-    dragSource = null;
   }
 
   return { startHandDrag, startFondoDrag };

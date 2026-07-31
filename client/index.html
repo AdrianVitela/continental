@@ -6,190 +6,305 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Continental - Lobby</title>
     <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style type="text/tailwindcss">
+        @layer theme, base, components, utilities;
+        @import "tailwindcss/theme.css" layer(theme);
+        @import "tailwindcss/utilities.css" layer(utilities);
+    </style>
     <style>
+        /* ============================================================
+           GAME HUB — fondo sobrio con aurora
+           ============================================================ */
         body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: block;
             min-height: 100vh;
-            background: radial-gradient(ellipse at center, #1d4a30 0%, #0b1e12 100%);
+            background:
+                radial-gradient(ellipse 70% 55% at 12% -8%, rgba(200,160,69,.10) 0%, transparent 55%),
+                radial-gradient(ellipse 60% 55% at 105% 18%, rgba(46,204,113,.07) 0%, transparent 55%),
+                radial-gradient(ellipse 90% 70% at 50% 115%, rgba(0,0,0,.5) 0%, transparent 60%),
+                linear-gradient(180deg, #12301f 0%, #0b1e12 100%);
         }
+        body::before { content: none; }
 
-        .lobby-wrap {
-            position: relative;
-            z-index: 1;
-            width: min(480px, 96%);
+        /* ============================================================
+           SIDEBAR
+           ============================================================ */
+        .hub-shell { display: flex; min-height: 100vh; }
+
+        .sidebar {
+            width: 236px;
+            flex-shrink: 0;
             display: flex;
             flex-direction: column;
-            gap: 24px;
-            padding: 20px 0;
+            padding: 22px 16px 18px;
+            background: rgba(11, 26, 17, .72);
+            border-right: 1px solid rgba(200,160,69,.14);
+            backdrop-filter: blur(16px);
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            z-index: 400;
+        }
+        .side-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 2px 8px 16px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+            margin-bottom: 14px;
+        }
+        .side-logo i { font-size: 1.5rem; color: var(--gold); }
+        .side-logo span {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.12rem;
+            font-weight: 600;
+            letter-spacing: 3px;
+            color: var(--text);
         }
 
-        /* ===== LOGO ===== */
-        .logo {
-            text-align: center;
-            animation: fadeDown .7s var(--eout) both;
+        .side-nav { display: flex; flex-direction: column; gap: 4px; }
+        .side-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: var(--text-dim);
+            font-size: .88rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            border: 1px solid transparent;
+            transition: background .15s ease, color .15s ease, border-color .15s ease;
+            user-select: none;
         }
-        .logo h1 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: clamp(3rem, 9vw, 5.5rem);
-            font-weight: 700;
-            color: var(--gold);
-            text-shadow: 0 0 60px rgba(200,160,69,.4), 0 2px 0 rgba(0,0,0,.5);
-            letter-spacing: 4px;
+        .side-link i { font-size: 1.1rem; }
+        .side-link:hover { background: rgba(200,160,69,.08); color: var(--gold-hi); }
+        .side-link.active {
+            background: rgba(200,160,69,.14);
+            border-color: rgba(200,160,69,.22);
+            color: var(--gold-hi);
         }
-        .logo p {
+
+        .side-foot {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            border-top: 1px solid rgba(255,255,255,.06);
+            padding-top: 14px;
+        }
+        .side-user { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .side-avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 700;
+            background: radial-gradient(circle at 30% 30%, #c8a045, #6b4e10 58%, #3d2e00);
+            border: 2px dashed rgba(255,220,140,.65);
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,.5);
+            box-shadow: 0 0 0 3px rgba(200,160,69,.22), inset 0 -3px 6px rgba(0,0,0,.4);
+            flex-shrink: 0;
+        }
+        .side-user-name { font-size: .88rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .side-user-badge { font-size: .66rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .06em; }
+        .side-logout {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,.08);
+            background: rgba(255,255,255,.03);
             color: var(--text-dim);
             font-size: .8rem;
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            margin-top: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: color .15s ease, border-color .15s ease;
         }
+        .side-logout:hover { color: var(--red-hi); border-color: rgba(224,64,64,.35); }
 
-        /* ===== CARD ===== */
-        .card-box {
-            background: rgba(0,0,0,.35);
-            border: 1px solid rgba(200,160,69,.18);
-            border-radius: 18px;
-            padding: 26px 28px;
-            backdrop-filter: blur(16px);
-            animation: fadeUp .7s .1s var(--eout) both;
+        /* ============================================================
+           MAIN
+           ============================================================ */
+        .hub-main {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 36px clamp(20px, 4vw, 56px) 60px;
         }
-        .card-box h2 {
+        .hub-top {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 26px;
+            animation: fadeDown .5s var(--eout) both;
+        }
+        .hub-right { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
+        .hub-date { margin-top: 2px; font-size: .78rem; color: var(--text-muted); }
+        .hub-date i { margin-right: 5px; }
+
+        .deco-cards { position: relative; width: 120px; height: 82px; pointer-events: none; }
+        .deco-card {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 48px;
+            height: 68px;
+            transform: translateX(calc((var(--i) - 1.5) * 22px)) rotate(calc((var(--i) - 1.5) * 13deg));
+            transform-origin: 50% 100%;
+            background: linear-gradient(165deg, #fffdf2, #e8e2cf);
+            border: 1px solid rgba(200,160,69,.55);
+            border-radius: 6px;
+            box-shadow: 0 12px 26px rgba(0,0,0,.32);
+            color: #1c1c1c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
             font-family: 'Cormorant Garamond', serif;
-            color: var(--gold);
-            font-size: 1.15rem;
-            text-align: center;
-            margin-bottom: 18px;
-            letter-spacing: 2px;
+            animation: decoFloat 6s ease-in-out infinite;
+            animation-delay: calc(var(--i) * -.7s);
         }
-
-        /* ===== TABS ===== */
-        .tabs {
-            display: flex;
-            background: rgba(0,0,0,.3);
-            border-radius: 10px;
-            padding: 3px;
-            margin-bottom: 20px;
-        }
-        .tab {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: .85rem;
-            color: var(--text-dim);
-            transition: background .2s, color .2s;
-            user-select: none;
-        }
-        .tab.active {
-            background: rgba(200,160,69,.2);
-            color: var(--gold-hi);
+        .deco-card b { font-size: 1.15rem; line-height: 1; }
+        .deco-card i { font-size: .95rem; line-height: 1; }
+        .deco-card:nth-child(even) { color: #b32424; }
+        @keyframes decoFloat { 0%,100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+        .hub-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.9rem, 4.5vw, 2.8rem);
             font-weight: 600;
+            color: var(--text);
+            margin: 0;
+            letter-spacing: .5px;
         }
-        .tab-panel { display: none; }
-        .tab-panel.active {
+        .hub-sub { color: var(--text-dim); font-size: .92rem; margin: 6px 0 0; }
+        .hub-pill {
+            font-size: .68rem;
+            color: var(--text-muted);
+            border: 1px solid rgba(255,255,255,.1);
+            padding: 4px 10px;
+            border-radius: 999px;
+            letter-spacing: .08em;
+            white-space: nowrap;
+        }
+
+        /* ============================================================
+           TARJETAS HUB
+           ============================================================ */
+        .hub-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 16px;
+        }
+        .hub-card {
+            background: linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+            border: 1px solid rgba(200,160,69,.16);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 18px 40px rgba(0,0,0,.28);
+            backdrop-filter: blur(10px);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 16px;
+            animation: fadeUp .55s var(--eout) both;
+            position: relative;
+            overflow: hidden;
         }
-
-        /* ===== FIELDS ===== */
-        .field-group {
+        .hub-card > * { position: relative; z-index: 1; }
+        .hub-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 50%), rgba(200,160,69,.13), transparent 65%);
+            opacity: 0;
+            transition: opacity .3s ease;
+            pointer-events: none;
+        }
+        .hub-card:hover::before { opacity: 1; }
+        .hub-grid .hub-card:nth-child(2) { animation-delay: .08s; }
+        .hub-grid .hub-card:nth-child(3) { animation-delay: .16s; }
+        .hub-card--create {
+            background: linear-gradient(170deg, rgba(200,160,69,.10), rgba(255,255,255,.02));
+            border-color: rgba(200,160,69,.32);
+        }
+        .hub-card-head {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .field-group label {
-            font-size: .78rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Fila input + botón de dados */
-        .input-row {
-            display: flex;
-            gap: 6px;
-            align-items: stretch;
-        }
-        .input-row input {
-            flex: 1;
-        }
-
-        /* Botón de nombre aleatorio */
-        .btn-random-name {
-            flex-shrink: 0;
-            width: 38px;
-            height: 38px;  /* igual que input */
-            background: rgba(200,160,69,.1);
-            border: 1px solid rgba(200,160,69,.3);
-            border-radius: 9px;
+            align-items: center;
+            gap: 9px;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.05rem;
             color: var(--gold);
-            font-size: 1.1rem;
-            cursor: pointer;
+            letter-spacing: .5px;
+        }
+        .hub-card-head i { font-size: 1.15rem; color: var(--gold-hi); }
+        .hub-desc { margin: -6px 0 0; font-size: .8rem; color: var(--text-dim); line-height: 1.5; }
+        .hub-panel { display: flex; flex-direction: column; gap: 14px; }
+
+        .btn-hub {
+            width: 100%;
+            padding: 13px;
+            font-size: .92rem;
+            border-radius: 11px;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background .2s, transform .15s;
-            line-height: 1;
+            gap: 8px;
         }
-        .btn-random-name:hover {
-            background: rgba(200,160,69,.22);
-            transform: rotate(20deg) scale(1.08);
-        }
-        .btn-random-name:active { transform: rotate(0deg) scale(.95); }
-
-        /* Hint de validación */
-        .field-hint {
-            font-size: .68rem;
-            color: var(--red-hi);
-            min-height: 14px;
-            line-height: 1.3;
-            display: none;
-        }
-        .field-hint.show { display: block; }
-
-        /* ===== MODO DE JUEGO ===== */
-        .mode-row { display: flex; gap: 8px; }
-        .mode-btn {
-            flex: 1;
-            padding: 10px;
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.12);
-            border-radius: 9px;
-            color: var(--text-dim);
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
-            transition: background .2s, border-color .2s, color .2s;
-            user-select: none;
-        }
-        .mode-btn.active {
-            background: rgba(200,160,69,.15);
-            border-color: rgba(200,160,69,.4);
+        .btn-hub--ghost {
+            background: rgba(200,160,69,.12);
+            border: 1px solid rgba(200,160,69,.35);
             color: var(--gold-hi);
         }
-        .mode-btn small {
-            display: block;
-            font-size: .68rem;
-            color: var(--text-muted);
-            margin-top: 2px;
-        }
+        .btn-hub--ghost:hover { background: rgba(200,160,69,.2); }
 
-        /* ===== JUGADORES MAX ===== */
-        .player-count {
+        .btn-leave {
+            background: rgba(224,64,64,.1);
+            border: 1px solid rgba(224,64,64,.32);
+            color: #ff9a8c;
+        }
+        .btn-leave:hover { background: rgba(224,64,64,.18); }
+
+        .howto { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 13px; }
+        .howto li { display: flex; gap: 12px; align-items: flex-start; }
+        .howto li i { font-size: 1.2rem; color: var(--gold-dim); margin-top: 1px; }
+        .howto li span { font-size: .82rem; color: var(--text-dim); line-height: 1.45; }
+        .howto li strong { color: var(--text); display: block; font-size: .86rem; }
+
+        .hub-foot {
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,.06);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            gap: 8px;
+            font-size: .72rem;
+            color: var(--text-muted);
+            letter-spacing: 1px;
         }
-        .player-count label {
-            font-size: .78rem;
+        .hub-foot i { color: var(--gold-dim); font-size: .85rem; }
+
+        /* ============================================================
+           FORM (heredado y afinado)
+           ============================================================ */
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-group label {
+            font-size: .72rem;
             color: var(--text-dim);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+        .field-hint { font-size: .68rem; color: var(--red-hi); min-height: 14px; line-height: 1.3; display: none; }
+        .field-hint.show { display: block; }
+
+        .player-count { display: flex; align-items: center; justify-content: space-between; }
+        .player-count label { font-size: .78rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
         .pc-ctrl { display: flex; align-items: center; gap: 10px; }
         .pc-btn {
             width: 30px; height: 30px; border-radius: 50%;
@@ -198,11 +313,149 @@
             color: var(--gold); font-size: 1rem;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: background .15s;
+            font-family: inherit;
         }
         .pc-btn:hover { background: rgba(200,160,69,.25); }
-        .pc-val { font-size: .95rem; min-width: 20px; text-align: center; }
+        .pc-val {
+            width: 30px; height: 30px; min-width: 30px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 30% 30%, rgba(200,160,69,.4), rgba(44,32,8,.95));
+            border: 2px dashed rgba(200,160,69,.65);
+            color: var(--gold-hi); font-weight: 600; font-size: .88rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,.3);
+        }
 
-        /* ===== INPUT CÓDIGO DE SALA ===== */
+        /* Botón explorar mesas públicas (header) */
+        .btn-explore {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            font-size: .8rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(200,160,69,.22), rgba(200,160,69,.1));
+            border: 1px solid rgba(200,160,69,.45);
+            color: var(--gold-hi);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all .15s ease;
+        }
+        .btn-explore:hover {
+            background: linear-gradient(135deg, rgba(200,160,69,.34), rgba(200,160,69,.16));
+            box-shadow: 0 4px 14px rgba(200,160,69,.28);
+        }
+
+        /* Mesa caliente */
+        .hot-badge {
+            display: inline-flex;
+            align-items: center;
+            align-self: flex-start;
+            gap: 6px;
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .4px;
+            color: #ffd37a;
+            background: linear-gradient(135deg, rgba(255,120,40,.2), rgba(200,60,20,.14));
+            border: 1px solid rgba(255,150,70,.4);
+            border-radius: 999px;
+            padding: 4px 10px;
+            animation: hotPulse 2s ease-in-out infinite;
+        }
+        @keyframes hotPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,120,40,.35); }
+            50%      { box-shadow: 0 0 12px 2px rgba(255,120,40,.35); }
+        }
+
+        /* Toggle visibilidad */
+        .vis-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .vis-label { font-size: .78rem; color: var(--text-dim); display: flex; align-items: center; gap: 7px; }
+        .seg {
+            display: flex;
+            background: rgba(255,255,255,.05);
+            border: 1px solid rgba(255,255,255,.09);
+            border-radius: 10px;
+            padding: 3px;
+            gap: 3px;
+        }
+        .seg-btn {
+            display: flex; align-items: center; gap: 6px;
+            padding: 6px 11px; font-size: .74rem; border-radius: 7px;
+            color: var(--text-dim); background: transparent; border: none;
+            cursor: pointer; font-family: inherit;
+            transition: all .15s ease;
+        }
+        .seg-btn:hover { color: var(--text); }
+        .seg-btn.active {
+            background: linear-gradient(135deg, rgba(200,160,69,.3), rgba(200,160,69,.16));
+            color: var(--gold-hi);
+        }
+
+        /* Modal mesas públicas */
+        .rooms-overlay {
+            position: fixed; inset: 0; z-index: 600;
+            background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center;
+        }
+        .rooms-overlay.show { display: flex; }
+        .rooms-modal {
+            width: min(560px, 92vw);
+            max-height: 82vh;
+            display: flex; flex-direction: column; gap: 16px;
+            background: linear-gradient(160deg, #1a3d28, #0d1f14);
+            border: 1px solid rgba(200,160,69,.25);
+            border-radius: 16px;
+            padding: 26px 24px;
+            animation: fadeUp .25s ease both;
+        }
+        .rooms-title {
+            font-family: 'Cormorant Garamond', serif;
+            color: var(--gold); font-size: 1.25rem; margin: 0;
+            text-align: center; letter-spacing: 1px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+        .rooms-title i { color: #ff9f43; }
+        .rooms-sub { font-size: .78rem; color: var(--text-dim); text-align: center; margin: 0; line-height: 1.5; }
+        .rooms-list { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; min-height: 120px; }
+        .room-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 10px 14px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 11px;
+            transition: background .15s ease, border-color .15s ease;
+        }
+        .room-row:hover { background: rgba(200,160,69,.07); border-color: rgba(200,160,69,.28); }
+        .room-table-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .room-table-dot[data-color="green"] { background: #1f7a4d; }
+        .room-table-dot[data-color="navy"]  { background: #2a4a7a; }
+        .room-table-dot[data-color="wine"]  { background: #8a2f3c; }
+        .room-table-dot[data-color="black"] { background: #444; }
+        .room-info { min-width: 0; }
+        .room-host { font-size: .86rem; color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .room-meta { font-size: .72rem; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .room-flame { color: #ff9f43; font-size: .8rem; }
+        .room-full { color: #ff9a8c; }
+        .room-join { margin-left: auto; flex-shrink: 0; }
+        .room-join .btn-hub { padding: 8px 16px; width: auto; font-size: .8rem; }
+        .room-row.full { opacity: .55; }
+        .rooms-empty { text-align: center; color: var(--text-muted); font-size: .82rem; padding: 26px 12px; line-height: 1.6; }
+        .rooms-actions { display: flex; gap: 10px; justify-content: center; }
+
+        .chip-stack { position: absolute; top: 16px; right: 16px; width: 26px; height: 26px; pointer-events: none; }
+        .chip {
+            position: absolute; right: 0;
+            width: 26px; height: 26px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .42rem; font-weight: 800; color: #fff;
+            border: 2px dashed rgba(255,255,255,.7);
+            box-shadow: 0 4px 8px rgba(0,0,0,.4), inset 0 0 5px rgba(0,0,0,.3);
+            font-family: 'Outfit', sans-serif;
+        }
+        .chip--1 { bottom: 0;   background: radial-gradient(circle at 30% 30%, #f7f7f2, #bcbcb0 60%, #84847a); color: #333; }
+        .chip--5 { bottom: 7px; background: radial-gradient(circle at 30% 30%, #ff6b6b, #b32424 60%, #641010); }
+        .chip--25 { bottom: 14px; background: radial-gradient(circle at 30% 30%, #ffd35c, #c8a045 60%, #6e5200); }
+
         #unirse-code {
             text-transform: uppercase;
             letter-spacing: 5px;
@@ -211,15 +464,112 @@
             font-family: 'Cormorant Garamond', serif;
         }
 
-        /* ===== SALA DE ESPERA ===== */
+        /* ============================================================
+           BANNER "MESA EN JUEGO" (reconexión)
+           ============================================================ */
+        .resume-game-card {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 18px;
+            background: linear-gradient(160deg, rgba(12,36,26,.85), rgba(20,52,38,.9));
+            border: 1px solid rgba(46,204,113,.3);
+            box-shadow: 0 18px 45px rgba(0,0,0,.28), inset 0 0 0 1px rgba(140,255,180,.04);
+            animation: fadeUp .5s var(--eout) both;
+        }
+        .resume-game-card.show { display: flex; }
+        .resume-game-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .resume-game-title { font-size: .76rem; color: #7ef0a1; text-transform: uppercase; letter-spacing: .14em; }
+        .resume-game-pill {
+            padding: 4px 10px; border-radius: 999px;
+            background: rgba(46,204,113,.12);
+            border: 1px solid rgba(46,204,113,.24);
+            color: #8dffb4; font-size: .68rem; white-space: nowrap;
+        }
+        .resume-game-info { display: flex; flex-direction: column; gap: 5px; color: var(--text-dim); font-size: .8rem; }
+        .resume-game-info strong { color: var(--text); font-size: .94rem; }
+        .resume-game-actions { display: flex; gap: 8px; }
+        .resume-game-btn {
+            flex: 1; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+            font-family: inherit; font-size: .8rem;
+            transition: transform .15s ease, background .15s ease, border-color .15s ease;
+            background: linear-gradient(135deg, rgba(46,204,113,.22), rgba(25,120,70,.22));
+            border: 1px solid rgba(46,204,113,.34);
+            color: #abffc2;
+        }
+        .resume-game-btn:hover { transform: translateY(-1px); }
+
+        /* ============================================================
+           SALA DE ESPERA
+           ============================================================ */
         #lobby-room { display: none; flex-direction: column; gap: 16px; }
+        #lobby-room.show { display: flex; }
+        .hub-room { max-width: 560px; width: 100%; margin: 0 auto; animation: fadeUp .5s var(--eout) both; }
+
+        .room-code-display { text-align: center; }
+        .room-code-display .code {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.5rem; font-weight: 700;
+            color: var(--gold); letter-spacing: 8px;
+            background: rgba(0,0,0,.3);
+            border: 1px solid rgba(200,160,69,.25);
+            border-radius: 12px; padding: 10px 20px;
+            display: inline-flex; align-items: center; gap: 10px; cursor: pointer;
+            transition: background .2s, box-shadow .2s;
+        }
+        .room-code-display .code i { font-size: 1.2rem; color: var(--gold-dim); }
+        .room-code-display .code:hover { background: rgba(200,160,69,.1); box-shadow: 0 0 24px rgba(200,160,69,.2); }
+        .room-public-badge {
+            display: inline-flex; align-items: center; gap: 7px;
+            font-size: .74rem; font-weight: 600; letter-spacing: .5px;
+            color: var(--gold-hi);
+            background: linear-gradient(135deg, rgba(200,160,69,.2), rgba(200,160,69,.08));
+            border: 1px solid rgba(200,160,69,.4);
+            border-radius: 999px;
+            padding: 5px 12px;
+            margin-top: 4px;
+        }
+        .room-code-display p { font-size: .75rem; color: var(--text-dim); margin-top: 6px; }
+
+        .separator { height: 1px; background: rgba(255,255,255,.08); }
+        .player-list { display: flex; flex-direction: column; gap: 6px; }
+        .player-item {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(0,0,0,.22); border-radius: 8px; padding: 8px 12px;
+            animation: popIn .3s var(--spring) both;
+            font-size: .88rem;
+        }
+        .player-avatar {
+            width: 30px; height: 30px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            font-size: .9rem; font-weight: 600; color: #fff;
+            border: 1px solid rgba(255,255,255,.22);
+            box-shadow: inset 0 -3px 6px rgba(0,0,0,.35);
+        }
+        .player-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .player-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 8px rgba(46,204,113,.6); margin-left: auto; }
+        .player-dot.away { background: var(--text-muted); box-shadow: none; }
+        .player-badge { font-size: .68rem; color: var(--gold); margin-left: 10px; font-weight: 600; letter-spacing: .05em; }
+
+        .room-wait { display: flex; align-items: center; justify-content: center; gap: 14px; }
+        .mini-deck { position: relative; width: 56px; height: 48px; flex-shrink: 0; pointer-events: none; }
+        .mini-deck-card {
+            position: absolute; bottom: 0; left: 50%;
+            transform: translateX(-50%);
+            animation: deckFloat 2.6s ease-in-out infinite;
+        }
+        .mini-deck-card:nth-child(1) { transform: translateX(-64%); animation-delay: 0s; }
+        .mini-deck-card:nth-child(2) { transform: translateX(-50%); animation-delay: .12s; }
+        .mini-deck-card:nth-child(3) { transform: translateX(-36%); animation-delay: .24s; }
+        @keyframes deckFloat { 0%,100% { translate: 0 0; } 50% { translate: 0 -4px; } }
 
         .mesa-picker { display: flex; flex-direction: column; gap: 8px; }
-        .mesa-picker-label { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
+        .mesa-picker-label { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; display: flex; align-items: center; gap: 6px; }
         .mesa-swatches { display: flex; gap: 8px; }
         .mesa-swatch {
-          width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
-          border: 2px solid transparent; transition: all .15s ease;
+            width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+            border: 2px solid transparent; transition: all .15s ease;
         }
         .mesa-swatch:hover { transform: scale(1.1); }
         .mesa-swatch.active { border-color: var(--gold); box-shadow: 0 0 8px rgba(200,160,69,.5); }
@@ -230,50 +580,21 @@
         .mesa-swatch-name { font-size: .62rem; color: var(--text-dim); text-align: center; margin-top: 2px; }
 
         .music-bar {
-          display: flex; align-items: center; gap: 10px;
-          background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
-          border: 1px solid rgba(200,160,69,.15);
-        }
-        .music-bar span { font-size: .72rem; color: var(--text-dim); flex: 1; }
-        .music-toggle {
-          background: none; border: 1px solid rgba(200,160,69,.3);
-          color: var(--gold); border-radius: 6px; padding: 4px 10px;
-          cursor: pointer; font-size: .72rem; transition: all .15s;
-        }
-        .music-toggle:hover { background: rgba(200,160,69,.1); }
-        input[type=range].vol-slider {
-          width: 70px; accent-color: var(--gold);
-          cursor: pointer;
-        }
-        #lobby-room.show { display: flex; }
-
-        .room-code-display { text-align: center; }
-        .room-code-display .code {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 2.5rem; font-weight: 700;
-            color: var(--gold); letter-spacing: 8px;
-            background: rgba(0,0,0,.3);
-            border: 1px solid rgba(200,160,69,.25);
-            border-radius: 12px; padding: 10px 20px;
-            display: inline-block; cursor: pointer;
-            transition: background .2s;
-        }
-        .room-code-display .code:hover { background: rgba(200,160,69,.1); }
-        .room-code-display p { font-size: .75rem; color: var(--text-dim); margin-top: 6px; }
-
-        .player-list { display: flex; flex-direction: column; gap: 6px; }
-        .player-item {
             display: flex; align-items: center; gap: 10px;
             background: rgba(0,0,0,.2); border-radius: 8px; padding: 8px 12px;
-            animation: popIn .3s var(--spring) both;
+            border: 1px solid rgba(200,160,69,.15);
         }
-        .player-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71; }
-        .player-dot.away { background: var(--text-muted); }
-        .player-badge { font-size: .72rem; color: var(--gold); margin-left: auto; }
+        .music-bar span { font-size: .72rem; color: var(--text-dim); flex: 1; display: flex; align-items: center; gap: 6px; }
+        .music-toggle {
+            background: none; border: 1px solid rgba(200,160,69,.3);
+            color: var(--gold); border-radius: 6px; padding: 4px 10px;
+            cursor: pointer; font-size: .72rem; transition: all .15s;
+            font-family: inherit; display: flex; align-items: center; gap: 5px;
+        }
+        .music-toggle:hover { background: rgba(200,160,69,.1); }
+        input[type=range].vol-slider { width: 70px; accent-color: var(--gold); cursor: pointer; }
 
-        .separator { height: 1px; background: rgba(255,255,255,.08); }
         .waiting-msg { text-align: center; font-size: .82rem; color: var(--text-dim); }
-
         @keyframes dots {
             0%,20% { content: '.'; }
             40%     { content: '..'; }
@@ -281,82 +602,9 @@
         }
         .dot-pulse::after { content: '...'; animation: dots 1.2s infinite; }
 
-        /* ===== MODAL DE NOMBRES ===== */
-        .names-modal-overlay {
-            display: none;
-            position: fixed; inset: 0; z-index: 500;
-            background: rgba(0,0,0,.72);
-            backdrop-filter: blur(5px);
-            align-items: center; justify-content: center;
-        }
-        .names-modal-overlay.show { display: flex; }
-
-        .names-modal {
-            background: linear-gradient(160deg, #1a3d28, #0d1f14);
-            border: 1px solid rgba(200,160,69,.22);
-            border-radius: 16px;
-            padding: 22px 20px 18px;
-            width: min(340px, 92%);
-            display: flex; flex-direction: column; gap: 14px;
-            animation: fadeUp .25s var(--eout) both;
-        }
-        .names-modal h3 {
-            font-family: 'Cormorant Garamond', serif;
-            color: var(--gold); font-size: 1.05rem;
-            text-align: center; letter-spacing: 2px;
-        }
-        .names-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 7px;
-            max-height: 52vh;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--gold-dim) transparent;
-        }
-        .name-option {
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: .82rem;
-            cursor: pointer;
-            text-align: center;
-            transition: background .15s, border-color .15s, color .15s;
-            line-height: 1.2;
-            color: var(--text);
-        }
-        .name-option:hover {
-            background: rgba(200,160,69,.15);
-            border-color: rgba(200,160,69,.4);
-            color: var(--gold-hi);
-        }
-        .name-option .nicon { display: block; font-size: 1.1rem; margin-bottom: 3px; }
-
-        .names-modal-footer {
-            display: flex; gap: 8px;
-        }
-        .btn-modal-close {
-            flex: 1; padding: 8px;
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.1);
-            border-radius: 8px; color: var(--text-dim);
-            font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
-        }
-        .btn-modal-close:hover { background: rgba(255,255,255,.1); color: var(--text); }
-        .btn-modal-shuffle {
-            flex: 1; padding: 8px;
-            background: rgba(200,160,69,.1);
-            border: 1px solid rgba(200,160,69,.3);
-            border-radius: 8px; color: var(--gold);
-            font-size: .8rem; cursor: pointer;
-            transition: background .15s;
-            font-family: 'Outfit', sans-serif;
-        }
-        .btn-modal-shuffle:hover { background: rgba(200,160,69,.2); }
-
+        /* ============================================================
+           GUÍA (overlay, modal, focus)
+           ============================================================ */
         .guide-settings-overlay,
         .guide-overlay {
             display: none;
@@ -398,6 +646,9 @@
             color: var(--gold);
             letter-spacing: 1px;
             margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .guide-settings-modal p,
         .guide-card p {
@@ -415,27 +666,11 @@
             border: 1px solid rgba(255,255,255,.08);
             border-radius: 12px;
         }
-        .guide-inline-toggle input {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--gold);
-        }
-        .guide-inline-toggle strong {
-            display: block;
-            color: var(--text);
-            font-size: .84rem;
-        }
-        .guide-inline-toggle span {
-            display: block;
-            color: var(--text-muted);
-            font-size: .72rem;
-            margin-top: 2px;
-        }
+        .guide-inline-toggle input { width: 18px; height: 18px; accent-color: var(--gold); }
+        .guide-inline-toggle strong { display: block; color: var(--text); font-size: .84rem; }
+        .guide-inline-toggle span { display: block; color: var(--text-muted); font-size: .72rem; margin-top: 2px; }
         .guide-settings-actions,
-        .guide-actions {
-            display: flex;
-            gap: 8px;
-        }
+        .guide-actions { display: flex; gap: 8px; }
         .guide-secondary-btn,
         .guide-primary-btn {
             flex: 1;
@@ -446,16 +681,8 @@
             cursor: pointer;
             transition: background .15s ease, border-color .15s ease, color .15s ease, transform .15s ease;
         }
-        .guide-secondary-btn {
-            background: rgba(255,255,255,.05);
-            border: 1px solid rgba(255,255,255,.12);
-            color: var(--text-dim);
-        }
-        .guide-primary-btn {
-            background: linear-gradient(135deg, rgba(200,160,69,.28), rgba(184,146,10,.18));
-            border: 1px solid rgba(200,160,69,.4);
-            color: var(--gold-hi);
-        }
+        .guide-secondary-btn { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); color: var(--text-dim); }
+        .guide-primary-btn { background: linear-gradient(135deg, rgba(200,160,69,.28), rgba(184,146,10,.18)); border: 1px solid rgba(200,160,69,.4); color: var(--gold-hi); }
         .guide-secondary-btn:hover,
         .guide-primary-btn:hover { transform: translateY(-1px); }
         .guide-focus {
@@ -467,81 +694,38 @@
             pointer-events: none;
             transition: all .22s cubic-bezier(.22,1,.36,1);
         }
-        .guide-card {
-            z-index: 3;
-            width: min(360px, calc(100vw - 24px));
-            padding: 18px 18px 16px;
+        .guide-card { z-index: 3; width: min(360px, calc(100vw - 24px)); padding: 18px 18px 16px; }
+        .guide-kicker { color: var(--gold-hi); font-size: .68rem; text-transform: uppercase; letter-spacing: .16em; margin-bottom: 6px; }
+        .guide-progress { color: var(--text-muted); font-size: .72rem; margin-top: 10px; }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 860px) {
+            .hub-shell { flex-direction: column; }
+            .deco-cards { display: none; }
+            .sidebar {
+                position: sticky;
+                top: 0;
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                align-items: center;
+                padding: 10px 14px;
+                border-right: none;
+                border-bottom: 1px solid rgba(200,160,69,.14);
+            }
+            .side-logo { border-bottom: none; margin-bottom: 0; padding: 0; margin-right: auto; }
+            .side-logo span { display: none; }
+            .side-nav { flex-direction: row; gap: 2px; margin: 0 auto; }
+            .side-link { padding: 9px 11px; }
+            .side-link span { display: none; }
+            .side-foot { flex-direction: row; align-items: center; margin-top: 0; border-top: none; padding-top: 0; }
+            .side-user { display: none; }
+            .side-logout { padding: 8px 10px; }
+            .side-logout span { display: none; }
+            .hub-main { padding: 24px 16px 40px; }
         }
-        .guide-kicker {
-            color: var(--gold-hi);
-            font-size: .68rem;
-            text-transform: uppercase;
-            letter-spacing: .16em;
-            margin-bottom: 6px;
-        }
-        .guide-progress {
-            color: var(--text-muted);
-            font-size: .72rem;
-            margin-top: 10px;
-        }
-        .resume-game-card {
-            display: none;
-            flex-direction: column;
-            gap: 14px;
-            background: linear-gradient(160deg, rgba(8,24,18,.92), rgba(16,44,32,.96));
-            border: 1px solid rgba(46,204,113,.28);
-            box-shadow: 0 18px 45px rgba(0,0,0,.28), inset 0 0 0 1px rgba(140,255,180,.03);
-        }
-        .resume-game-card.show { display: flex; }
-        .resume-game-head {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-        }
-        .resume-game-title {
-            font-size: .78rem;
-            color: #7ef0a1;
-            text-transform: uppercase;
-            letter-spacing: .14em;
-        }
-        .resume-game-pill {
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(46,204,113,.12);
-            border: 1px solid rgba(46,204,113,.24);
-            color: #8dffb4;
-            font-size: .68rem;
-            white-space: nowrap;
-        }
-        .resume-game-info {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            color: var(--text-dim);
-            font-size: .8rem;
-        }
-        .resume-game-info strong {
-            color: var(--text);
-            font-size: .94rem;
-        }
-        .resume-game-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .resume-game-btn {
-            flex: 1;
-            padding: 10px 12px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: .8rem;
-            transition: transform .15s ease, background .15s ease, border-color .15s ease;
-            background: linear-gradient(135deg, rgba(46,204,113,.22), rgba(25,120,70,.22));
-            border: 1px solid rgba(46,204,113,.34);
-            color: #abffc2;
-        }
-        .resume-game-btn:hover { transform: translateY(-1px); }
         @media (max-width: 640px) {
             .guide-card {
                 left: 12px !important;
@@ -549,9 +733,7 @@
                 width: auto;
             }
             .guide-actions,
-            .guide-settings-actions {
-                flex-direction: column;
-            }
+            .guide-settings-actions { flex-direction: column; }
         }
     </style>
 </head>
@@ -569,154 +751,215 @@
         })();
     </script>
 
-    <div class="lobby-wrap">
-        <div class="logo">
-            <h1>Continental</h1>
-            <p>Juego de cartas multijugador</p>
-        </div>
+    <div class="hub-shell">
 
-        <!-- ===== INFO USUARIO ===== -->
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
-            <div style="display:flex;align-items:center;gap:8px">
-                <div style="width:8px;height:8px;border-radius:50%;background:#2ecc71"></div>
-                <span id="user-display" style="font-size:.85rem;color:var(--gold-hi);font-weight:600"></span>
-                <span id="user-badge" style="font-size:.72rem;color:var(--text-dim)"></span>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button id="btn-admin" onclick="window.location.href='/admin'" style="display:none;background:rgba(200,160,69,.15);border:1px solid rgba(200,160,69,.35);color:var(--gold);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s;font-weight:600">👑 Admin</button>
-                            <button id="btn-guide" onclick="openGuideSettings()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">📘 Guía</button>
-              <button onclick="openCustomize()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">🎨 Perfil</button>
-              <button onclick="openFeedback()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">💬 Feedback</button>
-              <button onclick="logout()" style="background:none;border:1px solid rgba(255,255,255,.15);color:var(--text-dim);border-radius:6px;padding:3px 10px;font-size:.72rem;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='rgba(200,160,69,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='rgba(255,255,255,.15)';this.style.color='var(--text-dim)'">Salir</button>
-            </div>
-        </div>
-
-        <!-- ===== FORMULARIO ===== -->
-        <div class="card-box resume-game-card" id="resume-game-card">
-            <div class="resume-game-head">
-                <div class="resume-game-title">Mesa en juego</div>
-                <div class="resume-game-pill">Reconexión</div>
-            </div>
-            <div class="resume-game-info">
-                <strong id="resume-game-room">Sala ----</strong>
-                <span id="resume-game-detail">Tu mesa sigue activa. Puedes volver a entrar con tu mismo asiento.</span>
-            </div>
-            <div class="resume-game-actions">
-                <button class="resume-game-btn" onclick="resumeActiveGame()">Reconectarme</button>
-            </div>
-        </div>
-
-        <div class="card-box" id="lobby-setup">
-            <h2>Unirse o Crear Sala</h2>
-            <div class="tabs">
-                <div class="tab active" onclick="switchTab('crear')">Crear sala</div>
-                <div class="tab" onclick="switchTab('unirse')">Unirse</div>
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+            <div class="side-logo">
+                <i class="ph ph-spade-fill"></i>
+                <span>CONTINENTAL</span>
             </div>
 
-            <!-- CREAR -->
-            <div class="tab-panel active" id="panel-crear">
-                <div class="field-group">
-                    <label>Modo de juego</label>
-                    <div class="mode-row">
-                        <div class="mode-btn active" data-mode="realtime" onclick="setMode(this)">
-                            Tiempo real <small>Todos conectados</small>
+            <nav class="side-nav">
+                <a class="side-link active" onclick="window.location.href='/'"><i class="ph ph-cards"></i><span>Jugar</span></a>
+                <a class="side-link" onclick="window.location.href='/perfil'"><i class="ph ph-palette"></i><span>Perfil</span></a>
+                <a class="side-link" id="btn-guide" onclick="openGuideSettings()"><i class="ph ph-books"></i><span>Guía</span></a>
+                <a class="side-link" onclick="openFeedback()"><i class="ph ph-chat-circle-text"></i><span>Feedback</span></a>
+                <a class="side-link" id="btn-admin" onclick="window.location.href='/admin'" style="display:none"><i class="ph ph-crown"></i><span>Admin</span></a>
+            </nav>
+
+            <div class="side-foot">
+                <div class="side-user">
+                    <div class="side-avatar" id="side-avatar">?</div>
+                    <div style="min-width:0">
+                        <div class="side-user-name" id="user-display">—</div>
+                        <div class="side-user-badge" id="user-badge"></div>
+                    </div>
+                </div>
+                <button class="side-logout" onclick="logout()"><i class="ph ph-sign-out"></i><span>Salir</span></button>
+            </div>
+        </aside>
+
+        <!-- ===== MAIN ===== -->
+        <main class="hub-main">
+
+            <header class="hub-top">
+                <div>
+                    <h1 class="hub-title"><span id="greet-prefix">Hola</span>, <span class="gold-text" id="greet">jugador</span></h1>
+                    <p class="hub-sub">Tu mesa te espera. Crea una sala o únete con un código.</p>
+                    <p class="hub-date" id="hub-date"><i class="ph ph-calendar-blank"></i></p>
+                </div>
+                <div class="hub-right">
+                    <button class="btn-explore" onclick="openRoomsBrowser()"><i class="ph ph-fire"></i>Mesas públicas</button>
+                    <span class="hub-pill">beta v0.4.7</span>
+                    <div class="deco-cards" id="deco-cards" aria-hidden="true">
+                        <div class="deco-card" style="--i:0"><b>A</b><i class="ph ph-spade-fill"></i></div>
+                        <div class="deco-card" style="--i:1"><b>K</b><i class="ph ph-heart-fill"></i></div>
+                        <div class="deco-card" style="--i:2"><b>Q</b><i class="ph ph-diamond-fill"></i></div>
+                        <div class="deco-card" style="--i:3"><b>J</b><i class="ph ph-club-fill"></i></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ===== MESA EN JUEGO (reconexión) ===== -->
+            <div class="resume-game-card" id="resume-game-card">
+                <div class="resume-game-head">
+                    <div class="resume-game-title">Mesa en juego</div>
+                    <div class="resume-game-pill">Reconexión</div>
+                </div>
+                <div class="resume-game-info">
+                    <strong id="resume-game-room">Sala ----</strong>
+                    <span id="resume-game-detail">Tu mesa sigue activa. Puedes volver a entrar con tu mismo asiento.</span>
+                </div>
+                <div class="resume-game-actions">
+                    <button class="resume-game-btn" onclick="resumeActiveGame()"><i class="ph ph-arrow-circle-right"></i>Reconectarme</button>
+                </div>
+            </div>
+
+            <!-- ===== SETUP (crear / unirse / cómo se juega) ===== -->
+            <div id="lobby-setup">
+                <div class="hub-grid">
+                    <!-- CREAR -->
+                    <section class="hub-card hub-card--create" style="position:relative">
+                        <div class="chip-stack" aria-hidden="true">
+                            <span class="chip chip--25">25</span>
+                            <span class="chip chip--5">5</span>
+                            <span class="chip chip--1">1</span>
                         </div>
-                        <div class="mode-btn" data-mode="async" onclick="setMode(this)">
-                            Asíncrono <small>Juega cuando puedas</small>
+                        <div class="hub-card-head"><i class="ph ph-plus-circle"></i>Crear sala</div>
+                        <p class="hub-desc">Crea tu propia mesa, elige cuántos jugadores y comparte el código para que se unan.</p>
+                        <div id="panel-crear" class="hub-panel">
+                            <div class="player-count">
+                                <label>Jugadores máx.</label>
+                                <div class="pc-ctrl">
+                                    <button class="pc-btn" onclick="chgMax(-1)"><i class="ph ph-minus"></i></button>
+                                    <span class="pc-val" id="max-val">4</span>
+                                    <button class="pc-btn" onclick="chgMax(1)"><i class="ph ph-plus"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="hot-badge" id="hot-badge" style="display:none"><i class="ph ph-fire"></i>Mesa caliente — 2 mazos, 5 jugadores</div>
+
+                            <div class="vis-row">
+                                <span class="vis-label"><i class="ph ph-eye"></i>Visibilidad</span>
+                                <div class="seg">
+                                    <button type="button" class="seg-btn active" id="seg-privada" onclick="setRoomPublic(false)"><i class="ph ph-lock"></i>Privada</button>
+                                    <button type="button" class="seg-btn" id="seg-publica" onclick="setRoomPublic(true)"><i class="ph ph-eye"></i>Pública</button>
+                                </div>
+                            </div>
+
+                            <button id="btn-create-room" class="btn btn-gold btn-hub" style="margin-top:4px" onclick="crearSala()"><i class="ph ph-play-fill"></i>Crear Sala</button>
+                        </div>
+                    </section>
+
+                    <!-- UNIRSE -->
+                    <section class="hub-card">
+                        <div class="hub-card-head"><i class="ph ph-sign-in"></i>Unirse a una mesa</div>
+                        <p class="hub-desc">Entra con el código de 5 letras que te compartió el anfitrión de la mesa.</p>
+                        <div id="panel-unirse" class="hub-panel">
+                            <div class="field-group">
+                                <label>Código de sala</label>
+                                <input type="text" id="unirse-code"
+                                       placeholder="EJ: ABC12"
+                                       maxlength="5"
+                                       oninput="sanitizeCode(this)"
+                                       autocomplete="off" autocorrect="off" spellcheck="false">
+                                <span class="field-hint" id="hint-unirse-code"></span>
+                            </div>
+
+                            <button id="btn-join-room" class="btn btn-hub btn-hub--ghost" onclick="unirse()">Unirse</button>
+                        </div>
+                    </section>
+
+                    <!-- CÓMO SE JUEGA -->
+                    <section class="hub-card">
+                        <div class="hub-card-head"><i class="ph ph-cards-three"></i>¿Cómo se juega?</div>
+                        <ul class="howto">
+                            <li>
+                                <i class="ph ph-cards"></i>
+                                <span><strong>7 rondas</strong>Cada ronda pide combinaciones distintas: tercias y corridas.</span>
+                            </li>
+                            <li>
+                                <i class="ph ph-lightning"></i>
+                                <span><strong>Solo tiempo real</strong>Todos los jugadores conectados en directo en la misma mesa.</span>
+                            </li>
+                            <li>
+                                <i class="ph ph-users-three"></i>
+                                <span><strong>De 2 a 5 jugadores</strong>Cada mesa tiene su propio límite de jugadores.</span>
+                            </li>
+                        </ul>
+                        <button class="btn btn-hub btn-hub--ghost" style="margin-top:2px" onclick="openGuideSettings()"><i class="ph ph-books"></i>Ver guía completa</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ===== SALA DE ESPERA ===== -->
+            <section class="hub-card hub-room" id="lobby-room">
+                <div class="room-code-display">
+                    <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar"><i class="ph ph-copy"></i><span id="room-code-text">????</span></div>
+                    <div class="room-public-badge" id="room-public-badge" style="display:none"><i class="ph ph-eye"></i>Mesa pública</div>
+                    <p id="room-code-hint">Comparte este código con tus amigos</p>
+                </div>
+                <div class="separator"></div>
+                <div class="player-list" id="player-list"></div>
+                <div class="separator"></div>
+
+                <!-- Color de mesa (solo visible para host) -->
+                <div id="mesa-picker-wrap" style="display:none">
+                    <div class="mesa-picker">
+                        <div class="mesa-picker-label"><i class="ph ph-palette"></i>Color de mesa</div>
+                        <div class="mesa-swatches">
+                            <div style="text-align:center">
+                                <div class="mesa-swatch active" data-color="green" onclick="setMesaColor('green')" title="Verde clásico"></div>
+                                <div class="mesa-swatch-name">Verde</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div class="mesa-swatch" data-color="navy" onclick="setMesaColor('navy')" title="Azul marino"></div>
+                                <div class="mesa-swatch-name">Azul</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div class="mesa-swatch" data-color="wine" onclick="setMesaColor('wine')" title="Rojo vino"></div>
+                                <div class="mesa-swatch-name">Vino</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div class="mesa-swatch" data-color="black" onclick="setMesaColor('black')" title="Negro elegante"></div>
+                                <div class="mesa-swatch-name">Negro</div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="player-count">
-                    <label>Jugadores máx.</label>
-                    <div class="pc-ctrl">
-                        <button class="pc-btn" onclick="chgMax(-1)">−</button>
-                        <span class="pc-val" id="max-val">4</span>
-                        <button class="pc-btn" onclick="chgMax(1)">+</button>
+                <!-- Reproductor de música -->
+                <div class="music-bar">
+                    <span><i class="ph ph-music-notes"></i>Jazz de Casino</span>
+                    <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="25" oninput="setVolume(this.value)">
+                    <button class="music-toggle" id="music-toggle" onclick="toggleMusic()"><i class="ph ph-play"></i><span>Play</span></button>
+                </div>
+
+                <div class="separator"></div>
+                <div class="room-wait">
+                    <div class="mini-deck" aria-hidden="true">
+                        <div class="mini-deck-card cback" style="--cw:34px;--ch:48px;--r:5px"></div>
+                        <div class="mini-deck-card cback" style="--cw:34px;--ch:48px;--r:5px"></div>
+                        <div class="mini-deck-card cback" style="--cw:34px;--ch:48px;--r:5px"></div>
+                    </div>
+                    <div class="waiting-msg" id="waiting-msg">
+                        Esperando jugadores<span class="dot-pulse"></span>
                     </div>
                 </div>
+                <button class="btn btn-gold btn-hub" style="display:none" id="btn-start" onclick="iniciarJuego()">
+                    <i class="ph ph-play-fill"></i>Iniciar Partida
+                </button>
+                <button class="btn btn-hub btn-leave" id="btn-leave" onclick="salirDeLaMesa()">
+                    <i class="ph ph-sign-out"></i>Salir de la mesa
+                </button>
+            </section>
 
-                <button id="btn-create-room" class="btn btn-gold" style="width:100%;margin-top:4px" onclick="crearSala()">🃏 Crear Sala</button>
-            </div>
-
-            <!-- UNIRSE -->
-            <div class="tab-panel" id="panel-unirse">
-                <div class="field-group">
-                    <label>Código de sala</label>
-                    <input type="text" id="unirse-code"
-                           placeholder="Ej: ABC12"
-                           maxlength="5"
-                           oninput="sanitizeCode(this)"
-                           autocomplete="off" autocorrect="off" spellcheck="false">
-                    <span class="field-hint" id="hint-unirse-code"></span>
-                </div>
-
-                <button id="btn-join-room" class="btn btn-gold" style="width:100%" onclick="unirse()">Unirse →</button>
-            </div>
-        </div>
-
-        <!-- ===== SALA DE ESPERA ===== -->
-        <div class="card-box" id="lobby-room">
-            <div class="room-code-display">
-                <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar">????</div>
-                <p>Comparte este código con tus amigos</p>
-            </div>
-            <div class="separator"></div>
-            <div class="player-list" id="player-list"></div>
-            <div class="separator"></div>
-
-            <!-- Color de mesa (solo visible para host) -->
-            <div id="mesa-picker-wrap" style="display:none">
-              <div class="mesa-picker">
-                <div class="mesa-picker-label">🎨 Color de mesa</div>
-                <div class="mesa-swatches">
-                  <div style="text-align:center">
-                    <div class="mesa-swatch active" data-color="green" onclick="setMesaColor('green')" title="Verde clásico"></div>
-                    <div class="mesa-swatch-name">Verde</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="navy" onclick="setMesaColor('navy')" title="Azul marino"></div>
-                    <div class="mesa-swatch-name">Azul</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="wine" onclick="setMesaColor('wine')" title="Rojo vino"></div>
-                    <div class="mesa-swatch-name">Vino</div>
-                  </div>
-                  <div style="text-align:center">
-                    <div class="mesa-swatch" data-color="black" onclick="setMesaColor('black')" title="Negro elegante"></div>
-                    <div class="mesa-swatch-name">Negro</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Reproductor de música -->
-            <div class="music-bar">
-              <span>🎷 Jazz de Casino</span>
-              <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="25" oninput="setVolume(this.value)">
-              <button class="music-toggle" id="music-toggle" onclick="toggleMusic()">▶ Play</button>
-            </div>
-
-            <div class="separator"></div>
-            <div class="waiting-msg" id="waiting-msg">
-                Esperando jugadores<span class="dot-pulse"></span>
-            </div>
-            <button class="btn btn-gold" style="width:100%;margin-top:8px;display:none" id="btn-start" onclick="iniciarJuego()">
-                ▶ Iniciar Partida
-            </button>
-        </div>
-    </div>
-
-    <!-- ===== MODAL NOMBRES PREDEFINIDOS ===== -->
-    <div class="names-modal-overlay" id="names-modal" onclick="closeNamesModalOutside(event)">
-        <div class="names-modal">
-            <h3>🎲 Elige un nombre</h3>
-            <div class="names-grid" id="names-grid"></div>
-            <div class="names-modal-footer">
-                <button class="btn-modal-close" onclick="closeNamesModal()">Cancelar</button>
-                <button class="btn-modal-shuffle" onclick="shuffleNames()">🔀 Otros nombres</button>
-            </div>
-        </div>
+            <footer class="hub-foot">
+                <i class="ph ph-spade-fill"></i>
+                <span>Continental · beta v0.4.7 · hecho con pasión</span>
+            </footer>
+        </main>
     </div>
 
     <div id="toast"></div>
@@ -724,7 +967,7 @@
     <div class="guide-settings-overlay" id="guide-settings-overlay">
         <div class="guide-settings-backdrop" onclick="closeGuideSettings()"></div>
         <div class="guide-settings-modal">
-            <h3>📘 Guía de juego</h3>
+            <h3><i class="ph ph-books"></i>Guía de juego</h3>
             <p id="guide-settings-status">Activa la guía para verla automáticamente una vez en lobby y una vez dentro de la partida.</p>
             <label class="guide-inline-toggle">
                 <input type="checkbox" id="guide-auto-toggle" onchange="toggleGuideAuto(this.checked)">
@@ -755,27 +998,10 @@
         </div>
     </div>
 
-    <!-- ===== MODAL PERSONALIZACIÓN ===== -->
-    <div id="customize-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
-      <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(420px,92%);display:flex;flex-direction:column;gap:18px;animation:fadeUp .25s ease both">
-        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px">🎨 Personalización</h3>
-
-        <div>
-          <div style="font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Skin de cartas</div>
-          <div id="skin-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"></div>
-        </div>
-
-        <div id="customize-error" style="display:none;background:rgba(220,50,50,.12);border:1px solid rgba(220,50,50,.3);border-radius:8px;color:#ff7070;font-size:.78rem;padding:8px 12px;text-align:center"></div>
-        <div id="customize-ok" style="display:none;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;color:#2ecc71;font-size:.78rem;padding:8px 12px;text-align:center"></div>
-
-        <button onclick="closeCustomize()" style="padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-dim);font-size:.82rem;cursor:pointer;font-family:inherit">Cerrar</button>
-      </div>
-    </div>
-
     <!-- ===== MODAL FEEDBACK ===== -->
     <div id="feedback-overlay" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);align-items:center;justify-content:center">
       <div style="background:linear-gradient(160deg,#1a3d28,#0d1f14);border:1px solid rgba(200,160,69,.25);border-radius:16px;padding:28px 24px;width:min(380px,92%);display:flex;flex-direction:column;gap:16px;animation:fadeUp .25s ease both">
-        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px">💬 Deja tu feedback</h3>
+        <h3 style="font-family:'Cormorant Garamond',serif;color:var(--gold);font-size:1.2rem;margin:0;text-align:center;letter-spacing:1px"><i class="ph ph-chat-circle-text"></i>Deja tu feedback</h3>
         <p style="font-size:.78rem;color:var(--text-dim);margin:0;text-align:center">Tu opinión nos ayuda a mejorar el juego</p>
 
         <!-- Estrellas -->
@@ -795,7 +1021,24 @@
 
         <div style="display:flex;gap:8px">
           <button onclick="closeFeedback()" style="flex:1;padding:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text-dim);font-size:.82rem;cursor:pointer;font-family:inherit">Cancelar</button>
-          <button id="feedback-btn" onclick="submitFeedback()" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gold),#b8920a);border:none;border-radius:8px;color:#0b1e12;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s">Enviar ✈</button>
+          <button id="feedback-btn" onclick="submitFeedback()" style="flex:2;padding:10px;background:linear-gradient(135deg,var(--gold),#b8920a);border:none;border-radius:8px;color:#0b1e12;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .2s"><i class="ph ph-send"></i>Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL MESAS PÚBLICAS ===== -->
+    <div class="rooms-overlay" id="rooms-overlay" onclick="if(event.target===this)closeRoomsBrowser()">
+      <div class="rooms-modal">
+        <h3 class="rooms-title"><i class="ph ph-fire"></i>Mesas públicas</h3>
+        <p class="rooms-sub">Únete a cualquier mesa abierta. Las <strong style="color:#ff9f43">calientes</strong> (5 jugadores, 2 mazos) son más difíciles.</p>
+
+        <div class="rooms-list" id="rooms-list">
+          <div class="rooms-empty">Cargando mesas…</div>
+        </div>
+
+        <div class="rooms-actions">
+          <button class="btn btn-hub btn-hub--ghost" onclick="refreshRoomsBrowser()" style="width:auto;padding:10px 18px"><i class="ph ph-arrows-clockwise"></i>Actualizar</button>
+          <button class="btn btn-hub" onclick="closeRoomsBrowser()" style="width:auto;padding:10px 18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text-dim)">Cerrar</button>
         </div>
       </div>
     </div>
@@ -854,7 +1097,7 @@
           errEl.style.display = 'block';
         } finally {
           btn.disabled    = false;
-          btn.textContent = 'Enviar ✈';
+          btn.innerHTML   = '<i class="ph ph-send"></i>Enviar';
         }
       }
       // Cerrar al click fuera
@@ -864,139 +1107,31 @@
     </script>
 
     <script src="js/socket.js"></script>
+    <script src="js/skins.js"></script>
     <script>
-        // ── Skins config ──────────────────────────────────────────
-        const SKINS = [
-            { id: 'clasico',    label: 'Clásico',    bg: 'linear-gradient(135deg,#1a3a80,#0d2050)', border: 'rgba(255,255,255,.25)', free: true },
-            { id: 'rojo',       label: 'Rojo',       bg: 'linear-gradient(135deg,#7a1a1a,#3d0a0a)', border: 'rgba(255,100,100,.4)',  free: true },
-            { id: 'obsidiana',  label: 'Obsidiana',  bg: 'linear-gradient(135deg,#1a1a1a,#0a0a0a)', border: 'rgba(200,160,69,.4)',   free: true },
-            { id: 'esmeralda',  label: 'Esmeralda',  bg: 'linear-gradient(135deg,#0d3320,#061a10)', border: 'rgba(46,204,113,.4)',   free: true },
-            { id: 'plata',      label: 'Plata',      bg: 'linear-gradient(135deg,#8b96a6,#4d5663,#d7dde6,#4d5663)', border: 'rgba(225,235,245,.6)', free: true },
-            { id: 'bronce',     label: 'Bronce',     bg: 'linear-gradient(135deg,#8a5630,#4a2815,#b97a4a,#4a2815)', border: 'rgba(206,139,85,.55)', free: true },
-            { id: 'zafiro',     label: 'Zafiro',     bg: 'linear-gradient(135deg,#0b2458,#07122d,#1d58b8,#07122d)', border: 'rgba(93,152,255,.6)', free: true },
-            { id: 'dorado',     label: '👑 Dorado',   bg: 'linear-gradient(135deg,#7a5c00,#3d2e00,#c8a045,#3d2e00)', border: 'rgba(200,160,69,.7)', free: false, roles: ['owner'] },
-            { id: 'neon',       label: '⚡ Neon',     bg: 'linear-gradient(135deg,#001a33,#003366)', border: 'rgba(0,200,255,.6)',    free: false, roles: ['owner','vip','beta_tester'] },
-            { id: 'imperial',   label: '👑 Imperial', bg: 'linear-gradient(135deg,#3f0018,#160008,#8f0f3b,#160008)', border: 'rgba(255,133,183,.6)', free: false, roles: ['owner'] },
-            { id: 'arcoiris',   label: '🌈 Arcoíris', bg: 'linear-gradient(135deg,#ff4d6d,#ff9f1c,#ffe66d,#2ec4b6,#4d96ff,#8b5cf6,#ff4d6d)', border: 'rgba(255,255,255,.72)', free: false, roles: ['owner'] },
-            { id: 'amatista',   label: '⭐ Amatista', bg: 'linear-gradient(135deg,#35105e,#170728,#7e39c6,#170728)', border: 'rgba(186,132,255,.65)', free: false, roles: ['vip'] },
-            { id: 'cobalto',    label: '🧪 Cobalto',  bg: 'linear-gradient(135deg,#0a1e46,#071024,#1453c2,#071024)', border: 'rgba(88,151,255,.62)', free: false, roles: ['beta_tester'] },
-            { id: 'marfil',     label: '🎖️ Marfil',   bg: 'linear-gradient(135deg,#8a7b63,#4a4134,#e6d8bc,#4a4134)', border: 'rgba(240,225,194,.62)', free: false, roles: ['early_adopter'] },
-        ];
-
-        let currentSkin = 'clasico';
-
-        function hasAccessToSkin(skin) {
-            if (skin.free) return true;
-            const u = window.AUTH?.usuario;
-            if (u?.rol === 'owner') return true;
-            return skin.roles?.includes(u?.rol) || skin.roles?.includes(u?.badge);
-        }
-
-        function openCustomize() {
-            const u = window.AUTH?.usuario;
-            currentSkin = u?.skin || localStorage.getItem('mySkin') || 'clasico';
-            document.getElementById('customize-error').style.display = 'none';
-            document.getElementById('customize-ok').style.display = 'none';
-            renderSkinGrid();
-            document.getElementById('customize-overlay').style.display = 'flex';
-        }
-
-        function closeCustomize() {
-            document.getElementById('customize-overlay').style.display = 'none';
-        }
-
-        function renderSkinGrid() {
-            const grid = document.getElementById('skin-grid');
-            grid.innerHTML = SKINS.map(s => {
-                const accessible = hasAccessToSkin(s);
-                const selected   = currentSkin === s.id;
-                return `<div onclick="${accessible ? `selectSkin('${s.id}')` : ''}"
-                    style="
-                        border-radius:10px;
-                        border:2px solid ${selected ? 'var(--gold)' : 'rgba(255,255,255,.1)'};
-                        overflow:hidden;
-                        cursor:${accessible ? 'pointer' : 'not-allowed'};
-                        opacity:${accessible ? '1' : '.4'};
-                        transition:all .2s;
-                        box-shadow:${selected ? '0 0 12px rgba(200,160,69,.5)' : 'none'};
-                    ">
-                    <div style="height:52px;background:${s.bg};border-bottom:1px solid ${s.border};position:relative">
-                        <div style="position:absolute;inset:6px;border:1.5px solid ${s.border};border-radius:4px;opacity:.6"></div>
-                        ${!accessible ? '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:rgba(255,255,255,.5)">🔒</div>' : ''}
-                    </div>
-                    <div style="padding:5px 6px;font-size:.68rem;color:${selected ? 'var(--gold)' : 'var(--text-dim)'};text-align:center;background:rgba(0,0,0,.3)">${s.label}</div>
-                </div>`;
-            }).join('');
-        }
-
-        async function selectSkin(skinId) {
-            const token = localStorage.getItem('token');
-            const prevSkin = currentSkin;
-            currentSkin = skinId;
-            renderSkinGrid();
-
-            if (!token) {
-                currentSkin = prevSkin;
-                renderSkinGrid();
-                document.getElementById('customize-error').textContent = 'Tu sesión expiró. Vuelve a iniciar sesión.';
-                document.getElementById('customize-error').style.display = 'block';
-                return;
-            }
-
-            try {
-                const res  = await fetch('/api/me/skin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ skin: skinId }),
-                });
-                const data = await res.json();
-                if (!res.ok) {
-                    currentSkin = prevSkin;
-                    renderSkinGrid();
-                    if (res.status === 401) {
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('usuario');
-                        localStorage.removeItem('mySkin');
-                        document.getElementById('customize-error').textContent = 'Tu sesión expiró. Vuelve a iniciar sesión.';
-                        document.getElementById('customize-error').style.display = 'block';
-                        setTimeout(() => { window.location.href = '/login'; }, 900);
-                        return;
-                    }
-                    document.getElementById('customize-error').textContent = data.error;
-                    document.getElementById('customize-error').style.display = 'block';
-                    return;
-                }
-                // Update localStorage
-                const u = JSON.parse(localStorage.getItem('usuario') || '{}');
-                u.skin = skinId;
-                localStorage.setItem('usuario', JSON.stringify(u));
-                localStorage.setItem('mySkin', skinId);
-                if (window.AUTH?.usuario) window.AUTH.usuario.skin = skinId;
-
-                document.getElementById('customize-ok').textContent = '✓ Skin guardado';
-                document.getElementById('customize-ok').style.display = 'block';
-                setTimeout(() => { document.getElementById('customize-ok').style.display = 'none'; }, 1500);
-            } catch {
-                currentSkin = prevSkin;
-                renderSkinGrid();
-                document.getElementById('customize-error').textContent = 'Error de conexión.';
-                document.getElementById('customize-error').style.display = 'block';
-            }
-        }
-
-        // Cerrar al click fuera
-        document.getElementById('customize-overlay')?.addEventListener('click', function(e) {
-            if (e.target === this) closeCustomize();
-        });
-
         function refreshAuthUi(user = window.AUTH?.usuario) {
             if (!user) return;
             const displayEl = document.getElementById('user-display');
             const badgeEl = document.getElementById('user-badge');
             const adminBtn = document.getElementById('btn-admin');
-            if (displayEl) displayEl.textContent = user.nombre || '';
-            if (badgeEl) badgeEl.textContent = user.badge || '';
-            if (adminBtn) adminBtn.style.display = user.rol === 'owner' ? 'inline-block' : 'none';
+            const greetEl = document.getElementById('greet');
+            const avatarEl = document.getElementById('side-avatar');
+            const nombre = user.nombre || '';
+            if (displayEl) displayEl.textContent = nombre;
+            if (badgeEl) badgeEl.textContent = BADGE_LABELS[user.badge] || '';
+            if (adminBtn) adminBtn.style.display = user.rol === 'owner' ? 'flex' : 'none';
+            if (greetEl) greetEl.textContent = nombre;
+            if (avatarEl) avatarEl.textContent = BADGE_EMOJI[user.badge] || (nombre ? nombre[0].toUpperCase() : '?');
+            const prefixEl = document.getElementById('greet-prefix');
+            if (prefixEl) {
+                const h = new Date().getHours();
+                prefixEl.textContent = h < 12 ? 'Buenos días' : h < 19 ? 'Buenas tardes' : 'Buenas noches';
+            }
+            const dateEl = document.getElementById('hub-date');
+            if (dateEl) {
+                const f = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                dateEl.innerHTML = '<i class="ph ph-calendar-blank"></i>' + (f.charAt(0).toUpperCase() + f.slice(1));
+            }
         }
 
         // Mostrar info de usuario
@@ -1016,7 +1151,37 @@
             window.location.href = '/login';
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="js/gsap-enhance.js"></script>
+    <script>
+        // Spotlight dorado que sigue al cursor dentro de las tarjetas
+        (function () {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            document.querySelectorAll('.hub-card').forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const r = card.getBoundingClientRect();
+                    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+                    card.style.setProperty('--my', (e.clientY - r.top) + 'px');
+                });
+            });
+        })();
+
+        // Parallax del abanico de cartas (mejora progresiva)
+        (function () {
+            if (typeof window.gsap === 'undefined' || window.innerWidth <= 860) return;
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            const dc    = document.getElementById('deco-cards');
+            const main  = document.querySelector('.hub-main');
+            if (!dc || !main) return;
+            const xTo = gsap.quickTo(dc, 'x', { duration: 0.6, ease: 'power2.out' });
+            const yTo = gsap.quickTo(dc, 'y', { duration: 0.6, ease: 'power2.out' });
+            main.addEventListener('mousemove', (e) => {
+                const r = main.getBoundingClientRect();
+                xTo(((e.clientX - r.left) / r.width - 0.5) * 26);
+                yTo(((e.clientY - r.top) / r.height - 0.5) * 16);
+            });
+        })();
+    </script>
     <script src="js/lobby.js"></script>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
 </body>
 </html>

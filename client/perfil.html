@@ -448,6 +448,56 @@
     .danger-zone .panel-head h3 { color: #ff9a8c; }
     .danger-zone .panel-head h3 i { color: #ff6b5e; }
 
+    /* Navegador interno de secciones (solo en el perfil) */
+    .profile-layout { display: flex; gap: 26px; align-items: flex-start; }
+    .profile-body { flex: 1; min-width: 0; }
+    .profile-layout [id] { scroll-margin-top: 26px; }
+    .profile-sidenav {
+      width: 178px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding: 14px 12px;
+      background: rgba(11, 26, 17, .55);
+      border: 1px solid rgba(200,160,69,.14);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 40px rgba(0,0,0,.22);
+      animation: fadeUp .55s var(--eout) both;
+    }
+    .ps-title {
+      font-size: .6rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 0 10px 8px;
+    }
+    .ps-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 9px;
+      color: var(--text-dim);
+      font-size: .8rem;
+      text-decoration: none;
+      border: 1px solid transparent;
+      transition: background .15s ease, color .15s ease, border-color .15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .ps-link i { font-size: .95rem; }
+    .ps-link:hover { background: rgba(200,160,69,.08); color: var(--gold-hi); }
+    .ps-link.active {
+      background: rgba(200,160,69,.14);
+      border-color: rgba(200,160,69,.22);
+      color: var(--gold-hi);
+    }
+
     /* Toast */
     .toast {
       position: fixed;
@@ -514,6 +564,19 @@
       .side-logout { padding: 8px 10px; }
       .side-logout span { display: none; }
       .hub-main { padding: 24px 16px 40px; }
+      .profile-layout { flex-direction: column; }
+      .profile-layout [id] { scroll-margin-top: 96px; }
+      .profile-sidenav {
+        position: static;
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 12px;
+        top: auto;
+      }
+      .ps-title { width: 100%; padding: 0 8px 6px; }
     }
     @media (max-width: 560px) {
       .profile-hero { flex-direction: column; align-items: center; text-align: center; }
@@ -575,8 +638,12 @@
         <span class="hub-pill" id="profile-pill">Cargando…</span>
       </header>
 
+      <div class="profile-layout">
+
+        <div class="profile-body">
+
       <!-- Identidad -->
-      <section class="panel profile-hero">
+      <section id="sec-hero" class="panel profile-hero">
         <div class="big-avatar" id="big-avatar">?</div>
         <div style="min-width:0">
           <div class="profile-name" id="profile-name">—</div>
@@ -592,7 +659,7 @@
       <div class="profile-grid">
 
         <!-- Identidad / editar -->
-        <section class="panel">
+        <section id="sec-identidad" class="panel">
           <div class="panel-head"><h3><i class="ph ph-user-pen"></i>Identidad</h3></div>
           <div class="panel-body">
             <label>Nombre de jugador</label>
@@ -607,13 +674,20 @@
             <label>Email</label>
             <div class="readonly"><i class="ph ph-envelope"></i><span id="email-static">—</span></div>
 
+            <label>Fichas</label>
+            <div class="readonly"><i class="ph ph-coins"></i><span id="fichas-static">—</span></div>
+            <div class="input-row">
+              <button class="btn-save" id="btn-recargar-fichas" onclick="recargarFichas()"><i class="ph ph-arrows-counter-clockwise"></i>Recargar a 10,000</button>
+            </div>
+            <p class="field-note">Recarga tu saldo de fichas a 10,000 para seguir probando las mesas con apuesta.</p>
+
             <label>Registrado</label>
             <div class="readonly"><i class="ph ph-calendar-check"></i><span id="registro-static">—</span></div>
           </div>
         </section>
 
         <!-- Personalización de cartas -->
-        <section class="panel">
+        <section id="sec-pers" class="panel">
           <div class="panel-head"><h3><i class="ph ph-palette"></i>Personalización de cartas</h3></div>
           <div class="panel-body">
             <div class="skin-area">
@@ -628,7 +702,7 @@
       </div>
 
       <!-- Preferencias -->
-      <section class="panel" style="margin-bottom:18px">
+      <section id="sec-pref" class="panel" style="margin-bottom:18px">
         <div class="panel-head"><h3><i class="ph ph-sliders-horizontal"></i>Preferencias</h3></div>
         <div class="panel-body">
           <div class="pref-row">
@@ -654,7 +728,7 @@
       </section>
 
       <!-- Sesión -->
-      <section class="panel danger-zone">
+      <section id="sec-sesion" class="panel danger-zone">
         <div class="panel-head"><h3><i class="ph ph-shield-warning"></i>Sesión</h3></div>
         <div class="panel-body">
           <p style="margin:0;color:var(--text-dim);font-size:.82rem;line-height:1.5">Tu sesión se guarda en este navegador. Puedes cerrarla cuando quieras; tus datos y skins quedan intactos.</p>
@@ -665,10 +739,23 @@
         </div>
       </section>
 
-      <footer class="hub-foot">
-        <i class="ph ph-spade-fill"></i>
-        <span>Continental · beta v0.4.7</span>
-      </footer>
+        <footer class="hub-foot">
+          <i class="ph ph-spade-fill"></i>
+          <span>Continental · beta v0.5.1</span>
+        </footer>
+
+        </div><!-- /.profile-body -->
+
+        <nav class="profile-sidenav" aria-label="Secciones del perfil">
+          <div class="ps-title">En esta página</div>
+          <a class="ps-link" data-sec="sec-hero"><i class="ph ph-user-circle"></i>Tu perfil</a>
+          <a class="ps-link" data-sec="sec-identidad"><i class="ph ph-user-pen"></i>Identidad</a>
+          <a class="ps-link" data-sec="sec-pers"><i class="ph ph-palette"></i>Cartas</a>
+          <a class="ps-link" data-sec="sec-pref"><i class="ph ph-sliders-horizontal"></i>Preferencias</a>
+          <a class="ps-link" data-sec="sec-sesion"><i class="ph ph-shield-warning"></i>Sesión</a>
+        </nav>
+
+      </div><!-- /.profile-layout -->
     </main>
   </div>
 
@@ -702,6 +789,10 @@
       return new Date(iso).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
+    function fmtChips (n) {
+      return Number(n ?? 0).toLocaleString('es-MX');
+    }
+
     function refreshAuthUi (u = usuario) {
       if (!u) return;
       const nombre = u.nombre || '';
@@ -725,6 +816,7 @@
         badgeEl.style.display = 'none';
       }
       el('email-static').textContent = u.email || '—';
+      el('fichas-static').textContent = fmtChips(u.chips);
       el('registro-static').textContent = formatFecha(u.created_at);
       el('profile-since').innerHTML = '<i class="ph ph-clock"></i>Con nosotros desde ' + formatFecha(u.created_at);
       el('nombre-input').value = nombre;
@@ -757,6 +849,34 @@
       const f = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
       document.getElementById('profile-date').innerHTML = '<i class="ph ph-calendar-blank"></i>' + (f.charAt(0).toUpperCase() + f.slice(1));
     }
+
+    /* ── Navegador interno de secciones ─────────────────────── */
+    (function initSectionNav () {
+      const links = Array.from(document.querySelectorAll('.ps-link'));
+      const targets = links.map(a => document.getElementById(a.dataset.sec)).filter(Boolean);
+      if (!links.length || !targets.length) return;
+
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(en => {
+          if (en.isIntersecting) {
+            links.forEach(a => a.classList.toggle('active', a.dataset.sec === en.target.id));
+          }
+        });
+      }, { rootMargin: '-35% 0px -55% 0px' });
+      targets.forEach(t => observer.observe(t));
+
+      links[0].classList.add('active');
+
+      links.forEach(a => {
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          const t = document.getElementById(a.dataset.sec);
+          if (!t) return;
+          t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.replaceState(null, '', '#' + a.dataset.sec);
+        });
+      });
+    })();
 
     /* ── Nombre ─────────────────────────────────────────────── */
     function showNombreMsg (kind, text) {
@@ -905,6 +1025,35 @@
       toast('Datos actualizados.');
     }
 
+    async function recargarFichas () {
+      const btn = document.getElementById('btn-recargar-fichas');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph ph-circle-notch spin"></i>';
+      }
+      try {
+        const res = await fetch('/api/me/fichas', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) { toast(data.error || 'No se pudo recargar.', 'err'); return; }
+        usuario = { ...usuario, ...data.usuario };
+        const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
+        localStorage.setItem('usuario', JSON.stringify({ ...stored, ...data.usuario }));
+        window.AUTH = { token, usuario };
+        refreshAuthUi(usuario);
+        toast('Fichas recargadas a 10,000.');
+      } catch {
+        toast('Error de conexión.', 'err');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="ph ph-arrows-counter-clockwise"></i>Recargar a 10,000';
+        }
+      }
+    }
+
     function logout () {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
@@ -919,6 +1068,7 @@
     window.setPrefMesa = setPrefMesa;
     window.logout = logout;
     window.recargar = recargar;
+    window.recargarFichas = recargarFichas;
 
     cargarDatos();
   </script>

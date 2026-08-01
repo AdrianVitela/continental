@@ -13,6 +13,7 @@ async function crearTablas() {
       badge       VARCHAR(50)  DEFAULT NULL,
       rol         VARCHAR(20)  DEFAULT 'jugador',
       skin        VARCHAR(50)  DEFAULT 'clasico',
+      chips       BIGINT       NOT NULL DEFAULT 10000,
       created_at  TIMESTAMP    DEFAULT NOW()
     );
 
@@ -35,6 +36,11 @@ async function crearTablas() {
     UPDATE usuarios
     SET skin = 'clasico'
     WHERE skin IS NULL OR skin = ''
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS chips BIGINT NOT NULL DEFAULT 10000
   `);
 
   console.log('✅ Tablas creadas correctamente');

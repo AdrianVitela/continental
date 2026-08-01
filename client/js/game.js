@@ -41,6 +41,7 @@ let intercambioMode = false;
 let selectedComodinInfo = null;
 let hideHandDuringDeal = true;
 let _lastRenderedTurn = null;
+let _lastRenderedRound = null;
 let _turnJustChanged = false;
 let _pendingTurnAlert = false;
 let guideAutoTimer = null;
@@ -428,9 +429,9 @@ function buildGameGuideSteps() {
                 },
             },
             {
-                selector: '#table-bajadas',
+                selector: '#opponents',
                 title: 'Mesa de jugadas',
-                text: 'Aquí aparecen las bajadas de todos. Después de bajarte puedes pagar cartas o acomodar comodines sobre estas jugadas.',
+                text: 'Las bajadas aparecen delante del asiento de cada jugador sobre el fieltro. Después de bajarte puedes pagar cartas o acomodar comodines sobre estas jugadas.',
                 contextTitle: 'Sobre los jokers',
                 contextBody: 'Solo puedes reclamar un joker si tienes la carta exacta que representa y estás en un estado válido para intercambiar.',
             },
@@ -979,6 +980,55 @@ const SFX = (() => {
                     o.start(ac.currentTime + note.t);
                     o.stop(ac.currentTime + note.t + note.dur);
                 });
+
+            } else if (type === 'chips') {
+                // Clac de fichas de poker — sintetizado (sin archivos).
+                // Mezcla: ruido agudo filtrado + anillo brillante + golpe grave.
+                const t0 = ac.currentTime;
+
+                // 1) Ataque: estallido de ruido en banda aguda
+                const dur = 0.09;
+                const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * dur), ac.sampleRate);
+                const d = buf.getChannelData(0);
+                for (let i = 0; i < d.length; i++) {
+                    d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+                }
+                const noiseSrc = ac.createBufferSource();
+                noiseSrc.buffer = buf;
+                const bp = ac.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.frequency.value = 3800;
+                bp.Q.value = 0.8;
+                const ng = ac.createGain();
+                ng.gain.setValueAtTime(0.5, t0);
+                ng.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+                noiseSrc.connect(bp); bp.connect(ng); ng.connect(g);
+                noiseSrc.start(t0);
+                noiseSrc.stop(t0 + dur);
+
+                // 2) Anillo brillante (resonancia de la ficha)
+                [2600, 3900].forEach((f, i) => {
+                    const o = ac.createOscillator();
+                    o.type = 'sine';
+                    o.frequency.value = f;
+                    const og = ac.createGain();
+                    og.gain.setValueAtTime(0.1, t0);
+                    og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.12 + i * 0.02);
+                    o.connect(og); og.connect(g);
+                    o.start(t0);
+                    o.stop(t0 + 0.15);
+                });
+
+                // 3) Golpe de cuerpo (dos fichas chocando)
+                const o2 = ac.createOscillator();
+                o2.type = 'triangle';
+                o2.frequency.setValueAtTime(420, t0);
+                o2.frequency.exponentialRampToValueAtTime(180, t0 + 0.06);
+                const g2 = ac.createGain();
+                g2.gain.setValueAtTime(0.25, t0);
+                g2.gain.exponentialRampToValueAtTime(0.001, t0 + 0.09);
+                o2.connect(g2); g2.connect(g);
+                o2.start(t0); o2.stop(t0 + 0.1);
             }
             return true;
         } catch(e) {}
@@ -1192,7 +1242,7 @@ function setupSocketEvents() {
             render();
             // Si el juego terminó mientras estábamos desconectados
             if (G.estado === 'fin_juego' && G.jugadores) {
-                showModalJuego(G.jugadores);
+                showModalJuego({ jugadores: G.jugadores, fichas: null, bancaRepartida: null, conApuesta: G.conApuesta });
             }
         } else {
             hideHandDuringDeal = false;
@@ -1288,12 +1338,30 @@ async function handleNewRound() {
     const handZone = document.getElementById('discard-zone');
     const mano     = G.jugadores[myIdx]?.mano || [];
 
+    // 0. Renderizar asientos (mano oculta) y animar el ante al pozo
+    //    en mesas con apuesta, ANTES de barajar y repartir.
+    hideHandDuringDeal = true;
+    render();
+    if (G?.conApuesta) {
+        const seats = [...document.querySelectorAll('#opponents .opp')];
+        const mySeat = document.querySelector('.player-header');
+        if (mySeat) seats.push(mySeat);
+        await Anim.betChipsToPot({
+            seats,
+            potEl: document.getElementById('pot-area'),
+            chipsPerSeat: 2,
+            stagger: 110,
+            flight: 560,
+        });
+    }
+
     // 1. Shuffle del mazo
     await Anim.shuffleAnim(mazoEl);
 
-    // 2. Renderizar mano oculta para tener posiciones destino
-    hideHandDuringDeal = true;
+    // 2. Render final (mano oculta) justo antes de repartir
     render();
+
+    // 3. Ocultar cartas para la animación de reparto
     const cardEls = handZone?.querySelectorAll('.card');
     cardEls?.forEach(el => { el.style.opacity = '0'; el.style.transition = 'none'; });
 
@@ -1589,11 +1657,9 @@ async function handleBajar(data) {
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
-        // 3. Destino: slots de bajadas del jugador en la mesa
-        const bajadas   = document.getElementById('table-bajadas');
-        const myBajadas = bajadas?.querySelector(`[data-jugador-idx="${myIdx}"]`);
-        const slots     = myBajadas?.querySelectorAll('.jugada-cards') || bajadas?.querySelectorAll('.jugada-cards');
-        const slotArr   = [...(slots || [])];
+        // 3. Destino: tu bajada en la zona inferior
+        const bajadas   = document.getElementById('my-plays');
+        const slotArr   = bajadas?.querySelectorAll('.bajada-pile-cards') || [];
         const dstEl     = slotArr[0] || bajadas;
         const dstRect   = dstEl?.getBoundingClientRect();
 
@@ -1678,7 +1744,7 @@ async function handleFinRonda(data) {
         if (data.manosFinales?.some(m => m.mano?.length > 0)) {
             await showConteoCartas(data.manosFinales, data.ganadorIdx);
         }
-        showModalRonda(data.ganadorIdx, data.puntos);
+        showModalRonda(data);
     }, delay);
 }
 
@@ -1702,7 +1768,7 @@ async function handleFinJuego(data) {
         if (data.manosFinales?.some(m => m.mano?.length > 0)) {
             await showConteoCartas(data.manosFinales, data.ganadorIdx);
         }
-        showModalJuego(data.jugadores);
+        showModalJuego(data);
     }, delay);
 }
 
@@ -2441,9 +2507,7 @@ function applyTableTheme(color) {
 
 function restoreAnimatedBajadas() {
     if (!_animatedBajadas.size) return;
-    const bajEl = document.getElementById('table-bajadas');
-    if (!bajEl) return;
-    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach(el => {
+    document.querySelectorAll('#opponents .opp-plays .card-sm, #opponents .opp-plays .joker-sm, #my-plays .card-sm, #my-plays .joker-sm').forEach(el => {
         const id = el.dataset.id || el.dataset.comodinId;
         if (!id) return;
         if (_animatedBajadas.has(id)) {
@@ -2455,17 +2519,47 @@ function restoreAnimatedBajadas() {
     });
 }
 
+function fmtChips (n) {
+  return Number(n ?? 0).toLocaleString('es-MX');
+}
+
+function renderPot() {
+    const potArea = document.getElementById('pot-area');
+    const potVal  = document.getElementById('pot-value');
+    const potBanca = document.getElementById('pot-banca');
+    const esApuesta = !!G?.conApuesta;
+    if (potArea) potArea.style.display = esApuesta ? 'flex' : 'none';
+    if (!esApuesta) return;
+    if (potVal)   potVal.textContent   = fmtChips(G.pot ?? 0);
+    if (potBanca) potBanca.textContent = `Banca · ${fmtChips(G.banca ?? 0)}`;
+}
+
 function render() {
     if (!G || myIdx < 0) return;
     const me = G.jugadores[myIdx];
     _turnJustChanged = _lastRenderedTurn !== null && _lastRenderedTurn !== G.turno;
+
+    const roundChanged = _lastRenderedRound !== null && _lastRenderedRound !== G.ronda;
+    if (roundChanged) {
+        const topbar = document.querySelector('.topbar');
+        if (topbar) {
+            topbar.classList.remove('round-changed');
+            void topbar.offsetWidth;
+            topbar.classList.add('round-changed');
+            setTimeout(() => topbar.classList.remove('round-changed'), 950);
+        }
+    }
+    _lastRenderedRound = G.ronda;
+
     document.getElementById('ronda-pill').textContent = `Ronda ${G.ronda} de 7`;
     document.getElementById('req-pill').textContent = REQ_LABELS[G.ronda] || '';
+    renderRoundProgress();
     renderScoreboard();
     renderOpponents();
     renderTableBajadas();
     renderMazo();
     renderFondo(me);
+    renderPot();
     renderPlayerInfo(me);
     renderHand();
     renderActions();
@@ -2474,6 +2568,17 @@ function render() {
     applyMySkin();
     _lastRenderedTurn = G.turno;
     _turnJustChanged = false;
+}
+
+function renderRoundProgress() {
+    const el = document.getElementById('round-dots');
+    if (!el) return;
+    el.innerHTML = '';
+    for (let i = 1; i <= 7; i++) {
+        const d = document.createElement('span');
+        d.className = 'rdot' + (i < G.ronda ? ' done' : i === G.ronda ? ' active' : '');
+        el.appendChild(d);
+    }
 }
 
 function renderOwnerConsole() {
@@ -2531,13 +2636,58 @@ function renderOpponents() {
         const d = document.createElement('div');
         d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}${_turnJustChanged && i === G.turno ? ' turn-arrive' : ''}`;
         d.dataset.idx = i;
+        const avBg = skinAvatarStyle(j.skin).bg;
+        const avBd = skinAvatarStyle(j.skin).border;
+        const avatarChar = (j.badge && BADGES[j.badge]) ? BADGES[j.badge].emoji : ((j.nombre || '?').trim()[0] || '?').toUpperCase();
         d.innerHTML = `
-            <div class="opp-name">${badgeHtml(j.badge)}${j.nombre}${j.bajado ? ' ✅' : ''}${!j.conectado ? ' 📴' : ''} · ${j.pts_t}pts</div>
+            ${i === G.turno ? '<div class="opp-turn-arrow">▼</div>' : ''}
+            <div class="opp-top">
+                <span class="opp-avatar" style="background:${avBg};border-color:${avBd}">${avatarChar}</span>
+                <span class="opp-name">${escapeHtml(j.nombre)}${!j.conectado ? ' 📴' : ''}</span>
+            </div>
             <div class="opp-backs">${(j.mano || []).map(() => `<div class="cback-xs ${skinClass(j.skin)}"></div>`).join('')}</div>
-            ${j.bajado && j.jugadas?.length ? `<div style="font-size:.62rem;color:#2a8a4a;margin-top:3px">${j.jugadas.length} jugada(s)</div>` : ''}
+            <div class="opp-meta">
+                ${j.bajado ? '<span class="opp-bajado-chip">Bajado</span>' : ''}
+                ${j.fichas != null ? `<span class="opp-chips${j.quebrado ? ' quebrado' : ''}">🪙 ${fmtChips(j.fichas)}</span>` : ''}
+                <span class="opp-count">${j.mano?.length || 0} cartas · ${j.pts_t}pts</span>
+            </div>
+            ${j.bajado && j.jugadas?.length ? `<div class="opp-jugadas">${j.jugadas.length} jugada(s)</div>` : ''}
+            <div class="opp-plays"></div>
         `;
         opEl.appendChild(d);
     });
+}
+
+const SKIN_AVATAR_BG = {
+    'clasico':   'linear-gradient(135deg,#1a3a80,#0d2050)',
+    'rojo':      'linear-gradient(135deg,#7a1a1a,#3d0a0a)',
+    'obsidiana': 'linear-gradient(135deg,#1a1a1a,#0a0a0a)',
+    'esmeralda': 'linear-gradient(135deg,#0d3320,#061a10)',
+    'plata':     'linear-gradient(135deg,#8b96a6,#4d5663)',
+    'bronce':    'linear-gradient(135deg,#8a5630,#4a2815)',
+    'zafiro':    'linear-gradient(135deg,#0b2458,#07122d)',
+    'dorado':    'linear-gradient(135deg,#c8a045,#7a5c00)',
+    'neon':      'linear-gradient(135deg,#001a33,#003366)',
+    'imperial':  'linear-gradient(135deg,#3f0018,#160008)',
+    'arcoiris':  'linear-gradient(135deg,#ff4d6d,#ff9f1c,#2ec4b6,#4d96ff)',
+    'amatista':  'linear-gradient(135deg,#35105e,#170728)',
+    'cobalto':   'linear-gradient(135deg,#0a1e46,#071024)',
+    'marfil':    'linear-gradient(135deg,#8a7b63,#4a4134)',
+};
+const SKIN_AVATAR_BORDER = {
+    'clasico':   'rgba(255,255,255,.25)',  'rojo':    'rgba(255,100,100,.4)',
+    'obsidiana': 'rgba(200,160,69,.4)',    'esmeralda':'rgba(46,204,113,.4)',
+    'plata':     'rgba(225,235,245,.6)',   'bronce':  'rgba(206,139,85,.55)',
+    'zafiro':    'rgba(93,152,255,.6)',    'dorado':  'rgba(200,160,69,.7)',
+    'neon':      'rgba(0,200,255,.6)',     'imperial':'rgba(255,133,183,.6)',
+    'arcoiris':  'rgba(255,255,255,.72)',  'amatista':'rgba(186,132,255,.65)',
+    'cobalto':   'rgba(88,151,255,.62)',   'marfil':  'rgba(240,225,194,.62)',
+};
+function skinAvatarStyle(skin) {
+    return {
+        bg:     SKIN_AVATAR_BG[skin]     || SKIN_AVATAR_BG.clasico,
+        border: SKIN_AVATAR_BORDER[skin] || 'rgba(255,255,255,.25)',
+    };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2546,13 +2696,22 @@ function renderOpponents() {
 // (esperando_accion o esperando_pago), usando la misma función de detección.
 // ─────────────────────────────────────────────────────────────────────────────
 function renderTableBajadas() {
-    const bajEl = document.getElementById('table-bajadas');
-    bajEl.innerHTML = '';
+    // Limpiar todas las zonas de jugadas
+    document.querySelectorAll('#opponents .opp-plays').forEach(p => { p.innerHTML = ''; });
+    const myPlaysEl = document.getElementById('my-plays');
+    const myLabelEl = document.getElementById('my-plays-label');
+    if (myPlaysEl) myPlaysEl.innerHTML = '';
+    let tengoJugadas = false;
+
     G.jugadores.forEach((j, ji) => {
         if (!j.bajado || !j.jugadas?.length) return;
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;flex-direction:column;gap:5px;align-items:center';
-        wrap.innerHTML = `<div style="font-size:.62rem;color:var(--text-dim);margin-bottom:2px">${j.nombre}</div>`;
+
+        const target = ji === myIdx
+            ? myPlaysEl
+            : document.querySelector(`#opponents .opp[data-idx="${ji}"] .opp-plays`);
+        if (!target) return;
+        if (ji === myIdx) tengoJugadas = true;
+
         j.jugadas.forEach((jug, jugi) => {
             const pile = document.createElement('div');
             pile.className = 'bajada-pile';
@@ -2567,7 +2726,7 @@ function renderTableBajadas() {
             const puedeIntercambiar = isMyTurn() && ['esperando_accion', 'esperando_pago'].includes(G.estado);
             const intercambiosPosibles = puedeIntercambiar ? detectarIntercambiosPosibles() : [];
 
-        const cardsHtml = jug.cartas.map(c => {
+            const cardsHtml = jug.cartas.map(c => {
                 if (c.comodin) {
                     const vr = c.valorReemplazado || '?';
                     const vrPalo = c.paloReemplazado ? c.paloReemplazado : '';
@@ -2608,13 +2767,17 @@ function renderTableBajadas() {
                     acAcomodar(selId, ji, jugi, null);
                 };
             }
-            wrap.appendChild(pile);
+            target.appendChild(pile);
         });
-        bajEl.appendChild(wrap);
     });
 
+    // Mostrar/ocultar TU BAJADA
+    if (myPlaysEl) myPlaysEl.style.display = tengoJugadas ? 'flex' : 'none';
+    if (myLabelEl) myLabelEl.style.display = tengoJugadas ? 'flex' : 'none';
+
     // Animar solo cartas nuevas (con ID real, no textContent)
-    bajEl.querySelectorAll('.card-sm, .joker-sm').forEach((el, i) => {
+    const allPlays = document.querySelectorAll('#opponents .opp-plays .card-sm, #opponents .opp-plays .joker-sm, #my-plays .card-sm, #my-plays .joker-sm');
+    allPlays.forEach((el, i) => {
         const id = el.dataset.id || el.dataset.comodinId;
         if (!id) return;
         if (!_animatedBajadas.has(id)) {
@@ -2635,16 +2798,25 @@ function renderTableBajadas() {
 function renderMazo() {
     document.getElementById('mazo-count').textContent = `${G.mazo_count} cartas`;
     const mazoW = document.getElementById('mazo-wrap');
-    mazoW.style.cursor = isMyTurn() && G.estado === 'esperando_robo' ? 'pointer' : 'default';
+    const canRob = isMyTurn() && G.estado === 'esperando_robo';
+    mazoW.style.cursor = canRob ? 'pointer' : 'default';
+    mazoW.classList.toggle('can-act-ring', canRob);
+    const hint = document.getElementById('mazo-hint');
+    if (hint) hint.style.display = canRob ? 'block' : 'none';
 }
 
 function renderFondo(me) {
     const fw = document.getElementById('fondo-wrap');
+    const countEl = document.getElementById('fondo-count');
+    if (countEl) countEl.textContent = G.fondo_count > 0 ? `${G.fondo_count} cartas` : '';
+    const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
+    const hint = document.getElementById('fondo-hint');
+    if (hint) hint.style.display = canTake && G.fondo_top ? 'block' : 'none';
+    fw.classList.toggle('can-act-ring', canTake && !!G.fondo_top);
     if (G.fondo_top) {
         fw.innerHTML = cFull(G.fondo_top, false);
         const fc = fw.querySelector('.card');
         if (fc) {
-            const canTake = isMyTurn() && G.estado === 'esperando_robo' && !me?.bajado;
             if (!canTake) {
                 fc.classList.add('disabled');
             } else {
@@ -2661,6 +2833,16 @@ function renderFondo(me) {
 function renderPlayerInfo(me) {
     document.getElementById('my-name').innerHTML = (me?.badge ? badgeHtml(me.badge) : '') + (me?.nombre || '—');
     document.getElementById('hand-count').textContent = `${me?.mano?.length || 0} cartas`;
+    const chipsEl = document.getElementById('my-chips');
+    if (chipsEl) {
+        if (me?.fichas != null) {
+            chipsEl.style.display = '';
+            chipsEl.textContent = `🪙 ${fmtChips(me.fichas)}${me.quebrado ? ' · Quebrado' : ''}`;
+            chipsEl.classList.toggle('low', !!me.quebrado);
+        } else {
+            chipsEl.style.display = 'none';
+        }
+    }
     const dot = document.getElementById('pulse-dot');
     if (dot) dot.style.display = isMyTurn() ? 'inline-block' : 'none';
     const turnTag = document.getElementById('turn-tag');
@@ -2683,6 +2865,11 @@ function renderBuildingRow() {
     if (!G || myIdx < 0) return;
     const buildingRow = document.getElementById('building-row');
     if (!buildingRow) return;
+    const buildingLabel = document.getElementById('building-label');
+    const me = G.jugadores[myIdx];
+    const oculto = !!me?.bajado;
+    if (buildingLabel) buildingLabel.style.display = oculto ? 'none' : 'flex';
+    buildingRow.style.display = oculto ? 'none' : 'flex';
     const reqEl = document.getElementById('building-requirement');
     if (reqEl) reqEl.textContent = REQ_LABELS[G.ronda] || '';
 
@@ -2914,10 +3101,10 @@ function renderActions() {
     if (cb) cb.style.display = 'none';
     if (btns) btns.innerHTML = '';
 
-    const add = (txt, cls, fn, dis = false) => {
+    const add = (txt, cls, fn, dis = false, hero = false) => {
         if (!btns) return;
         const b = document.createElement('button');
-        b.className = `abtn ${cls}`;
+        b.className = `abtn ${cls}${hero ? ' abtn-hero' : ''}`;
         b.textContent = txt;
         b.disabled = dis;
         b.onclick = fn;
@@ -2964,8 +3151,8 @@ function renderActions() {
             if (instr) instr.textContent = me?.bajado
                 ? `${me.nombre} (bajado) — roba del mazo.`
                 : `Tu turno — toma del fondo o roba del mazo.`;
-            if (!me?.bajado) add('📥 Tomar Fondo', 'abtn-gold', acFondo, !G.fondo_top);
-            add('🎴 Robar Mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo);
+            if (!me?.bajado) add('📥 Tomar Fondo', 'abtn-gold', acFondo, !G.fondo_top, true);
+            add('🎴 Robar Mazo', me?.bajado ? 'abtn-gold' : 'abtn-outline', acMazo, false, !!me?.bajado);
             break;
 
         case 'fase_castigo': {
@@ -2975,7 +3162,7 @@ function renderActions() {
                 cb.style.display = 'block';
                 cb.textContent = `⚡ ¿Te castigas el ${top?.valor}${top?.palo || ''}? (carta extra del mazo)`;
                 if (instr) instr.textContent = 'Tienes prioridad de castigo.';
-                add('✅ Sí', 'abtn-green', () => acCastigo(true));
+                add('✅ Sí', 'abtn-green', () => acCastigo(true), false, true);
                 add('❌ No', 'abtn-red', () => acCastigo(false));
             } else {
                 if (instr) instr.textContent = `Esperando que ${jc?.nombre} decida el castigo…`;
@@ -2985,6 +3172,8 @@ function renderActions() {
 
         case 'esperando_accion': {
             const listoParaBajar = slotsListosParaBajar();
+            const br = document.getElementById('building-row');
+            if (br) br.classList.toggle('ready-pulse', !!listoParaBajar && !me?.bajado);
             if (!me?.bajado) {
                 // ── Pre-bajada ──
                 if (me?.penalizacion?.activa) {
@@ -2996,7 +3185,11 @@ function renderActions() {
                         ? 'Carta seleccionada — págala o arrástrala a un slot.'
                         : 'Arrastra cartas a los slots para armar tus jugadas.';
                 }
-                add('🔥 Bajarme', 'abtn-gold', acBajar, !listoParaBajar);
+                add('🔥 Bajarme', 'abtn-gold', acBajar, !listoParaBajar, true);
+                if (listoParaBajar) {
+                    const heroBtn = btns.querySelector('.abtn-hero');
+                    if (heroBtn) heroBtn.classList.add('hero-pulse');
+                }
                 add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
 
                 const intercambiosPosibles = detectarIntercambiosPosibles();
@@ -3016,7 +3209,7 @@ function renderActions() {
                 if (instr) instr.textContent = selId
                     ? 'Carta seleccionada — acomódala en jugadas de otros o intercambia por un Joker.'
                     : 'Selecciona una carta para acomodar o intercambiar.';
-                add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId);
+                add('💳 Pagar', 'abtn-outline', () => acPagar(selId), !selId, true);
 
                 // ── Intercambio post-bajada: detectar y mostrar botón ──
                 const intercambiosPosibles = detectarIntercambiosPosibles();
@@ -3040,7 +3233,7 @@ function renderActions() {
             if (instr) instr.textContent = selId
                 ? 'Carta seleccionada — acomódala, intercámbia por un Joker, o págala.'
                 : 'Selecciona una carta para acomodar, intercambiar o pagar.';
-            add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId);
+            add('💳 Pagar', selId ? 'abtn-gold' : 'abtn-outline', () => acPagar(selId), !selId, true);
 
             // ── Intercambio post-bajada en esperando_pago ──
             const intercambiosPosibles = detectarIntercambiosPosibles();
@@ -3095,9 +3288,11 @@ function cSm(c) {
 // MODALES
 // ═══════════════════════════════════════════════════
 
-function showModalRonda(ganadorIdx, puntos) {
+function showModalRonda(data) {
     const modal = document.getElementById('modal-ronda');
     if (!modal) return;
+    const ganadorIdx = data.ganadorIdx;
+    const puntos = data.puntos;
     const hayGanador = Number.isInteger(ganadorIdx) && ganadorIdx >= 0;
     document.getElementById('mr-title').textContent = hayGanador
         ? `🏆 Ronda ${G.ronda} — ${G.jugadores[ganadorIdx]?.nombre} gana!`
@@ -3105,7 +3300,10 @@ function showModalRonda(ganadorIdx, puntos) {
     document.getElementById('mr-msg').textContent = hayGanador
         ? (G.ronda < 7 ? `Siguiente: ronda ${G.ronda + 1}.` : '¡Última ronda!')
         : (G.ronda < 7 ? `Todos cuentan sus cartas. Siguiente: ronda ${G.ronda + 1}.` : 'Todos cuentan sus cartas. Fin del juego.');
-    document.getElementById('mr-scores').innerHTML = G.jugadores.map((j, i) => `
+    const apuestaInfo = G.conApuesta && data.pot != null
+        ? `<div class="mr-apuesta">🪙 Pozo: ${fmtChips(data.pot)}${data.banca != null ? ` · Banca: ${fmtChips(data.banca)}` : ''}</div>`
+        : '';
+    document.getElementById('mr-scores').innerHTML = apuestaInfo + G.jugadores.map((j, i) => `
         <div class="srow ${hayGanador && i === ganadorIdx ? 'winner' : ''}">
             <span>${j.nombre}${hayGanador && i === ganadorIdx ? ' 🏆' : ''}</span>
             <span class="srow-pts">+${puntos?.[i]?.pts_r ?? 0} · Total: ${j.pts_t}</span>
@@ -3121,13 +3319,13 @@ function showModalRonda(ganadorIdx, puntos) {
     modal.classList.add('show');
 }
 
-function showModalJuego(jugadores) {
+function showModalJuego(data) {
     clearActiveGameSession();
     hideNextRoundWait();
     document.getElementById('modal-ronda')?.classList.remove('show');
     SFX.play('victoria');
     showConfetti();
-    showPodio(jugadores);
+    showPodio(data.jugadores, data.fichas, data.bancaRepartida, data.conApuesta);
 }
 
 function startNewGameFromPodium() {
@@ -3162,8 +3360,13 @@ function showConfetti() {
     }
 }
 
-function showPodio(jugadores) {
-    const sorted = [...jugadores].sort((a, b) => a.pts_t - b.pts_t);
+function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
+    const sorted = [...jugadores].map((j, idx) => ({ ...j, idx })).sort((a, b) => a.pts_t - b.pts_t);
+    const fichasMap = {};
+    (Array.isArray(fichas) ? fichas : []).forEach(f => { fichasMap[f.jugadorIdx] = f; });
+    const bancaNote = (conApuesta && bancaRepartida && bancaRepartida.porJugador > 0)
+        ? `<div style="margin-top:2px;font-size:.66rem;color:var(--gold);text-align:center">🪙 Banca repartida: +${fmtChips(bancaRepartida.porJugador)} a ${bancaRepartida.ganadores.length > 1 ? `${bancaRepartida.ganadores.length} empatados` : 'el menor puntaje'}</div>`
+        : '';
     const podioColors = [
         { bg: 'linear-gradient(135deg,#c8a045,#7a5c00)', border: 'rgba(200,160,69,.8)', medal: '🥇', label: '1er lugar', glow: '0 0 30px rgba(200,160,69,.6)' },
         { bg: 'linear-gradient(135deg,#8a8a8a,#4a4a4a)', border: 'rgba(200,200,200,.5)', medal: '🥈', label: '2do lugar', glow: '0 0 20px rgba(150,150,150,.4)' },
@@ -3196,6 +3399,12 @@ function showPodio(jugadores) {
     const podioWrap = document.createElement('div');
     podioWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:min(400px,92vw)';
     overlay.appendChild(podioWrap);
+
+    if (bancaNote) {
+        const bn = document.createElement('div');
+        bn.innerHTML = bancaNote;
+        podioWrap.appendChild(bn);
+    }
 
     // Botón nueva partida
     const btnWrap = document.createElement('div');
@@ -3241,7 +3450,11 @@ function showPodio(jugadores) {
                     <div style="font-size:${i===0?'1.1rem':'.95rem'};font-weight:700;color:#fff">${j.nombre}</div>
                     <div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px">${col.label}</div>
                 </div>
-                <div style="font-family:'Cormorant Garamond',serif;font-size:${i===0?'1.6rem':'1.2rem'};font-weight:700;color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
+                <div style="text-align:right">
+                    ${fichasMap[j.idx] != null ? `<div style="font-size:.78rem;font-weight:700;color:#ffe08a">🪙 ${fmtChips(fichasMap[j.idx].fichas)}</div>` : ''}
+                    ${fichasMap[j.idx] != null ? `<div style="font-size:.64rem;font-weight:700;color:${fichasMap[j.idx].ganancia >= 0 ? '#6bcf77' : '#ffb3a0'}">${fichasMap[j.idx].ganancia >= 0 ? '+' : ''}${fmtChips(fichasMap[j.idx].ganancia)}</div>` : ''}
+                    <div style="font-family:'Cormorant Garamond',serif;font-size:${i===0?'1.6rem':'1.2rem'};font-weight:700;color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
+                </div>
             `;
 
             podioWrap.appendChild(card);

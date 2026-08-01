@@ -615,6 +615,18 @@ body::before {
   color: var(--gold);
 }
 
+.mr-apuesta {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gold-hi);
+  background: rgba(200,160,69,.12);
+  border: 1px dashed rgba(200,160,69,.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+}
+
 .modal-btns {
   display: flex;
   gap: 8px;

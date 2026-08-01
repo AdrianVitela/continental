@@ -1,15 +1,18 @@
 'use strict';
 const { GameEngine } = require('./GameEngine');
 const { randomUUID } = require('crypto');
+const pool = require('./db');
 
 const ROOM_TIMEOUT_MS  = 6 * 60 * 60 * 1000;
+const ANTE_MIN_JOIN    = 100;
 
 class GameRoom {
-  constructor({ code, host, mode = 'realtime', maxPlayers = 5, publicRoom = false }) {
+  constructor({ code, host, mode = 'realtime', maxPlayers = 5, publicRoom = false, conApuesta = false }) {
     this.code       = code;
     this.mode       = mode;
     this.maxPlayers = maxPlayers;
     this.public     = Boolean(publicRoom);
+    this.conApuesta = Boolean(conApuesta);
     this.status     = 'lobby';
     this.players    = [];
     this.readyAcks  = new Set();
@@ -17,10 +20,10 @@ class GameRoom {
     this.createdAt  = Date.now();
     this.host       = host;
 
-    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico', host.rol || 'jugador');
+    this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico', host.rol || 'jugador', host.userId || null, host.chips);
   }
 
-  addPlayer(id, nombre, ws, badge = null, skin = 'clasico', rol = 'jugador') {
+  addPlayer(id, nombre, ws, badge = null, skin = 'clasico', rol = 'jugador', userId = null, chips = null) {
     if (this.players.find(p => p.id === id)) {
       const p = this.players.find(p => p.id === id);
       p.ws = ws;
@@ -28,6 +31,8 @@ class GameRoom {
       p.badge = badge;
       p.skin = skin;
       p.rol = rol;
+      p.userId = userId || p.userId;
+      p.chips = Number.isInteger(chips) ? chips : p.chips;
       if (this.engine) {
         const enginePlayer = this.engine._findPlayer(id);
         if (enginePlayer) {
@@ -48,7 +53,7 @@ class GameRoom {
     }
     if (this.players.length >= this.maxPlayers) return null;
     if (this.status !== 'lobby') return null;
-    const player = { id, nombre, badge, skin, rol, ws, conectado: true };
+    const player = { id, nombre, badge, skin, rol, userId, chips: Number.isInteger(chips) ? chips : null, ws, conectado: true };
     this.players.push(player);
     this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);
     return player;
@@ -127,8 +132,27 @@ class GameRoom {
   startGame() {
     if (this.status !== 'lobby') return { ok: false, error: 'Partida ya iniciada.' };
     if (this.players.length < 2) return { ok: false, error: 'Se necesitan al menos 2 jugadores.' };
-    this.engine = new GameEngine(this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico' })));
+
+    if (this.conApuesta) {
+      const sinFichas = this.players.filter(p => !Number.isInteger(p.chips) || p.chips < ANTE_MIN_JOIN);
+      if (sinFichas.length) {
+        return { ok: false, error: `${sinFichas.map(p => p.nombre).join(', ')} no tiene suficientes fichas para esta mesa.` };
+      }
+    }
+
+    this.engine = new GameEngine(
+      this.players.map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        badge: p.badge || null,
+        skin: p.skin || 'clasico',
+        userId: p.userId || null,
+        fichas: this.conApuesta ? p.chips : 0,
+      })),
+      { conApuesta: this.conApuesta }
+    );
     this.engine.repartir();
+    this.engine._cobrarAnte();
     this.status = 'playing';
     return { ok: true };
   }
@@ -239,6 +263,8 @@ class GameRoom {
       });
     }
 
+    if (result.event === 'fin_juego') this._persistirFichas();
+
     return result;
   }
 
@@ -250,6 +276,7 @@ class GameRoom {
       this.readyAcks.clear();
       const result = this.engine.finalizarRonda();
       this._broadcastState(result.event, result.data);
+      if (result.event === 'fin_juego') this._persistirFichas();
     } else {
       const readyPlayerIds = connected.filter(id => this.readyAcks.has(id));
       this._broadcastState('esperando_siguiente_ronda', {
@@ -262,6 +289,19 @@ class GameRoom {
       });
     }
     return { ok: true };
+  }
+
+  // Guarda los saldos finales de fichas en la base de datos.
+  async _persistirFichas() {
+    if (!this.engine || !this.conApuesta) return;
+    for (const j of this.engine.jugadores) {
+      if (!j.userId) continue;
+      try {
+        await pool.query('UPDATE usuarios SET chips = $1 WHERE id = $2', [j.fichas, j.userId]);
+      } catch (e) {
+        console.error('[ROOM]', this.code, 'error persistiendo fichas de', j.nombre, e.message);
+      }
+    }
   }
 
   _broadcastState(event, data = {}) {
@@ -326,6 +366,7 @@ class GameRoom {
       mode: this.mode,
       status: this.status,
       public: this.public,
+      conApuesta: this.conApuesta,
       players: this.players.map(p => ({ id: p.id, nombre: p.nombre, badge: p.badge || null, skin: p.skin || 'clasico', conectado: p.conectado })),
       maxPlayers: this.maxPlayers,
       tableColor: this.tableColor || 'green',

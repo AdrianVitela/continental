@@ -10,6 +10,10 @@ const PUNTOS = {
     '2': 5, '3': 5, '4': 5, '5': 5, '6': 5, '7': 5
 };
 
+// ─── Fichas / apuestas ────────────────────────────────
+const ANTE = 100;   // lo que apuesta cada jugador por ronda
+const MITAD_ANTE = 50; // 50 al ganador de ronda, 50 a la banca
+
 const REQ = {
   1:{t:2,c:0}, 2:{t:1,c:1}, 3:{t:0,c:2},
   4:{t:3,c:0}, 5:{t:2,c:1}, 6:{t:1,c:2}, 7:{t:0,c:3}
@@ -417,9 +421,13 @@ function validarJugadasConstruidas(jugadas) {
 // ═══════════════════════════════════════════════════
 
 class GameEngine {
-    constructor(jugadores) {
-        this.jugadores = jugadores.map(({ id, nombre, badge, skin }) => ({
+    constructor(jugadores, { conApuesta = false } = {}) {
+        this.jugadores = jugadores.map(({ id, nombre, badge, skin, fichas, userId }) => ({
             id, nombre, badge: badge || null, skin: skin || 'clasico',
+            userId: userId || null,
+            fichas: Math.max(0, Number.isInteger(fichas) ? fichas : 10000),
+            fichasInicio: Math.max(0, Number.isInteger(fichas) ? fichas : 10000),
+            quebrado: false,
             mano: [],
             bajado: false,
             pts_r: 0,
@@ -429,6 +437,9 @@ class GameEngine {
             penalizacion: null,
             puedeBajar: true,
         }));
+        this.conApuesta = Boolean(conApuesta);
+        this.pot = 0;      // pozo de la ronda actual
+        this.banca = 0;    // acumulado entre rondas
         this.ronda = 1;
         this.dealer = 0;
         this.turno = 1 % jugadores.length;
@@ -459,6 +470,86 @@ class GameEngine {
     addLog(m) {
         this.log.push({ msg: m, ts: Date.now() });
         if (this.log.length > 20) this.log.shift();
+    }
+
+    // ─────────────────────────────────────────────────
+    // Fichas / apuestas
+    // ─────────────────────────────────────────────────
+    _participantesApuesta() {
+        return this.jugadores.filter(j => !j.quebrado);
+    }
+
+    // Cobra el ante de 100 a cada participante al empezar una ronda.
+    // Si alguien no puede pagar, queda marcado como quebrado y NO
+    // participa en apuestas ni en la banca (puede seguir jugando cartas).
+    _cobrarAnte() {
+        if (!this.conApuesta) return null;
+        const participantes = this._participantesApuesta();
+        let algunQuebrado = false;
+        participantes.forEach(j => {
+            if (j.fichas < ANTE) {
+                j.quebrado = true;
+                algunQuebrado = true;
+                this.addLog(`💔 ${j.nombre} no tiene fichas para la apuesta — ya no participa en apuestas.`);
+            } else {
+                j.fichas -= ANTE;
+                this.pot += ANTE;
+            }
+        });
+        if (algunQuebrado) {
+            this.pot = this._participantesApuesta().length * ANTE;
+        }
+        if (this.pot > 0) {
+            this.addLog(`💸 Apuesta de la ronda ${this.ronda}: ${this._participantesApuesta().length} × ${ANTE} fichas → pozo ${this.pot}.`);
+        }
+        return null;
+    }
+
+    // Reparte el pozo al terminar la ronda.
+    // Con ganador: 50 × participantes al ganador, 50 × participantes a la banca.
+    // Sin ganador: se devuelve el ante a cada participante.
+    _repartirPozo(ganadorIdx) {
+        if (!this.conApuesta) return;
+        const participantes = this._participantesApuesta();
+        const total = this.pot;
+        if (total <= 0) return;
+        if (Number.isInteger(ganadorIdx) && ganadorIdx >= 0 && ganadorIdx < this.jugadores.length) {
+            const ganador = this.jugadores[ganadorIdx];
+            if (ganador && !ganador.quebrado) {
+                const paraGanador = participantes.length * MITAD_ANTE;
+                const paraBanca = total - paraGanador;
+                ganador.fichas += paraGanador;
+                this.banca += paraBanca;
+                this.addLog(`🏅 ${ganador.nombre} gana ${paraGanador} fichas de la ronda. Banca: ${this.banca}.`);
+            } else {
+                this.banca += total;
+                this.addLog(`🏦 Sin ganador válido — ${total} fichas del pozo van a la banca.`);
+            }
+        } else {
+            participantes.forEach(j => { j.fichas += ANTE; });
+            this.addLog(`↩️ Ronda sin ganador — ante devuelto a los participantes.`);
+        }
+        this.pot = 0;
+    }
+
+    // Reparte la banca acumulada entre los de menor puntaje (ganadores del juego).
+    // Empates → se divide en partes iguales.
+    _repartirBanca() {
+        if (!this.conApuesta || this.banca <= 0) return { ganadores: [], porJugador: 0 };
+        const elegibles = this._participantesApuesta();
+        if (!elegibles.length) return { ganadores: [], porJugador: 0 };
+        const minPts = Math.min(...elegibles.map(j => j.pts_t));
+        const ganadores = elegibles.filter(j => j.pts_t === minPts);
+        const porJugador = Math.floor(this.banca / ganadores.length);
+        let sobrante = this.banca - porJugador * ganadores.length;
+        ganadores.forEach((j, i) => {
+            const extra = i === 0 ? sobrante : 0;
+            j.fichas += porJugador + extra;
+            sobrante = 0;
+        });
+        this.addLog(`🏆 ${ganadores.map(g => g.nombre).join(' y ')} se lleva${ganadores.length > 1 ? 'n' : ''} la banca de ${this.banca} fichas (${porJugador} c/u).`);
+        this.banca = 0;
+        return { ganadores: ganadores.map(g => g.id), porJugador, sobrante: 0 };
     }
 
     // ─────────────────────────────────────────────────
@@ -958,9 +1049,14 @@ class GameEngine {
         } else {
             this.addLog(`📋 Ronda ${this.ronda} cerrada sin ganador — se cuentan todas las manos.`);
         }
+
+        this._repartirPozo(ganadorIdx);
+
         const roundSummary = {
             ganadorIdx,
             sinGanador: !hayGanador,
+            pot: this.pot,
+            banca: this.banca,
             puntos: this.jugadores.map(j => ({ pts_r: j.pts_r, pts_t: j.pts_t })),
             // Cartas en mano de cada jugador para animación de conteo
             manosFinales: this.jugadores.map((j, i) => ({
@@ -980,10 +1076,22 @@ class GameEngine {
         this.lastAction = Date.now();
         if (this.ronda >= 7) {
             this.estado = 'fin_juego';
+            const repartoBanca = this._repartirBanca();
+            const fichas = this.jugadores.map(j => ({
+                jugadorIdx: this.jugadores.indexOf(j),
+                nombre: j.nombre,
+                fichasInicio: j.fichasInicio,
+                fichas: j.fichas,
+                ganancia: j.fichas - j.fichasInicio,
+                quebrado: j.quebrado,
+            }));
             return this._ok('fin_juego', {
                 ...roundSummary,
                 jugadores: this.jugadores.map(j => ({ nombre: j.nombre, pts_t: j.pts_t })),
+                fichas,
+                bancaRepartida: repartoBanca,
                 finalRound: true,
+                conApuesta: this.conApuesta,
             });
         }
 
@@ -1002,6 +1110,7 @@ class GameEngine {
         this.dealer = (this.dealer + 1) % this.jugadores.length;
         this.turno = (this.dealer + 1) % this.jugadores.length;
         this.repartir();
+        this._cobrarAnte();
         return this._ok('nueva_ronda', { ronda: this.ronda });
     }
 
@@ -1021,7 +1130,12 @@ class GameEngine {
             dealer: this.dealer,
             turno: this.turno,
             estado: this.estado,
+            conApuesta: this.conApuesta,
+            pot: this.pot,
+            banca: this.banca,
+            ante: this.conApuesta ? ANTE : 0,
             fondo_top: this.fondo.length ? this.fondo[this.fondo.length - 1] : null,
+            fondo_count: this.fondo.length,
             mazo_count: this.mazo.length,
             // Exponer cuántas cartas hay en el fondo reciclable (info para UI)
             fondo_reciclable_count: this.fondoDescartado.length,
@@ -1030,6 +1144,8 @@ class GameEngine {
             jugadores: this.jugadores.map(j => ({
                 id: j.id,
                 nombre: j.nombre,
+                skin: j.skin || 'clasico',
+                badge: j.badge || null,
                 num_cartas: j.mano.length,
                 bajado: j.bajado,
                 pts_r: j.pts_r,
@@ -1039,6 +1155,9 @@ class GameEngine {
                 mano: [],
                 penalizacion: j.penalizacion,
                 puedeBajar: j.puedeBajar,
+                fichas: j.fichas,
+                fichasInicio: j.fichasInicio,
+                quebrado: j.quebrado,
             })),
             log: this.log.slice(-6).map(l => l.msg),
             req: REQ[this.ronda],

@@ -9,6 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
 
 const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CHIPS_INICIALES = 10000;
 
 // ── POST /api/register ──────────────────────────────────────────
 router.post('/register', async (req, res) => {
@@ -43,7 +44,7 @@ router.post('/register', async (req, res) => {
 
     // Insertar usuario
     const result = await pool.query(
-      'INSERT INTO usuarios (nombre, email, password) VALUES ($1, $2, $3) RETURNING id, nombre, badge, rol, skin',
+      'INSERT INTO usuarios (nombre, email, password) VALUES ($1, $2, $3) RETURNING id, nombre, badge, rol, skin, chips',
       [safeNombre, safeEmail, hash]
     );
     const usuario = result.rows[0];
@@ -55,7 +56,7 @@ router.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico' } });
+    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico', chips: Number(usuario.chips ?? CHIPS_INICIALES) } });
 
   } catch (err) {
     console.error('[register]', err.message);
@@ -75,7 +76,7 @@ router.post('/login', async (req, res) => {
 
     // Buscar usuario
     const result = await pool.query(
-      'SELECT id, nombre, password, badge, rol, skin FROM usuarios WHERE email = $1',
+      'SELECT id, nombre, password, badge, rol, skin, chips FROM usuarios WHERE email = $1',
       [safeEmail]
     );
     if (result.rows.length === 0)
@@ -95,7 +96,7 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico' } });
+    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico', chips: Number(usuario.chips ?? CHIPS_INICIALES) } });
 
   } catch (err) {
     console.error('[login]', err.message);
@@ -114,16 +115,50 @@ router.get('/me', async (req, res) => {
     const payload = jwt.verify(token, JWT_SECRET);
 
     const result = await pool.query(
-      'SELECT id, nombre, badge, rol, skin, created_at FROM usuarios WHERE id = $1',
+      'SELECT id, nombre, badge, rol, skin, chips, created_at FROM usuarios WHERE id = $1',
       [payload.id]
     );
     if (result.rows.length === 0)
       return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-    res.json({ usuario: result.rows[0] });
+    const u = result.rows[0];
+    if (u.chips != null) u.chips = Number(u.chips);
+    res.json({ usuario: u });
 
   } catch (err) {
     res.status(401).json({ error: 'Token inválido o expirado.' });
+  }
+});
+
+// ── POST /api/me/fichas ──────────────────────────────────────────
+// Recarga de fichas en la beta: reinicia el saldo a 10,000.
+router.post('/me/fichas', async (req, res) => {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth || !auth.startsWith('Bearer '))
+      return res.status(401).json({ error: 'No autorizado.' });
+
+    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+
+    const result = await pool.query(
+      `UPDATE usuarios
+          SET chips = $1
+        WHERE id = $2
+        RETURNING id, nombre, badge, rol, skin, chips`,
+      [CHIPS_INICIALES, payload.id]
+    );
+    const usuario = result.rows[0];
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (usuario.chips != null) usuario.chips = Number(usuario.chips);
+
+    res.json({ ok: true, usuario });
+
+  } catch (err) {
+    console.error('[fichas]', err.message);
+    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token inválido o expirado.' });
+    }
+    res.status(500).json({ error: 'Error interno.' });
   }
 });
 

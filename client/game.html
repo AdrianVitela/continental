@@ -526,45 +526,84 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 }
 
 /* ===== MESA ===== */
-.table {
+/* ===== MESA DE POKER ===== */
+.poker-table {
   flex: 1;
   min-height: 0;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 10px 4px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px 6px;
   overflow: hidden;
 }
 
-/* OPONENTES */
+/* Fieltro ovalado con canto de madera */
+.felt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 50% / 42%;
+  border: 14px solid #3b2716;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(255,255,255,.05), transparent 60%),
+    radial-gradient(ellipse at center, var(--felt), var(--felt-deep) 82%);
+  box-shadow:
+    0 14px 40px rgba(0,0,0,.6),
+    0 4px 14px rgba(0,0,0,.45),
+    inset 0 0 90px rgba(0,0,0,.42),
+    inset 0 0 0 1px rgba(255,255,255,.05);
+  overflow: hidden;
+}
+.felt-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 50% 32%, rgba(255,255,255,.055), transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* OPONENTES: sentados en el arco superior del fieltro */
 .opponents-row {
-  flex-shrink: 0;
+  position: absolute;
+  top: 6%;
+  left: 6%;
+  right: 6%;
+  z-index: 3;
   display: flex;
-  gap: 8px;
+  gap: 12px;
   justify-content: center;
   flex-wrap: wrap;
 }
 
 .opp {
-  background: rgba(0,0,0,.28);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 8px;
-  padding: 5px 10px;
+  background: rgba(0,0,0,.34);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 6px 10px 8px;
   text-align: center;
-  min-width: 80px;
+  min-width: 96px;
+  max-width: 230px;
   position: relative;
   overflow: visible !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 5px 16px rgba(0,0,0,.42);
+  backdrop-filter: blur(4px);
   transition: transform .22s var(--eout), border-color .22s var(--eout), box-shadow .22s var(--eout), background .22s var(--eout);
 }
 .opp.turn   {
   border-color: var(--gold);
-  background: linear-gradient(180deg, rgba(200,160,69,.12), rgba(0,0,0,.28));
-  box-shadow: 0 0 12px rgba(200,160,69,.25), inset 0 0 0 1px rgba(255,230,150,.06);
+  background: linear-gradient(180deg, rgba(200,160,69,.14), rgba(0,0,0,.34));
+  box-shadow: 0 0 14px rgba(200,160,69,.3), 0 5px 16px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,230,150,.07);
   transform: translateY(-2px);
 }
 .opp.turn.turn-arrive { animation: turnPulse .58s cubic-bezier(.22,1,.36,1); }
 .opp.bajado { border-color: #2a8a4a; }
-.opp-name   { font-size: .68rem; color: var(--text-dim); margin-bottom: 4px; }
+.opp-name   { font-size: .68rem; color: var(--text-dim); white-space: nowrap; }
 .opp-backs  { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
 .cback-xs {
   width: 12px; height: 17px; border-radius: 2px;
@@ -576,41 +615,66 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   overflow: hidden;
 }
 
-/* ===== ZONA CENTRAL ===== */
-.center-zone {
-  flex: 1 1 0;
-  min-height: 60px;
+/* Jugadas del oponente, delante de su asiento */
+.opp-plays {
   display: flex;
-  align-items: stretch;
-  justify-content: center;
-  gap: 16px;
-  overflow: hidden;
-  padding: 0 4px;
-}
-
-/* ===== BAJADAS ===== */
-.table-bajadas-container {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: auto;
-  padding: 8px;
-  background: rgba(0,0,0,.1);
-  border-radius: 10px;
-  scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-color: var(--gold-dim) rgba(255,255,255,0.1);
-}
-.table-bajadas-container::-webkit-scrollbar { width: 6px; height: 6px; }
-.table-bajadas-container::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
-.table-bajadas-container::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 10px; }
-
-.table-bajadas {
-  display: flex;
+  gap: 5px;
   flex-wrap: wrap;
-  gap: 8px;
-  padding: 4px;
-  align-content: flex-start;
+  justify-content: center;
+  margin-top: 4px;
+}
+.opp-plays .bajada-pile {
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 6px;
+  padding: 3px;
+}
+.opp-plays .bajada-pile-label { font-size: 0.46rem; }
+.opp-plays .bajada-pile-cards { gap: 1px; }
+.opp-plays .card-sm,
+.opp-plays .joker-sm {
+  width: calc(var(--cw-sm) * 0.6);
+  height: calc(var(--ch-sm) * 0.6);
+  font-size: 0.5rem;
+  border-radius: 3px;
+}
+.opp-plays .joker-sm small { font-size: 5px !important; }
+
+/* ===== CENTRO DEL FIELTRO: MAZO Y FONDO ===== */
+.felt-center {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 46px;
+  pointer-events: none;
+}
+.felt-center .deck-area { pointer-events: auto; }
+.deck-area { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.deck-label { font-size: 0.58rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ===== POZO Y BANCA (mesas con apuesta) ===== */
+.pot-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(200,160,69,.16), rgba(200,160,69,0) 70%);
+  border: 1px dashed rgba(200,160,69,.3);
+  border-radius: 12px;
+  padding: 8px 14px;
+  animation: potPulse 2.4s ease-in-out infinite;
+}
+.pot-stack { font-size: 1.15rem; line-height: 1; filter: drop-shadow(0 2px 6px rgba(200,160,69,.5)); }
+.pot-label { font-size: 0.52rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; }
+.pot-value { font-family: 'Cormorant Garamond', serif; font-weight: 700; font-size: 1.05rem; color: var(--gold); text-shadow: 0 0 12px rgba(200,160,69,.45); }
+.pot-banca { font-size: 0.55rem; color: var(--text-muted); }
+@keyframes potPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(200,160,69,0); }
+  50% { box-shadow: 0 0 18px rgba(200,160,69,.28); }
 }
 
 .bajada-pile {
@@ -628,17 +692,6 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 .bajada-pile-cards { display: flex; gap: 2px; flex-wrap: wrap; justify-content: center; }
 
 /* ===== MAZO Y FONDO ===== */
-.deck-area-container {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  justify-content: center;
-  width: 90px;
-}
-.deck-area { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.deck-label { font-size: 0.58rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; }
-
 .mazo-wrap {
   position: relative;
   width: var(--cw);
@@ -659,6 +712,179 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   text-align: center;
   animation: pulse 1.3s ease-in-out infinite;
   letter-spacing: 0.5px;
+}
+
+/* ===== MEJORAS UI: progreso de ronda ===== */
+.round-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.rdot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.08);
+  transition: background .3s ease, box-shadow .3s ease, transform .3s ease;
+}
+.rdot.done { background: rgba(200,160,69,.38); border-color: rgba(200,160,69,.35); }
+.rdot.active {
+  background: var(--gold-hi);
+  border-color: #fff0c0;
+  box-shadow: 0 0 10px rgba(200,160,69,.75);
+  transform: scale(1.25);
+}
+
+/* ===== MEJORAS UI: oponentes ===== */
+.opp-top {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.opp-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .66rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  color: #fff;
+}
+.opp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.opp-count {
+  font-size: .58rem;
+  color: var(--text-muted);
+}
+.opp-bajado-chip {
+  font-size: .52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #6ee7a0;
+  background: rgba(46,204,113,.14);
+  border: 1px solid rgba(46,204,113,.35);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.opp-jugadas {
+  font-size: .58rem;
+  color: #2a8a4a;
+  margin-top: 3px;
+  text-align: center;
+}
+.opp-turn-arrow {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--gold-hi);
+  font-size: .68rem;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(200,160,69,.7);
+  animation: oppArrowPulse 1.15s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes oppArrowPulse {
+  0%,100% { opacity:.55; transform: translateX(-50%) translateY(0); }
+  50%     { opacity:1;   transform: translateX(-50%) translateY(-2px); }
+}
+
+/* ===== MEJORAS UI: mazo/fondo ===== */
+.deck-area .mazo-count { margin-top: 2px; }
+.can-act-ring {
+  animation: actRing 1.3s ease-in-out infinite;
+}
+@keyframes actRing {
+  0%,100% { box-shadow: 0 0 0 0 rgba(200,160,69,0); }
+  50%     { box-shadow: 0 0 0 6px rgba(200,160,69,.22); }
+}
+
+/* ===== MEJORAS UI: chip de mano ===== */
+.hand-chip {
+  font-size: .66rem;
+  color: var(--gold-hi);
+  background: rgba(200,160,69,.12);
+  border: 1px solid rgba(200,160,69,.3);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+
+/* ===== MEJORAS UI: fichas del jugador y oponentes ===== */
+.my-chips {
+  font-size: .66rem;
+  font-weight: 700;
+  color: #ffe08a;
+  background: rgba(200,160,69,.16);
+  border: 1px solid rgba(200,160,69,.42);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+  letter-spacing: .3px;
+}
+.my-chips.low { color: #ffb3a0; border-color: rgba(255,120,90,.5); background: rgba(255,90,60,.12); }
+.opp-chips {
+  font-size: .58rem;
+  font-weight: 700;
+  color: #ffe08a;
+  background: rgba(200,160,69,.14);
+  border: 1px solid rgba(200,160,69,.35);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  letter-spacing: .3px;
+}
+.opp-chips.quebrado { color: #ffb3a0; border-color: rgba(255,120,90,.5); background: rgba(255,90,60,.12); text-decoration: line-through; }
+
+/* ===== MEJORAS UI: botón héroe ===== */
+.abtn-hero {
+  font-size: 0.92rem;
+  padding: 12px 26px;
+  box-shadow: 0 6px 18px rgba(200,160,69,.35), 0 2px 6px rgba(0,0,0,.3);
+  position: relative;
+}
+.abtn-hero.hero-pulse {
+  animation: heroPulse 1.5s ease-in-out infinite;
+}
+@keyframes heroPulse {
+  0%,100% { box-shadow: 0 6px 18px rgba(200,160,69,.35); }
+  50%     { box-shadow: 0 6px 26px rgba(200,160,69,.75), 0 0 0 5px rgba(200,160,69,.14); }
+}
+
+/* ===== MEJORAS UI: listo para bajar ===== */
+.building-row.ready-pulse .building-slot.complete {
+  animation: readyGlow 1.6s ease-in-out infinite;
+}
+@keyframes readyGlow {
+  0%,100% { border-color: #2ecc71; box-shadow: 0 0 0 0 rgba(46,204,113,0); }
+  50%     { border-color: #4de88a; box-shadow: 0 0 16px rgba(46,204,113,.4); }
+}
+
+/* ===== MEJORAS UI: transición de ronda ===== */
+.round-changed #ronda-pill,
+.round-changed .round-dots {
+  animation: roundChange 900ms cubic-bezier(.22,1,.36,1);
+}
+@keyframes roundChange {
+  0%   { transform: scale(1); filter: brightness(1); }
+  30%  { transform: scale(1.14); filter: brightness(1.6); }
+  100% { transform: scale(1); filter: brightness(1); }
 }
 
 /* ===== SECCIÓN DEL JUGADOR ===== */
@@ -720,6 +946,20 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   line-height: 1.2;
 }
 .row-desc { font-size: 0.5rem; color: var(--text-dim); text-transform: none; }
+
+/* TU BAJADA (solo visible cuando estás bajado) */
+.my-plays {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 10px 2px;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.my-plays .bajada-pile { background: rgba(0,0,0,.22); border: 2px solid rgba(46,204,113,.22); }
 
 /* FILA 1: SOBRANTES */
 .discard-zone {
@@ -1413,8 +1653,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   .opp { min-width: 62px; padding: 4px 7px; }
   .opp-name { font-size: 0.6rem; }
   .cback-xs { width: 10px; height: 14px; }
-  .deck-area-container { width: 70px; flex-direction: row; justify-content: center; gap: 10px; }
-  .center-zone { gap: 10px; }
+  .felt { border-width: 8px; border-radius: 50% / 40%; }
+  .felt-center { gap: 18px; }
   .action-bar { padding: 4px 8px calc(6px + env(safe-area-inset-bottom, 0px)); gap: 3px; }
   .instr { font-size: 0.68rem; padding: 4px 10px; }
   .guide-tip { padding: 8px 10px; }
@@ -1466,11 +1706,14 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   .topbar { height: 32px; min-height: 32px; padding: 0 10px; }
   .tb-title { font-size: 0.85rem; }
   .pill { font-size: 0.58rem; padding: 1px 6px; }
-  .table { gap: 3px; padding: 3px 8px 2px; }
+  .poker-table { gap: 3px; padding: 3px 8px 2px; }
+  .felt { border-width: 8px; border-radius: 50% / 42%; }
+  .felt-center { gap: 20px; }
   .opponents-row { gap: 5px; }
   .opp { padding: 3px 6px; min-width: 55px; }
   .opp-name { font-size: 0.58rem; margin-bottom: 2px; }
-  .deck-area-container { width: 70px; flex-direction: column; gap: 6px; justify-content: center; }
+  .opp-plays .card-sm,
+  .opp-plays .joker-sm { width: calc(var(--cw-sm) * 0.72); height: calc(var(--ch-sm) * 0.72); font-size: 0.52rem; }
   .deck-label { font-size: 0.5rem; }
   .mazo-count { font-size: 0.45rem; }
   .player-section { gap: 1px; padding: 1px 0; }
@@ -1499,7 +1742,8 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 /* ── Landscape tablets (501–768px alto) ── */
 @media (orientation: landscape) and (min-height: 501px) and (max-height: 768px) {
   .topbar { height: 38px; min-height: 38px; }
-  .table  { gap: 4px; padding: 4px 10px 3px; }
+  .poker-table  { gap: 4px; padding: 4px 10px 3px; }
+  .felt { border-width: 10px; }
   .slot-hint  { display: none; }
   .row-desc   { display: none; }
   .player-section { gap: 1px; }
@@ -1545,6 +1789,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   <div class="topbar">
     <span class="tb-title">Continental</span>
     <span class="pill pill-gold" id="ronda-pill">Ronda 1</span>
+    <span class="round-dots" id="round-dots" title="Progreso de ronda"></span>
     <span class="pill pill-dim"  id="req-pill">2 tercias</span>
     <span class="pill pill-dim"  id="mode-pill">●</span>
     <div class="scoreboard" id="scoreboard"></div>
@@ -1552,20 +1797,15 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   </div>
 
   <!-- MESA -->
-  <div class="table" id="main-table">
+  <div class="poker-table" id="main-table">
+    <div class="felt">
+      <div class="felt-glow"></div>
 
-    <!-- Fila de oponentes -->
-    <div class="opponents-row" id="opponents"></div>
+      <!-- Asientos de oponentes (arco superior) -->
+      <div class="opponents-row" id="opponents"></div>
 
-    <!-- Zona central: bajadas + mazo/fondo -->
-    <div class="center-zone">
-
-      <div class="table-bajadas-container">
-        <div class="table-bajadas" id="table-bajadas"></div>
-      </div>
-
-      <div class="deck-area-container">
-
+      <!-- Centro del fieltro: mazo y fondo -->
+      <div class="felt-center">
         <div class="deck-area">
           <div class="deck-label">Mazo</div>
           <div class="mazo-wrap" id="mazo-wrap" title="Clic para robar" onclick="acMazo()">
@@ -1580,11 +1820,20 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
         <div class="deck-area">
           <div class="deck-label">Fondo</div>
           <div id="fondo-wrap"></div>
+          <div class="mazo-count" id="fondo-count"></div>
           <div class="deck-clickable-hint" id="fondo-hint" style="display:none">▲ TOMAR</div>
         </div>
 
+        <!-- Pozo y banca (solo en mesas con apuesta) -->
+        <div class="pot-area" id="pot-area" style="display:none">
+          <div class="pot-stack">🪙</div>
+          <div class="pot-label">Pozo</div>
+          <div class="pot-value" id="pot-value">0</div>
+          <div class="pot-banca" id="pot-banca">Banca · 0</div>
+        </div>
       </div>
-    </div><!-- /center-zone -->
+    </div>
+  </div>
 
     <!-- Sección del jugador propio -->
     <div class="player-section">
@@ -1595,9 +1844,17 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
           <span id="my-name">—</span>
         </div>
         <span class="turn-tag"  id="turn-tag"></span>
-        <span id="hand-count"></span>
+        <span class="hand-chip" id="hand-count"></span>
+        <span class="my-chips" id="my-chips" style="display:none"></span>
       </div>
       <div id="my-bubble-anchor" class="bubble-anchor"></div>
+
+      <!-- Fila 0: Tu bajada (solo cuando estás bajado) -->
+      <div class="row-label" id="my-plays-label" style="display:none">
+        <span>🎴 TU BAJADA</span>
+        <span class="row-desc">Tus jugadas sobre la mesa</span>
+      </div>
+      <div class="my-plays" id="my-plays" style="display:none"></div>
 
       <!-- Fila 1: Sobrantes -->
       <div class="row-label">
@@ -1607,7 +1864,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
       <div class="hand-zone discard-zone" id="discard-zone"></div>
 
       <!-- Fila 2: Construcción -->
-      <div class="row-label">
+      <div class="row-label" id="building-label">
         <span>🔨 CONSTRUCCIÓN</span>
         <span class="row-desc" id="building-requirement"></span>
       </div>
@@ -2083,7 +2340,7 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
     </div>
     <div id="owner-console-list" class="owner-console-list"></div>
   </div>
-  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.4.7</div>
+  <div style="position:fixed;bottom:10px;left:12px;font-size:0.65rem;color:rgba(200,160,69,0.45);pointer-events:none;z-index:9999;letter-spacing:0.04em;">beta v0.5.1</div>
 <script>
 (function() {
   const MUSIC_URL = 'https://files.catbox.moe/bs0qiq.mp3';

@@ -40,6 +40,11 @@ async function ensureDatabaseSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS chips BIGINT NOT NULL DEFAULT 10000
+  `);
+
+  await pool.query(`
     UPDATE usuarios
     SET skin = 'clasico'
     WHERE skin IS NULL OR skin = ''
@@ -66,17 +71,19 @@ const CODE_RE = /^[A-Z0-9]{4,5}$/;
 async function fetchPlayerProfile(userId, nombre) {
   try {
     const query = userId
-      ? 'SELECT badge, skin, rol FROM usuarios WHERE id = $1'
-      : 'SELECT badge, skin, rol FROM usuarios WHERE nombre = $1';
+      ? 'SELECT badge, skin, rol, chips FROM usuarios WHERE id = $1'
+      : 'SELECT badge, skin, rol, chips FROM usuarios WHERE nombre = $1';
     const r = await pool.query(query, [userId || nombre]);
+    const raw = r.rows[0] || {};
     return {
-      badge: r.rows[0]?.badge || null,
-      skin:  r.rows[0]?.skin  || 'clasico',
-      rol:   r.rows[0]?.rol   || 'jugador',
+      badge: raw.badge || null,
+      skin:  raw.skin  || 'clasico',
+      rol:   raw.rol   || 'jugador',
+      chips: raw.chips != null ? Number(raw.chips) : null,
     };
   } catch (e) {
     console.error('[badge] profile error:', e.message);
-    return { badge: null, skin: 'clasico', rol: 'jugador' };
+    return { badge: null, skin: 'clasico', rol: 'jugador', chips: null };
   }
 }
 
@@ -102,6 +109,7 @@ function serializePublicRoom (room) {
   return {
     code:        room.code,
     hot:         room.maxPlayers === 5,
+    conApuesta:  Boolean(room.conApuesta),
     maxPlayers:  room.maxPlayers,
     playerCount: room.players.length,
     tableColor:  room.tableColor || 'green',
@@ -181,7 +189,7 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'create_room': {
-          const { nombre, mode = 'realtime', maxPlayers = 5, public: publicRoom = false } = msg;
+          const { nombre, mode = 'realtime', maxPlayers = 5, public: publicRoom = false, conApuesta = false } = msg;
           const nameErr = validateNombre(nombre);
           if (nameErr) return send(ws, { type: 'error', msg: nameErr });
 
@@ -195,14 +203,19 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          const { badge: hostBadge, skin: hostSkin, rol: hostRole } = await fetchPlayerProfile(msg.userId, safeNombre);
+          const { badge: hostBadge, skin: hostSkin, rol: hostRole, chips: hostChips } = await fetchPlayerProfile(msg.userId, safeNombre);
+
+          if (Boolean(conApuesta) && (!Number.isInteger(hostChips) || hostChips < 100)) {
+            return send(ws, { type: 'error', msg: 'Necesitas al menos 100 fichas para crear una mesa con apuesta.' });
+          }
 
           const room = new GameRoom({
             code,
-            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, ws },
+            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, userId: msg.userId || null, chips: hostChips, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
             publicRoom,
+            conApuesta: Boolean(conApuesta),
           });
           rooms.set(code, room);
           logWs(`socket#${ws._socketId} creó sala ${code}`, {
@@ -210,6 +223,7 @@ wss.on('connection', (ws, req) => {
             mode,
             maxPlayers: room.maxPlayers,
             public: room.public,
+            conApuesta: room.conApuesta,
           });
           send(ws, { type: 'room_created', code, playerId, lobbyState: room.lobbyState() });
           if (room.public) broadcastRoomsList();
@@ -241,9 +255,13 @@ wss.on('connection', (ws, req) => {
           ctx.nombre   = safeNombre;
           ctx.userId   = msg.userId || null;
 
-          const { badge: joinBadge, skin: joinSkin, rol: joinRole } = await fetchPlayerProfile(msg.userId, safeNombre);
+          const { badge: joinBadge, skin: joinSkin, rol: joinRole, chips: joinChips } = await fetchPlayerProfile(msg.userId, safeNombre);
 
-          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole);
+          if (room.conApuesta && (!Number.isInteger(joinChips) || joinChips < 100)) {
+            return send(ws, { type: 'error', msg: 'Necesitas al menos 100 fichas para entrar a una mesa con apuesta.' });
+          }
+
+          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole, msg.userId || null, joinChips);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           ctx.playerId = player.id;

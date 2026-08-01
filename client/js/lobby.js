@@ -20,8 +20,11 @@ const GUIDE_DONE_LOBBY_ROOM_KEY = 'continental_guide_done_lobby_room';
    ================================================================ */
 let maxPlayers  = 4;
 let roomPublic  = false;
+let roomApuesta = false;
+let myChips     = 0;
 let publicRooms = [];
 let myRoomPublic = false;
+let myRoomApuesta = false;
 let myId        = null;
 let myCode      = null;
 let isHost      = false;
@@ -211,6 +214,56 @@ function setRoomPublic (v) {
 }
 
 /* ================================================================
+   APUESTAS (mesas con fichas)
+   ================================================================ */
+function setRoomApuesta (v) {
+  roomApuesta = !!v;
+  document.getElementById('seg-conapuesta')?.classList.toggle('active', roomApuesta);
+  document.getElementById('seg-sinapuesta')?.classList.toggle('active', !roomApuesta);
+  document.getElementById('bet-info')?.style.setProperty('display', roomApuesta ? 'flex' : 'none');
+  syncBetCreateState();
+}
+
+function syncBetCreateState () {
+  const btn = document.getElementById('btn-create-room');
+  if (!btn) return;
+  const chipsEl = document.getElementById('bet-my-chips');
+  if (chipsEl) chipsEl.innerHTML = `<i class="ph ph-wallet"></i>Tus fichas: <strong>${fmtChips(myChips)}</strong> (mínimo 100)`;
+  if (chipsEl) chipsEl.classList.toggle('warn', myChips < 100);
+
+  if (roomApuesta && myChips < 100) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-coins"></i>Necesitas 100 fichas';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ph ph-play-fill"></i>Crear Sala';
+  }
+}
+
+function fmtChips (n) {
+  return Number(n || 0).toLocaleString('es-MX');
+}
+
+function refreshChips () {
+  const token = localStorage.getItem('token');
+  const usuario = JSON.parse(localStorage.getItem('usuario') || 'null');
+  if (!token) return;
+  fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+    .then(r => r.json())
+    .then(d => {
+      if (!d?.usuario) return;
+      const u = d.usuario;
+      myChips = Number(u.chips ?? myChips);
+      const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
+      localStorage.setItem('usuario', JSON.stringify({ ...stored, chips: myChips, ...u }));
+      const chipsEl = document.getElementById('user-chips');
+      if (chipsEl) chipsEl.textContent = fmtChips(myChips);
+      syncBetCreateState();
+    })
+    .catch(() => {});
+}
+
+/* ================================================================
    EXPLORAR MESAS PÚBLICAS
    ================================================================ */
 function openRoomsBrowser () {
@@ -243,10 +296,12 @@ function renderRoomsList (rooms, loading = false) {
   const tableColorName = { green: 'Verde', navy: 'Azul', wine: 'Vino', black: 'Negro' };
   list.innerHTML = rooms.map(r => {
     const full = r.playerCount >= r.maxPlayers;
+    const sinFichas = r.conApuesta && myChips < 100;
     const meta = `
       <span>${r.playerCount}/${r.maxPlayers} jugadores</span>
       <span class="room-table-dot" data-color="${r.tableColor}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span>
       <span>${tableColorName[r.tableColor] || 'Verde'}</span>
+      ${r.conApuesta ? `<span class="room-bet-tag ${sinFichas ? 'warn' : ''}"><i class="ph ph-coins"></i>${sinFichas ? 'Sin fichas' : 'Apuesta'}</span>` : ''}
       ${r.hot ? '<span class="room-flame"><i class="ph ph-fire"></i>Caliente</span>' : ''}
     `;
     return `
@@ -258,7 +313,9 @@ function renderRoomsList (rooms, loading = false) {
         <div class="room-join">
           ${full
             ? '<button class="btn btn-hub" disabled style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-dim)">Llena</button>'
-            : `<button class="btn btn-hub btn-hub--ghost" onclick="joinPublicRoom('${r.code}')"><i class="ph ph-sign-in"></i>Unirse</button>`}
+            : (sinFichas
+              ? `<button class="btn btn-hub" disabled style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text-dim)" title="Necesitas al menos 100 fichas">Sin fichas</button>`
+              : `<button class="btn btn-hub btn-hub--ghost" onclick="joinPublicRoom('${r.code}')"><i class="ph ph-sign-in"></i>Unirse</button>`)}
         </div>
       </div>`;
   }).join('');
@@ -576,8 +633,12 @@ function crearSala () {
   const userId   = usuario?.id || null;
   if (!nombre) { window.location.href = '/login'; return; }
   if (lobbyActionPending) return;
+  if (roomApuesta && myChips < 100) {
+    toast('Necesitas al menos 100 fichas para una mesa con apuesta.');
+    return;
+  }
   setLobbyActionPending(true);
-  WS.send({ type: 'create_room', nombre, userId, mode: 'realtime', maxPlayers, public: roomPublic });
+  WS.send({ type: 'create_room', nombre, userId, mode: 'realtime', maxPlayers, public: roomPublic, conApuesta: roomApuesta });
 }
 
 function unirse () {
@@ -612,6 +673,7 @@ function showLobby (lobbyState, pid, code, host) {
   myCode = code;
   isHost = host;
   myRoomPublic = !!lobbyState?.public;
+  myRoomApuesta = !!lobbyState?.conApuesta;
   saveActiveLobbySession();
 
   document.getElementById('lobby-setup').style.display = 'none';
@@ -622,8 +684,10 @@ function showLobby (lobbyState, pid, code, host) {
   const codeBox = document.getElementById('room-code-display');
   const hintEl  = document.getElementById('room-code-hint');
   const pubBadge = document.getElementById('room-public-badge');
+  const betBadge = document.getElementById('room-bet-badge');
   if (codeBox)  codeBox.style.display = myRoomPublic ? 'none' : '';
   if (pubBadge) pubBadge.style.display = myRoomPublic ? 'inline-flex' : 'none';
+  if (betBadge) betBadge.style.display = myRoomApuesta ? 'inline-flex' : 'none';
   if (hintEl)   hintEl.textContent = myRoomPublic
     ? 'Mesa pública · cualquiera puede unirse desde el lobby'
     : 'Comparte este código con tus amigos';
@@ -832,6 +896,8 @@ function init () {
   syncGuidePreferenceUi();
   renderActiveGameCard();
   updateHotBadge();
+  refreshChips();
+  syncBetCreateState();
   window.addEventListener('resize', refreshGuideLayout);
   window.addEventListener('scroll', refreshGuideLayout, { passive: true });
   setupSocketEvents();
@@ -872,6 +938,7 @@ window.closeGuide          = closeGuide;
 window.nextGuideStep       = nextGuideStep;
 window.resumeActiveGame    = resumeActiveGame;
 window.setRoomPublic       = setRoomPublic;
+window.setRoomApuesta      = setRoomApuesta;
 window.openRoomsBrowser    = openRoomsBrowser;
 window.closeRoomsBrowser   = closeRoomsBrowser;
 window.refreshRoomsBrowser = refreshRoomsBrowser;

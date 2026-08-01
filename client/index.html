@@ -390,6 +390,43 @@
             background: linear-gradient(135deg, rgba(200,160,69,.3), rgba(200,160,69,.16));
             color: var(--gold-hi);
         }
+        .seg-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+        /* Fichas / apuestas */
+        .bet-info {
+            display: flex; flex-direction: column; gap: 4px;
+            padding: 10px 12px;
+            background: rgba(200,160,69,.06);
+            border: 1px solid rgba(200,160,69,.18);
+            border-radius: 10px;
+            font-size: .74rem;
+            color: var(--text-dim);
+            line-height: 1.45;
+        }
+        .bet-info strong { color: var(--gold-hi); }
+        .bet-chips { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--text-muted); }
+        .bet-chips i { color: var(--gold-dim); }
+        .bet-chips.warn { color: #ff9a8c; }
+        .side-user-chips {
+            display: flex; align-items: center; gap: 6px;
+            font-size: .72rem; color: var(--gold-hi);
+            margin-top: 3px;
+        }
+        .side-user-chips i { color: var(--gold-dim); }
+        .side-user-chips strong { font-weight: 700; letter-spacing: .3px; }
+        .room-bet-tag {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: .66rem; color: var(--gold-hi);
+            background: rgba(200,160,69,.12);
+            border: 1px solid rgba(200,160,69,.28);
+            border-radius: 999px; padding: 2px 8px;
+            font-weight: 600;
+        }
+        .room-bet-tag.warn {
+            color: #ff9a8c;
+            background: rgba(224,64,64,.12);
+            border-color: rgba(224,64,64,.32);
+        }
 
         /* Modal mesas públicas */
         .rooms-overlay {
@@ -774,6 +811,7 @@
                     <div style="min-width:0">
                         <div class="side-user-name" id="user-display">—</div>
                         <div class="side-user-badge" id="user-badge"></div>
+                        <div class="side-user-chips"><i class="ph ph-coins"></i><strong id="user-chips">0</strong> fichas</div>
                     </div>
                 </div>
                 <button class="side-logout" onclick="logout()"><i class="ph ph-sign-out"></i><span>Salir</span></button>
@@ -791,7 +829,7 @@
                 </div>
                 <div class="hub-right">
                     <button class="btn-explore" onclick="openRoomsBrowser()"><i class="ph ph-fire"></i>Mesas públicas</button>
-                    <span class="hub-pill">beta v0.4.7</span>
+                    <span class="hub-pill">beta v0.5.1</span>
                     <div class="deco-cards" id="deco-cards" aria-hidden="true">
                         <div class="deco-card" style="--i:0"><b>A</b><i class="ph ph-spade-fill"></i></div>
                         <div class="deco-card" style="--i:1"><b>K</b><i class="ph ph-heart-fill"></i></div>
@@ -848,6 +886,20 @@
                                 </div>
                             </div>
 
+                            <div class="vis-row">
+                                <span class="vis-label"><i class="ph ph-coins"></i>Apuestas</span>
+                                <div class="seg">
+                                    <button type="button" class="seg-btn active" id="seg-sinapuesta" onclick="setRoomApuesta(false)"><i class="ph ph-cards"></i>Sin apuesta</button>
+                                    <button type="button" class="seg-btn" id="seg-conapuesta" onclick="setRoomApuesta(true)"><i class="ph ph-coins"></i>Con apuesta</button>
+                                </div>
+                            </div>
+
+                            <div class="bet-info" id="bet-info" style="display:none">
+                                <span><i class="ph ph-coins"></i> Cada quien apuesta <strong>100</strong> por ronda: <strong>50</strong> al ganador de ronda y <strong>50</strong> a la banca.</span>
+                                <span><i class="ph ph-trophy"></i> Tras la 7ª ronda, el de menor puntaje se lleva la <strong>banca</strong> acumulada.</span>
+                                <span class="bet-chips" id="bet-my-chips"><i class="ph ph-wallet"></i>Tus fichas: <strong>0</strong> (mínimo 100)</span>
+                            </div>
+
                             <button id="btn-create-room" class="btn btn-gold btn-hub" style="margin-top:4px" onclick="crearSala()"><i class="ph ph-play-fill"></i>Crear Sala</button>
                         </div>
                     </section>
@@ -887,6 +939,10 @@
                                 <i class="ph ph-users-three"></i>
                                 <span><strong>De 2 a 5 jugadores</strong>Cada mesa tiene su propio límite de jugadores.</span>
                             </li>
+                            <li>
+                                <i class="ph ph-coins"></i>
+                                <span><strong>Mesas con apuesta</strong>Cada quien apuesta 100 por ronda: 50 al ganador y 50 a la banca. El de menor puntaje se la lleva.</span>
+                            </li>
                         </ul>
                         <button class="btn btn-hub btn-hub--ghost" style="margin-top:2px" onclick="openGuideSettings()"><i class="ph ph-books"></i>Ver guía completa</button>
                     </section>
@@ -895,9 +951,10 @@
 
             <!-- ===== SALA DE ESPERA ===== -->
             <section class="hub-card hub-room" id="lobby-room">
-                <div class="room-code-display">
+                    <div class="room-code-display">
                     <div class="code" id="room-code-display" onclick="copyCode()" title="Clic para copiar"><i class="ph ph-copy"></i><span id="room-code-text">????</span></div>
                     <div class="room-public-badge" id="room-public-badge" style="display:none"><i class="ph ph-eye"></i>Mesa pública</div>
+                    <div class="room-public-badge" id="room-bet-badge" style="display:none"><i class="ph ph-coins"></i>Con apuesta · fichas</div>
                     <p id="room-code-hint">Comparte este código con tus amigos</p>
                 </div>
                 <div class="separator"></div>
@@ -957,7 +1014,7 @@
 
             <footer class="hub-foot">
                 <i class="ph ph-spade-fill"></i>
-                <span>Continental · beta v0.4.7 · hecho con pasión</span>
+                <span>Continental · beta v0.5.1</span>
             </footer>
         </main>
     </div>

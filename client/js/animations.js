@@ -242,6 +242,102 @@ const Anim = (() => {
     }
   }
 
+  // Fichas que vuelan desde cada asiento al pozo central (mesas con apuesta).
+  // Se usa antes del reparto para "cobrar" el ante visualmente.
+  function betChipsToPot({ seats = [], potEl = null, chipsPerSeat = 2, stagger = 90, flight = 540 }) {
+    return new Promise(resolve => {
+      if (!potEl || !seats.length) { resolve(); return; }
+      const motion = getMotionProfile();
+      if (!document.querySelector('#chipAnimCss')) {
+        document.head.insertAdjacentHTML('beforeend', `
+          <style id="chipAnimCss">
+            .chip-ghost {
+              position:fixed; z-index:9998; pointer-events:none;
+              width:22px; height:22px; border-radius:50%;
+              background:radial-gradient(circle at 35% 30%, #fff, #f0cd7e 38%, #c8a045 62%, #8a6a1f);
+              border:2px dashed rgba(244,212,136,.85);
+              box-shadow:0 3px 9px rgba(0,0,0,.5), inset 0 0 4px rgba(255,255,255,.55);
+            }
+          </style>
+        `);
+      }
+
+      const dst = potEl.getBoundingClientRect();
+      const dstX = dst.left + dst.width / 2;
+      const dstY = dst.top + dst.height / 2;
+      let pending = seats.length * chipsPerSeat;
+      let resolved = false;
+      const flyMs = scaleMs(flight, motion.speed);
+
+      const land = () => {
+        if (resolved) return;
+        spawnParticles(dstX, dstY, 5);
+        if (--pending <= 0) {
+          resolved = true;
+          clearTimeout(safety);
+          if (typeof SFX !== 'undefined') {
+            SFX.play('chips');
+            setTimeout(() => SFX.play('chips'), 130);
+          }
+          const v = potEl.querySelector('.pot-value');
+          if (v) {
+            v.animate([
+              { transform: 'scale(1)', color: '#c8a045' },
+              { transform: 'scale(1.4)', color: '#ffe9a3' },
+              { transform: 'scale(1)', color: '#c8a045' },
+            ], { duration: 420, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+          }
+          setTimeout(resolve, 240);
+        }
+      };
+
+      // Red de seguridad: nunca dejar colgado el await del reparto
+      const safety = setTimeout(() => { if (!resolved) { resolved = true; resolve(); } },
+        seats.length * stagger + chipsPerSeat * 70 + 60 + flyMs + 900);
+
+      seats.forEach((seat, si) => {
+        if (!seat) { pending -= chipsPerSeat; return; }
+        const src = seat.getBoundingClientRect();
+        const srcX = src.left + src.width / 2;
+        const srcY = src.top + src.height / 2;
+        for (let c = 0; c < chipsPerSeat; c++) {
+          const delay = si * stagger + c * 70 + Math.random() * 40;
+          setTimeout(() => {
+            const chip = document.createElement('div');
+            chip.className = 'chip-ghost';
+            chip.style.left = `${srcX - 11}px`;
+            chip.style.top = `${srcY - 11}px`;
+            chip.style.transform = 'scale(.4)';
+            chip.style.opacity = '0';
+            document.body.appendChild(chip);
+            let chipDone = false;
+            let flyFallback = null;
+            const cleanup = () => {
+              if (chipDone) return;
+              chipDone = true;
+              if (flyFallback) clearTimeout(flyFallback);
+              chip.remove();
+              land();
+            };
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                try {
+                  const anim = chip.animate([
+                    { opacity: 1, transform: 'translate(0,0) scale(.5)', offset: 0 },
+                    { transform: `translate(${(dstX - srcX) / 2}px, ${(dstY - srcY) / 2 - 80}px) scale(.9)`, opacity: 1, offset: 0.55 },
+                    { transform: `translate(${dstX - srcX}px, ${dstY - srcY}px) scale(1.05)`, opacity: 1, offset: 1 },
+                  ], { duration: flyMs, easing: 'cubic-bezier(.25,.6,.35,1)', fill: 'forwards' });
+                  anim.addEventListener('finish', cleanup);
+                } catch { cleanup(); }
+              });
+            });
+            flyFallback = setTimeout(cleanup, flyMs + 300);
+          }, delay);
+        }
+      });
+    });
+  }
+
   // Muestra números flotantes de puntuación (+15, -0, etc.) al finalizar ronda
   function floatScore(el, pts, isGain = false) {
     if (!el) return;
@@ -317,6 +413,7 @@ const Anim = (() => {
     rivalPaysToFondo, 
     shuffleAnim, 
     dealAnim, 
+    betChipsToPot,
     floatScore, 
     spawnParticles
   };

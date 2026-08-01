@@ -4,6 +4,7 @@ let castigoEnviado = false;
 let pendingCastigo = null;
 const params = new URLSearchParams(location.search);
 const MY_ID = params.get('pid');
+const MY_SEAT = params.get('seat') || '';
 const ROOM = params.get('code');
 const SUIT_CLS = { '♠': 'blk-s', '♥': 'red-s', '♦': 'red-s', '♣': 'blk-s' };
 const REQ_LABELS = {
@@ -311,6 +312,7 @@ function saveActiveGameSession(extra = {}) {
     localStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify({
         code: ROOM,
         playerId: MY_ID,
+        seatToken: MY_SEAT || extra.seatToken || null,
         userId: usuario?.id || null,
         nombre: usuario?.nombre || localStorage.getItem('nombre_' + MY_ID) || 'Jugador',
         color,

@@ -43,6 +43,16 @@ async function crearTablas() {
     ADD COLUMN IF NOT EXISTS chips BIGINT NOT NULL DEFAULT 10000
   `);
 
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS last_reload_at TIMESTAMP
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0
+  `);
+
   console.log('✅ Tablas creadas correctamente');
   await pool.end();
 }

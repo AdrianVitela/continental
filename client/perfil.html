@@ -736,6 +736,9 @@
             <button class="btn-danger" onclick="logout()"><i class="ph ph-sign-out"></i>Cerrar sesión</button>
             <button class="btn-save" onclick="recargar()"><i class="ph ph-arrows-clockwise"></i>Actualizar datos</button>
           </div>
+          <div style="margin-top:10px">
+            <button class="btn-danger" style="opacity:.85" onclick="revocarSesiones()"><i class="ph ph-shield-slash"></i>Cerrar todas las sesiones (este y otros dispositivos)</button>
+          </div>
         </div>
       </section>
 
@@ -1037,7 +1040,11 @@
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
-        if (!res.ok) { toast(data.error || 'No se pudo recargar.', 'err'); return; }
+        if (!res.ok) {
+          const retry = data.retryAfter ? ` Intenta en ${data.retryAfter} min.` : '';
+          toast((data.error || 'No se pudo recargar.') + retry, 'err');
+          return;
+        }
         usuario = { ...usuario, ...data.usuario };
         const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
         localStorage.setItem('usuario', JSON.stringify({ ...stored, ...data.usuario }));
@@ -1062,6 +1069,18 @@
       window.location.href = '/login';
     }
 
+    async function revocarSesiones () {
+      if (!token) return;
+      const res = await fetch('/api/me/revocar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { toast(data.error || 'No se pudo revocar.', 'err'); return; }
+      toast(data.msg || 'Sesiones cerradas.', 'ok');
+      setTimeout(logout, 900);
+    }
+
     window.selectSkin = selectSkin;
     window.guardarNombre = guardarNombre;
     window.setPrefGuide = setPrefGuide;
@@ -1069,6 +1088,7 @@
     window.logout = logout;
     window.recargar = recargar;
     window.recargarFichas = recargarFichas;
+    window.revocarSesiones = revocarSesiones;
 
     cargarDatos();
   </script>

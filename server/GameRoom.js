@@ -53,7 +53,7 @@ class GameRoom {
     }
     if (this.players.length >= this.maxPlayers) return null;
     if (this.status !== 'lobby') return null;
-    const player = { id, nombre, badge, skin, rol, userId, chips: Number.isInteger(chips) ? chips : null, ws, conectado: true };
+    const player = { id, nombre, badge, skin, rol, userId, chips: Number.isInteger(chips) ? chips : null, ws, conectado: true, seatToken: randomUUID() };
     this.players.push(player);
     this.broadcast({ type: 'player_joined', nombre, count: this.players.length, lobbyState: this.lobbyState() }, id);
     return player;

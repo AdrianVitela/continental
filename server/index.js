@@ -7,6 +7,8 @@ const path     = require('path');
 const { randomUUID } = require('crypto');
 const { GameRoom } = require('./GameRoom');
 const pool         = require('./db');
+const { rateLimitHit, isRateLimited } = require('./rate-limit');
+const { verifyAuthorized } = require('./jwt-utils');
 
 const PORT = process.env.PORT || 3000;
 const app  = express();
@@ -14,7 +16,13 @@ const srv  = http.createServer(app);
 const wss  = new WebSocketServer({ server: srv });
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../client')));
+app.use(express.static(path.join(__dirname, '../client'), {
+  etag: true,
+  setHeaders: (res) => {
+    // Forzar revalidación de assets para no servir versiones viejas en caché
+    res.setHeader('Cache-Control', 'no-cache');
+  }
+}));
 
 // Rutas auth, feedback y admin
 const authRouter     = require('./auth');
@@ -45,6 +53,16 @@ async function ensureDatabaseSchema() {
   `);
 
   await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS last_reload_at TIMESTAMP
+  `);
+
+  await pool.query(`
+    ALTER TABLE usuarios
+    ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0
+  `);
+
+  await pool.query(`
     UPDATE usuarios
     SET skin = 'clasico'
     WHERE skin IS NULL OR skin = ''
@@ -69,11 +87,9 @@ const NAME_RE = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const CODE_RE = /^[A-Z0-9]{4,5}$/;
 
 async function fetchPlayerProfile(userId, nombre) {
+  if (!userId) return { badge: null, skin: 'clasico', rol: 'jugador', chips: null };
   try {
-    const query = userId
-      ? 'SELECT badge, skin, rol, chips FROM usuarios WHERE id = $1'
-      : 'SELECT badge, skin, rol, chips FROM usuarios WHERE nombre = $1';
-    const r = await pool.query(query, [userId || nombre]);
+    const r = await pool.query('SELECT badge, skin, rol, chips FROM usuarios WHERE id = $1', [userId]);
     const raw = r.rows[0] || {};
     return {
       badge: raw.badge || null,
@@ -166,7 +182,7 @@ wss.on('connection', (ws, req) => {
   });
   ws.isAlive = true;
   ws.lastPongAt = Date.now();
-  clients.set(ws, { playerId: null, roomCode: null, nombre: null });
+  clients.set(ws, { playerId: null, roomCode: null, nombre: null, auth: null });
 
   ws.on('message', async (raw) => {
     let msg;
@@ -182,13 +198,33 @@ wss.on('connection', (ws, req) => {
     try {
       switch (msg.type) {
 
+        case 'auth': {
+          const token = typeof msg.token === 'string' ? msg.token : null;
+          if (!token) {
+            ctx.auth = null;
+            send(ws, { type: 'auth_ok', usuario: null });
+            break;
+          }
+          try {
+            const payload = await verifyAuthorized(`Bearer ${token}`);
+            ctx.auth = { id: payload.id, nombre: payload.nombre, rol: payload.rol || 'jugador' };
+            send(ws, { type: 'auth_ok', usuario: { id: payload.id, nombre: payload.nombre, rol: payload.rol || 'jugador' } });
+          } catch (e) {
+            ctx.auth = null;
+            send(ws, { type: 'auth_denied' });
+          }
+          break;
+        }
+
         case 'identify': {
-          ctx.userId = msg.userId || null;
           if (msg.nombre) ctx.nombre = String(msg.nombre).trim();
           break;
         }
 
         case 'create_room': {
+          if (isRateLimited(`ws-create:${ws._remoteAddress}`, 10, 10 * 60 * 1000))
+            return send(ws, { type: 'error', msg: 'Creaste muchas salas. Espera unos minutos.' });
+          rateLimitHit(`ws-create:${ws._remoteAddress}`, 10 * 60 * 1000);
           const { nombre, mode = 'realtime', maxPlayers = 5, public: publicRoom = false, conApuesta = false } = msg;
           const nameErr = validateNombre(nombre);
           if (nameErr) return send(ws, { type: 'error', msg: nameErr });
@@ -201,9 +237,9 @@ wss.on('connection', (ws, req) => {
           ctx.playerId = playerId;
           ctx.roomCode = code;
           ctx.nombre   = safeNombre;
-          ctx.userId   = msg.userId || null;
+          ctx.userId   = ctx.auth?.id ?? null;
 
-          const { badge: hostBadge, skin: hostSkin, rol: hostRole, chips: hostChips } = await fetchPlayerProfile(msg.userId, safeNombre);
+          const { badge: hostBadge, skin: hostSkin, rol: hostRole, chips: hostChips } = await fetchPlayerProfile(ctx.userId, safeNombre);
 
           if (Boolean(conApuesta) && (!Number.isInteger(hostChips) || hostChips < 100)) {
             return send(ws, { type: 'error', msg: 'Necesitas al menos 100 fichas para crear una mesa con apuesta.' });
@@ -211,7 +247,7 @@ wss.on('connection', (ws, req) => {
 
           const room = new GameRoom({
             code,
-            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, userId: msg.userId || null, chips: hostChips, ws },
+            host: { id: playerId, nombre: safeNombre, badge: hostBadge, skin: hostSkin, rol: hostRole, userId: ctx.userId, chips: hostChips, ws },
             mode,
             maxPlayers: Math.min(Math.max(Number(maxPlayers) || 4, 2), 5),
             publicRoom,
@@ -225,7 +261,8 @@ wss.on('connection', (ws, req) => {
             public: room.public,
             conApuesta: room.conApuesta,
           });
-          send(ws, { type: 'room_created', code, playerId, lobbyState: room.lobbyState() });
+          const hostPlayer = room.players.find(p => p.id === playerId);
+          send(ws, { type: 'room_created', code, playerId, seatToken: hostPlayer?.seatToken, lobbyState: room.lobbyState() });
           if (room.public) broadcastRoomsList();
           break;
         }
@@ -236,6 +273,9 @@ wss.on('connection', (ws, req) => {
         }
 
         case 'join_room': {
+          if (isRateLimited(`ws-join:${ws._remoteAddress}`, 40, 10 * 60 * 1000))
+            return send(ws, { type: 'error', msg: 'Entraste a muchas salas. Espera unos minutos.' });
+          rateLimitHit(`ws-join:${ws._remoteAddress}`, 10 * 60 * 1000);
           const { nombre, code, playerId: existingId } = msg;
           const nameErr = validateNombre(nombre);
           if (nameErr) return send(ws, { type: 'error', msg: nameErr });
@@ -248,20 +288,26 @@ wss.on('connection', (ws, req) => {
           const room = rooms.get(safeCode);
           if (!room) return send(ws, { type: 'error', msg: 'Sala no encontrada.' });
 
-          const wasReconnecting = !!existingId && room.players.some(p => p.id === existingId);
+          const existingSeat = existingId ? room.players.find(p => p.id === existingId) : null;
+          if (existingId && !existingSeat)
+            return send(ws, { type: 'error', msg: 'Asiento no encontrado. Entra de nuevo a la sala.' });
+          if (existingSeat && existingSeat.seatToken !== msg.seatToken)
+            return send(ws, { type: 'error', msg: 'No puedes retomar ese asiento.' });
 
-          const playerId = existingId || randomUUID();
+          const wasReconnecting = !!existingSeat;
+
+          const playerId = existingSeat ? existingSeat.id : randomUUID();
           ctx.roomCode = safeCode;
           ctx.nombre   = safeNombre;
-          ctx.userId   = msg.userId || null;
+          ctx.userId   = ctx.auth?.id ?? null;
 
-          const { badge: joinBadge, skin: joinSkin, rol: joinRole, chips: joinChips } = await fetchPlayerProfile(msg.userId, safeNombre);
+          const { badge: joinBadge, skin: joinSkin, rol: joinRole, chips: joinChips } = await fetchPlayerProfile(ctx.userId, safeNombre);
 
           if (room.conApuesta && (!Number.isInteger(joinChips) || joinChips < 100)) {
             return send(ws, { type: 'error', msg: 'Necesitas al menos 100 fichas para entrar a una mesa con apuesta.' });
           }
 
-          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole, msg.userId || null, joinChips);
+          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole, ctx.userId, joinChips);
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           ctx.playerId = player.id;
@@ -274,14 +320,15 @@ wss.on('connection', (ws, req) => {
             players: room.players.map(p => ({ nombre: p.nombre, conectado: p.conectado })),
           });
 
-          send(ws, { type: 'room_joined', code: safeCode, playerId: player.id, lobbyState: room.lobbyState() });
+          send(ws, { type: 'room_joined', code: safeCode, playerId: player.id, seatToken: player.seatToken, lobbyState: room.lobbyState() });
           if (room.public) broadcastRoomsList();
 
           if (room.engine && wasReconnecting) {
             send(ws, {
               type: 'state_update',
               event: 'reconnect',
-              state: room.engine.stateFor(player.id, { includeLog: player.rol === 'owner' })
+              state: room.engine.stateFor(player.id, { includeLog: player.rol === 'owner' }),
+              tableColor: room.tableColor || 'green'
             });
           }
           break;

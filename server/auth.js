@@ -1,18 +1,18 @@
 'use strict';
 const express  = require('express');
 const bcrypt   = require('bcrypt');
-const jwt      = require('jsonwebtoken');
 const pool     = require('./db');
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
+const { middleware: rateLimit, rateLimitHit, isRateLimited } = require('./rate-limit');
+const { signUserToken, verifyAuthorized, incrementTokenVersion } = require('./jwt-utils');
 
 const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CHIPS_INICIALES = 10000;
 
 // ── POST /api/register ──────────────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', rateLimit({ max: 5, windowMs: 10 * 60 * 1000, message: 'Demasiados registros desde tu IP. Espera unos minutos.' }), async (req, res) => {
   try {
     const { nombre, email, password } = req.body;
 
@@ -50,11 +50,7 @@ router.post('/register', async (req, res) => {
     const usuario = result.rows[0];
 
     // Generar token
-    const token = jwt.sign(
-      { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(usuario);
 
     res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico', chips: Number(usuario.chips ?? CHIPS_INICIALES) } });
 
@@ -65,7 +61,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/login ─────────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', rateLimit({ max: 20, windowMs: 15 * 60 * 1000, message: 'Demasiados intentos de inicio de sesión. Espera unos minutos.' }), async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -74,27 +70,32 @@ router.post('/login', async (req, res) => {
 
     const safeEmail = email.trim().toLowerCase();
 
+    const LOCK_MAX = 5;
+    const LOCK_WIN = 15 * 60 * 1000;
+    if (isRateLimited(`login:${safeEmail}`, LOCK_MAX, LOCK_WIN))
+      return res.status(429).json({ error: 'Cuenta temporalmente bloqueada por demasiados intentos. Espera unos minutos.' });
+
     // Buscar usuario
     const result = await pool.query(
-      'SELECT id, nombre, password, badge, rol, skin, chips FROM usuarios WHERE email = $1',
+      'SELECT id, nombre, password, badge, rol, skin, chips, token_version FROM usuarios WHERE email = $1',
       [safeEmail]
     );
-    if (result.rows.length === 0)
+    if (result.rows.length === 0) {
+      rateLimitHit(`login:${safeEmail}`, LOCK_WIN);
       return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
 
     const usuario = result.rows[0];
 
     // Verificar contraseña
     const ok = await bcrypt.compare(password, usuario.password);
-    if (!ok)
+    if (!ok) {
+      rateLimitHit(`login:${safeEmail}`, LOCK_WIN);
       return res.status(401).json({ error: 'Email o contraseña incorrectos.' });
+    }
 
     // Generar token
-    const token = jwt.sign(
-      { id: usuario.id, nombre: usuario.nombre, rol: usuario.rol },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signUserToken(usuario);
 
     res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico', chips: Number(usuario.chips ?? CHIPS_INICIALES) } });
 
@@ -107,12 +108,7 @@ router.post('/login', async (req, res) => {
 // ── GET /api/me ─────────────────────────────────────────────────
 router.get('/me', async (req, res) => {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer '))
-      return res.status(401).json({ error: 'No autorizado.' });
-
-    const token = auth.slice(7);
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = await verifyAuthorized(req.headers.authorization);
 
     const result = await pool.query(
       'SELECT id, nombre, badge, rol, skin, chips, created_at FROM usuarios WHERE id = $1',
@@ -126,23 +122,41 @@ router.get('/me', async (req, res) => {
     res.json({ usuario: u });
 
   } catch (err) {
-    res.status(401).json({ error: 'Token inválido o expirado.' });
+    res.status(err.status || 401).json({ error: err.message || 'Token inválido o expirado.' });
   }
 });
 
 // ── POST /api/me/fichas ──────────────────────────────────────────
-// Recarga de fichas en la beta: reinicia el saldo a 10,000.
-router.post('/me/fichas', async (req, res) => {
-  try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer '))
-      return res.status(401).json({ error: 'No autorizado.' });
+// Recarga de fichas en la beta: reinicia el saldo a 10,000 con cooldown.
+const CHIPS_RECHARGE_COOLDOWN_MS = Number(process.env.CHIPS_RECHARGE_COOLDOWN_MS) || 30 * 60 * 1000;
 
-    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+router.post('/me/fichas', rateLimit({ max: 10, windowMs: 10 * 60 * 1000, message: 'Demasiadas recargas. Espera unos minutos.' }), async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization);
+
+    const actual = await pool.query(
+      `SELECT id,
+              EXTRACT(EPOCH FROM (NOW() - last_reload_at)) AS elapsed_sec
+         FROM usuarios
+        WHERE id = $1`,
+      [payload.id]
+    );
+    if (!actual.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const elapsedSec = actual.rows[0].elapsed_sec;
+    if (elapsedSec != null && elapsedSec * 1000 < CHIPS_RECHARGE_COOLDOWN_MS) {
+      const falta = CHIPS_RECHARGE_COOLDOWN_MS - elapsedSec * 1000;
+      return res.status(429).json({
+        error: 'Ya recargaste fichas hace poco.',
+        retryAfterMs: falta,
+        retryAfter: Math.ceil(falta / 60000),
+      });
+    }
 
     const result = await pool.query(
       `UPDATE usuarios
-          SET chips = $1
+          SET chips = $1,
+              last_reload_at = NOW()
         WHERE id = $2
         RETURNING id, nombre, badge, rol, skin, chips`,
       [CHIPS_INICIALES, payload.id]
@@ -155,21 +169,14 @@ router.post('/me/fichas', async (req, res) => {
 
   } catch (err) {
     console.error('[fichas]', err.message);
-    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token inválido o expirado.' });
-    }
-    res.status(500).json({ error: 'Error interno.' });
+    res.status(err.status || 500).json({ error: err.message || 'Error interno.' });
   }
 });
 
 // ── POST /api/me/nombre ─────────────────────────────────────────
-router.post('/me/nombre', async (req, res) => {
+router.post('/me/nombre', rateLimit({ max: 10, windowMs: 10 * 60 * 1000, message: 'Demasiados cambios de nombre. Espera unos minutos.' }), async (req, res) => {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer '))
-      return res.status(401).json({ error: 'No autorizado.' });
-
-    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    const payload = await verifyAuthorized(req.headers.authorization);
     const { nombre } = req.body;
     const safeNombre = String(nombre || '').trim();
 
@@ -197,10 +204,7 @@ router.post('/me/nombre', async (req, res) => {
 
   } catch (err) {
     console.error('[nombre]', err.message);
-    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token inválido o expirado.' });
-    }
-    res.status(500).json({ error: 'Error interno.' });
+    res.status(err.status || 500).json({ error: err.message || 'Error interno.' });
   }
 });
 
@@ -216,13 +220,9 @@ const SKINS_EXCLUSIVOS = {
   'marfil': ['early_adopter'],
 };
 
-router.post('/me/skin', async (req, res) => {
+router.post('/me/skin', rateLimit({ max: 20, windowMs: 10 * 60 * 1000, message: 'Demasiados cambios de skin. Espera unos minutos.' }), async (req, res) => {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer '))
-      return res.status(401).json({ error: 'No autorizado.' });
-
-    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    const payload = await verifyAuthorized(req.headers.authorization);
     const { skin } = req.body;
 
     const todosLosSkins = [...SKINS_LIBRES, ...Object.keys(SKINS_EXCLUSIVOS)];
@@ -247,10 +247,39 @@ router.post('/me/skin', async (req, res) => {
 
   } catch (err) {
     console.error('[skin]', err.message);
-    if (err?.name === 'JsonWebTokenError' || err?.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token inválido o expirado.' });
-    }
-    res.status(500).json({ error: 'Error interno.' });
+    res.status(err.status || 500).json({ error: err.message || 'Error interno.' });
+  }
+});
+
+// ── POST /api/refresh ────────────────────────────────────────────
+// Renueva el token (aunque esté expirado) si la sesión no fue revocada.
+router.post('/refresh', rateLimit({ max: 20, windowMs: 15 * 60 * 1000, message: 'Demasiadas peticiones. Espera unos minutos.' }), async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization, { ignoreExpiration: true });
+
+    const result = await pool.query(
+      'SELECT id, nombre, badge, rol, skin, chips, token_version FROM usuarios WHERE id = $1',
+      [payload.id]
+    );
+    const usuario = result.rows[0];
+    if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const token = signUserToken(usuario);
+    res.json({ token, usuario: { id: usuario.id, nombre: usuario.nombre, badge: usuario.badge, rol: usuario.rol, skin: usuario.skin || 'clasico', chips: Number(usuario.chips ?? CHIPS_INICIALES) } });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'Token inválido o expirado.' });
+  }
+});
+
+// ── POST /api/me/revocar ─────────────────────────────────────────
+// Revoca todas las sesiones activas (invalida los tokens emitidos antes).
+router.post('/me/revocar', rateLimit({ max: 5, windowMs: 10 * 60 * 1000, message: 'Demasiadas peticiones. Espera unos minutos.' }), async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization);
+    await incrementTokenVersion(payload.id);
+    res.json({ ok: true, msg: 'Sesiones revocadas. Vuelve a iniciar sesión.' });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'No autorizado.' });
   }
 });
 

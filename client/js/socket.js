@@ -43,11 +43,13 @@
         logWs('log', `✅ socket#${socketId} conectado`);
         isConnecting = false;
         reconnectDelay = 1000;
+        WS.send({ type: 'auth', token: localStorage.getItem('token') || null });
         WS.emit('_connected');
         // Restore session if mid-game
         const params = new URLSearchParams(location.search);
         const code = params.get('code');
         const pid  = params.get('pid');
+        const seat = params.get('seat') || '';
         if (code && pid) {
           const usuario = JSON.parse(localStorage.getItem('usuario') || '{}');
           const nombre  = usuario.nombre || localStorage.getItem('nombre_' + pid) || 'Jugador';
@@ -57,6 +59,7 @@
           code,
           nombre,
           playerId: pid,
+          seatToken: seat,
           userId: usuario.id || null
         });
         }
@@ -74,6 +77,10 @@
             return;
           }
           logWs('log', `📩 socket#${socketId} mensaje`, msg);
+          if (msg.type === 'auth_denied') {
+            WS._handleAuthDenied();
+            return;
+          }
           WS.emit(msg.type, msg);
           WS.emit('*', msg); // wildcard
         } catch (_) {}
@@ -122,6 +129,35 @@
     emit(type, data) { (handlers[type] || []).forEach(h => { try { h(data); } catch (e) { console.error(e); } }); },
 
     disconnect() { intentionalClose = true; ws?.close(); },
+
+    _handleAuthDenied() {
+      const oldToken = localStorage.getItem('token');
+      const logout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        if (!/login|register/.test(location.pathname)) location.href = '/login';
+      };
+      if (!oldToken) { logout(); return; }
+      fetch('/api/refresh', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + oldToken },
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.token) {
+            localStorage.setItem('token', data.token);
+            if (data.usuario) {
+              const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
+              localStorage.setItem('usuario', JSON.stringify({ ...stored, ...data.usuario }));
+            }
+            logWs('log', '🔑 token renovado por refresh');
+            WS.send({ type: 'auth', token: data.token });
+            return;
+          }
+          logout();
+        })
+        .catch(logout);
+    },
   };
 
   window.addEventListener('online', () => logWs('log', '🌐 navegador online'));

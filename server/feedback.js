@@ -2,24 +2,22 @@
 const express    = require('express');
 const { Resend } = require('resend');
 const pool       = require('./db');
-const jwt        = require('jsonwebtoken');
 
 const router     = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
 const resend     = new Resend(process.env.RESEND_API_KEY);
+const { middleware: rateLimit } = require('./rate-limit');
+const { verifyAuthorized } = require('./jwt-utils');
 
-function getUsuario(req) {
+async function getUsuario(req) {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer ')) return null;
-    return jwt.verify(auth.slice(7), JWT_SECRET);
+    return await verifyAuthorized(req.headers.authorization);
   } catch { return null; }
 }
 
-router.post('/feedback', async (req, res) => {
+router.post('/feedback', rateLimit({ max: 10, windowMs: 15 * 60 * 1000, message: 'Demasiados envíos de feedback. Espera unos minutos.' }), async (req, res) => {
   try {
     const { mensaje, rating } = req.body;
-    const usuario = getUsuario(req);
+    const usuario = await getUsuario(req);
 
     if (!mensaje || mensaje.trim().length < 5)
       return res.status(400).json({ error: 'El mensaje es muy corto.' });

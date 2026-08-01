@@ -1,8 +1,8 @@
 'use strict';
 const express    = require('express');
-const jwt        = require('jsonwebtoken');
 const pool       = require('./db');
-const JWT_SECRET = process.env.JWT_SECRET || 'continental_secret_2026';
+const { verifyAuthorized } = require('./jwt-utils');
+const { middleware: rateLimit } = require('./rate-limit');
 
 const BADGES = {
   'owner':         { label: 'Owner',         emoji: '👑' },
@@ -12,18 +12,15 @@ const BADGES = {
 };
 
 // Middleware — solo owner
-function requireOwner(req, res, next) {
+async function requireOwner(req, res, next) {
   try {
-    const auth = req.headers.authorization;
-    if (!auth || !auth.startsWith('Bearer '))
-      return res.status(401).json({ error: 'No autorizado.' });
-    const payload = jwt.verify(auth.slice(7), JWT_SECRET);
+    const payload = await verifyAuthorized(req.headers.authorization);
     if (payload.rol !== 'owner')
       return res.status(403).json({ error: 'Acceso denegado.' });
     req.user = payload;
     next();
-  } catch {
-    res.status(401).json({ error: 'Token inválido.' });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'Token inválido.' });
   }
 }
 
@@ -71,7 +68,7 @@ function createAdminRouter({ rooms, clients }) {
   });
 
   // ── POST /api/admin/badge ───────────────────────────────────────
-  router.post('/admin/badge', requireOwner, async (req, res) => {
+  router.post('/admin/badge', requireOwner, rateLimit({ max: 60, windowMs: 60 * 1000, message: 'Demasiadas peticiones. Espera un momento.' }), async (req, res) => {
     try {
       const { usuarioId, badge } = req.body;
       if (!usuarioId) return res.status(400).json({ error: 'usuarioId requerido.' });
@@ -134,7 +131,7 @@ function createAdminRouter({ rooms, clients }) {
   });
 
   // ── POST /api/admin/mesas/:code/cerrar ─────────────────────────
-  router.post('/admin/mesas/:code/cerrar', requireOwner, async (req, res) => {
+  router.post('/admin/mesas/:code/cerrar', requireOwner, rateLimit({ max: 30, windowMs: 60 * 1000, message: 'Demasiadas peticiones. Espera un momento.' }), async (req, res) => {
     const code = String(req.params.code || '').trim().toUpperCase();
     const room = rooms.get(code);
     if (!room) return res.status(404).json({ error: 'Mesa no encontrada.' });

@@ -27,6 +27,7 @@ let myRoomPublic = false;
 let myRoomApuesta = false;
 let myId        = null;
 let myCode      = null;
+let mySeatToken = null;
 let isHost      = false;
 let playersList = [];
 let currentTableColor = 'green';
@@ -51,6 +52,7 @@ function saveActiveLobbySession () {
   sessionStorage.setItem(ACTIVE_LOBBY_KEY, JSON.stringify({
     code: myCode,
     playerId: myId,
+    seatToken: mySeatToken,
     isHost,
   }));
 }
@@ -109,7 +111,7 @@ function resumeActiveGame () {
     return;
   }
   const color = active.color || sessionStorage.getItem('tableColor') || 'green';
-  window.location.href = `/game?code=${active.code}&pid=${active.playerId}&color=${color}`;
+  window.location.href = `/game?code=${active.code}&pid=${active.playerId}&seat=${active.seatToken || ''}&color=${color}`;
 }
 
 function rejoinActiveLobbyIfNeeded () {
@@ -118,6 +120,7 @@ function rejoinActiveLobbyIfNeeded () {
 
   myCode = active.code;
   myId = active.playerId;
+  mySeatToken = active.seatToken || null;
   isHost = !!active.isHost;
 
   const nombre = (window.getAuthNombre ? window.getAuthNombre() : '') || getCookie(COOKIE_KEY);
@@ -127,7 +130,7 @@ function rejoinActiveLobbyIfNeeded () {
   if (!nombre) return;
 
   console.log('[LOBBY] rejoin automático', { code: myCode, playerId: myId, isHost });
-  WS.send({ type: 'join_room', nombre, userId, code: myCode, playerId: myId });
+  WS.send({ type: 'join_room', nombre, userId, code: myCode, playerId: myId, seatToken: mySeatToken });
 }
 
 /* ================================================================
@@ -780,15 +783,19 @@ function setupSocketEvents () {
     setLobbyActionPending(false);
   });
 
-  WS.on('room_created', ({ code, playerId, lobbyState }) => {
+  WS.on('room_created', ({ code, playerId, seatToken, lobbyState }) => {
+    mySeatToken = seatToken || null;
     showLobby(lobbyState, playerId, code, true);
     localStorage.setItem('cid_' + code, playerId);
+    saveActiveLobbySession();
   });
 
-  WS.on('room_joined', ({ code, playerId, lobbyState }) => {
+  WS.on('room_joined', ({ code, playerId, seatToken, lobbyState }) => {
     const soyHost = lobbyState?.players?.[0]?.id === playerId;
+    mySeatToken = seatToken || null;
     showLobby(lobbyState, playerId, code, soyHost);
     localStorage.setItem('cid_' + code, playerId);
+    saveActiveLobbySession();
   });
 
   WS.on('rooms_list', ({ rooms }) => {
@@ -817,6 +824,7 @@ function setupSocketEvents () {
     clearActiveLobbySession();
     myCode = null;
     myId   = null;
+    mySeatToken = null;
     isHost = false;
     document.getElementById('lobby-room').classList.remove('show');
     document.getElementById('lobby-setup').style.display = 'block';
@@ -861,7 +869,7 @@ function setupSocketEvents () {
       sessionStorage.setItem('tableColor', color);
       if (musicAudio) sessionStorage.setItem('musicTime', musicAudio.currentTime);
       sessionStorage.setItem('musicPlaying', musicPlaying ? '1' : '0');
-      window.location.href = `/game?code=${myCode}&pid=${myId}&color=${color}`;
+      window.location.href = `/game?code=${myCode}&pid=${myId}&seat=${mySeatToken || ''}&color=${color}`;
     }
   });
 

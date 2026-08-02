@@ -444,6 +444,67 @@
     .pref-swatch[data-color="wine"]  { background: #2a0a0f; }
     .pref-swatch[data-color="black"] { background: #111111; }
 
+    /* Estadísticas */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 10px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(200,160,69,.16);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .stat-card .stat-val {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--gold-hi);
+      line-height: 1.1;
+    }
+    .stat-card .stat-label {
+      margin-top: 5px;
+      font-size: .64rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+    .stats-table-wrap { overflow-x: auto; }
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .8rem;
+    }
+    .stats-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: var(--text-muted);
+      font-size: .62rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      white-space: nowrap;
+    }
+    .stats-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+    .stats-table tbody tr:hover td { background: rgba(200,160,69,.04); }
+    .stats-pos {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%;
+      font-size: .68rem; font-weight: 700;
+    }
+    .stats-pos.p1   { background: rgba(200,160,69,.2); color: #ffe066; border: 1px solid rgba(200,160,69,.45); }
+    .stats-pos.other { background: rgba(255,255,255,.05); color: var(--text-dim); }
+    .stats-empty { color: var(--text-muted); font-size: .8rem; padding: 16px 0; text-align: center; }
+    .pos-pos { color: #2ecc71; }
+    .pos-neg { color: #ff8a7a; }
+
     .danger-zone { border-color: rgba(216,90,79,.22); }
     .danger-zone .panel-head h3 { color: #ff9a8c; }
     .danger-zone .panel-head h3 i { color: #ff6b5e; }
@@ -701,7 +762,27 @@
         </section>
       </div>
 
-      <!-- Preferencias -->
+      <!-- Estadísticas -->
+      <section id="sec-stats" class="panel" style="margin-bottom:18px">
+        <div class="panel-head"><h3><i class="ph ph-chart-line-up"></i>Estadísticas</h3></div>
+        <div class="panel-body">
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Partidas</div></div>
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Victorias</div></div>
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Balance fichas</div></div>
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">Puntos totales</div></div>
+            <div class="stat-card"><div class="stat-val">—</div><div class="stat-label">% victorias</div></div>
+          </div>
+          <div style="font-size:.72rem;color:var(--text-muted)"><i class="ph ph-info"></i> Se actualiza al terminar cada partida. Las mesas sin apuesta no cambian tu balance de fichas.</div>
+          <div id="stats-vacio" class="stats-empty" style="display:none">Aún no has terminado ninguna partida. ¡Juega una y tus resultados aparecerán aquí!</div>
+          <div id="stats-historico" class="stats-table-wrap" style="display:none">
+            <table class="stats-table">
+              <thead><tr><th>Fecha</th><th>Mesa</th><th>Rondas</th><th>Pos.</th><th>Puntos</th><th>Balance</th></tr></thead>
+              <tbody id="stats-historico-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
       <section id="sec-pref" class="panel" style="margin-bottom:18px">
         <div class="panel-head"><h3><i class="ph ph-sliders-horizontal"></i>Preferencias</h3></div>
         <div class="panel-body">
@@ -754,6 +835,7 @@
           <a class="ps-link" data-sec="sec-hero"><i class="ph ph-user-circle"></i>Tu perfil</a>
           <a class="ps-link" data-sec="sec-identidad"><i class="ph ph-user-pen"></i>Identidad</a>
           <a class="ps-link" data-sec="sec-pers"><i class="ph ph-palette"></i>Cartas</a>
+          <a class="ps-link" data-sec="sec-stats"><i class="ph ph-chart-line-up"></i>Estadísticas</a>
           <a class="ps-link" data-sec="sec-pref"><i class="ph ph-sliders-horizontal"></i>Preferencias</a>
           <a class="ps-link" data-sec="sec-sesion"><i class="ph ph-shield-warning"></i>Sesión</a>
         </nav>
@@ -843,6 +925,7 @@
         renderSkinGrid();
         initPrefs();
         initDate();
+        cargarStats();
       } catch {
         toast('Error al cargar tus datos.', 'err');
       }
@@ -923,6 +1006,57 @@
         btn.disabled = false;
         btn.innerHTML = '<i class="ph ph-check"></i>Guardar';
       }
+    }
+
+    /* ── Estadísticas ─────────────────────────────────────────── */
+    function fmtBalance (n) {
+      const v = Number(n ?? 0);
+      return (v > 0 ? '+' : '') + v.toLocaleString('es-MX');
+    }
+
+    function renderStats (s) {
+      const g = document.getElementById('stats-grid');
+      const partidas  = Number(s.partidas || 0);
+      const victorias = Number(s.victorias || 0);
+      const pct = partidas ? Math.round((victorias / partidas) * 100) : 0;
+      g.innerHTML = [
+        ['Partidas', partidas.toLocaleString('es-MX')],
+        ['Victorias', victorias.toLocaleString('es-MX')],
+        ['Balance fichas', fmtBalance(s.ganancia_total)],
+        ['Puntos totales', Number(s.pts_totales || 0).toLocaleString('es-MX')],
+        ['% victorias', pct + '%'],
+      ].map(([label, val]) =>
+        `<div class="stat-card"><div class="stat-val">${val}</div><div class="stat-label">${label}</div></div>`
+      ).join('');
+
+      const rows = s.historial || [];
+      const wrap  = document.getElementById('stats-historico');
+      const body  = document.getElementById('stats-historico-body');
+      const vacio = document.getElementById('stats-vacio');
+      if (!rows.length) {
+        wrap.style.display = 'none';
+        vacio.style.display = 'block';
+        return;
+      }
+      vacio.style.display = 'none';
+      wrap.style.display = 'block';
+      body.innerHTML = rows.map(r => `
+        <tr>
+          <td>${formatFecha(r.finished_at)}</td>
+          <td>${esc(r.codigo || '—')}</td>
+          <td>${r.ronda || 7}</td>
+          <td><span class="stats-pos ${r.posicion === 1 ? 'p1' : 'other'}">${r.posicion || '—'}</span></td>
+          <td>${r.pts_totales ?? '—'}</td>
+          <td class="${Number(r.ganancia) >= 0 ? 'pos-pos' : 'pos-neg'}">${fmtBalance(r.ganancia)}</td>
+        </tr>`).join('');
+    }
+
+    async function cargarStats () {
+      try {
+        const res = await fetch('/api/stats', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        renderStats(await res.json());
+      } catch {}
     }
 
     /* ── Skins ───────────────────────────────────────────────── */

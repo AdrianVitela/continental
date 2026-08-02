@@ -1049,6 +1049,27 @@ function init() {
     setupAudioUnlock();
     syncGuidePreferenceUi();
     window.addEventListener('resize', refreshGuideLayout);
+    const handZone = document.getElementById('discard-zone');
+    if (handZone) handZone.addEventListener('scroll', updateHandScroll, { passive: true });
+    const scrollArrow = document.getElementById('hand-scroll-arrow');
+    if (scrollArrow) scrollArrow.addEventListener('click', () => {
+        const z = document.getElementById('discard-zone');
+        if (!z) return;
+        z.scrollBy({ left: Math.max(120, z.clientWidth * 0.6), behavior: 'smooth' });
+        setTimeout(updateHandScroll, 400);
+    });
+    document.addEventListener('keydown', e => {
+        const tag = e.target && e.target.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+        if (!G || myIdx < 0) return;
+        if ((e.key === 'r' || e.key === 'R') && G.turno === myIdx && G.estado === 'esperando_robo') {
+            e.preventDefault(); acMazo();
+        } else if ((e.key === 'f' || e.key === 'F') && G.turno === myIdx && ['esperando_robo'].includes(G.estado)) {
+            e.preventDefault(); acFondo();
+        } else if (e.key === ' ' && G.turno === myIdx && G.estado === 'esperando_accion' && selId != null) {
+            e.preventDefault(); acBajar();
+        }
+    });
     setupSocketEvents();
     WS.connect();
 }
@@ -1393,6 +1414,31 @@ async function handleNewRound() {
     hideHandDuringDeal = false;
 }
 
+// Feedback visual sobre la tarjeta de un oponente (destello + texto flotante)
+function oppFlash(jugadorIdx, { color = 'rgba(255,255,255,.25)', text = '', glow = '0 0 16px' } = {}) {
+    const oppEl = document.querySelector(`.opp[data-idx="${jugadorIdx}"]`);
+    if (!oppEl) return;
+    oppEl.style.transition = 'box-shadow .15s ease, border-color .15s ease';
+    oppEl.style.boxShadow = `${glow} ${color}`;
+    setTimeout(() => { oppEl.style.boxShadow = ''; }, 450);
+    if (text) {
+        const rect = oppEl.getBoundingClientRect();
+        const txt = document.createElement('div');
+        txt.textContent = text;
+        txt.style.cssText = `
+            position: fixed; z-index: 9900; pointer-events: none;
+            left: ${rect.left + rect.width / 2}px; top: ${rect.top}px;
+            transform: translate(-50%, -6px);
+            font-size: .7rem; font-weight: 700; color: #e8d9a8;
+            text-shadow: 0 1px 4px rgba(0,0,0,.6);
+            opacity: 0;
+            animation: oppFloatUp .8s cubic-bezier(.22,1,.36,1) forwards;
+        `;
+        document.body.appendChild(txt);
+        setTimeout(() => txt.remove(), 850);
+    }
+}
+
 async function handleTomarMazo(data) {
     if (data.jugadorIdx === myIdx) {
         const mazoEl    = document.getElementById('mazo-wrap');
@@ -1422,13 +1468,8 @@ async function handleTomarMazo(data) {
         if (newCardEl) Anim.revealCard(newCardEl);
 
     } else {
-        // Otro jugador robó — pequeño destello en su tarjeta
-        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
-        if (oppEl) {
-            oppEl.style.transition  = 'box-shadow .15s ease';
-            oppEl.style.boxShadow   = '0 0 16px rgba(255,255,255,.25)';
-            setTimeout(() => { oppEl.style.boxShadow = ''; }, 400);
-        }
+        // Otro jugador robó — destello dorado + indicador flotante
+        oppFlash(data.jugadorIdx, { color: 'rgba(200,160,69,.5)', text: '⬆ Roba del mazo', glow: '0 0 18px' });
     }
 }
 
@@ -1449,17 +1490,15 @@ async function handleTomarFondo(data) {
             duration: 320,
             hold: 300,
             preScale: 1.05,
+            perspective: 600,
+            rotateYStart: 0,
+            rotateYEnd: 360,
             endBoxShadow: '0 0 20px rgba(200,160,69,.6)'
         });
 
         if (newCardEl) Anim.revealCard(newCardEl);
     } else {
-        const oppEl = document.querySelector(`.opp[data-idx="${data.jugadorIdx}"]`);
-        if (oppEl) {
-            oppEl.style.transition = 'box-shadow .15s ease';
-            oppEl.style.boxShadow  = '0 0 16px rgba(255,255,255,.25)';
-            setTimeout(() => { oppEl.style.boxShadow = ''; }, 400);
-        }
+        oppFlash(data.jugadorIdx, { color: 'rgba(200,160,69,.7)', text: '⬆ Toma del fondo', glow: '0 0 18px' });
     }
 }
 
@@ -1830,35 +1869,21 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
 
         // Overlay
         const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position:fixed; inset:0; z-index:8000; pointer-events:none;
-            background:rgba(0,0,0,.65); backdrop-filter:blur(3px);
-            display:flex; flex-direction:column; align-items:center;
-            justify-content:center; gap:16px; padding:20px;
-            opacity:0; transform:scale(.985);
-            transition:opacity 280ms ease, transform 320ms cubic-bezier(.22,1,.36,1);
-        `;
-    document.body.appendChild(overlay);
+        overlay.className = 'conteo-overlay';
+        document.body.appendChild(overlay);
 
     // Confeti (si la capa GSAP está disponible)
     if (Anim.confetti) Anim.confetti(window.innerWidth / 2, window.innerHeight * 0.4, 80);
 
         // Título
         const titulo = document.createElement('div');
+        titulo.className = 'conteo-title';
         titulo.textContent = '🃏 Conteo de cartas';
-        titulo.style.cssText = `
-            font-family:'Cormorant Garamond',serif;
-            font-size:1.6rem; font-weight:700; color:var(--gold);
-            text-shadow:0 0 20px rgba(200,160,69,.5);
-            letter-spacing:2px; margin-bottom:4px;
-            opacity:0; transform:translateY(-14px);
-            transition:opacity 320ms ease, transform 420ms cubic-bezier(.22,1,.36,1);
-        `;
         overlay.appendChild(titulo);
 
         // Contenedor de filas por jugador
         const rows = document.createElement('div');
-        rows.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(600px,95vw)';
+        rows.className = 'conteo-rows';
         overlay.appendChild(rows);
 
         requestAnimationFrame(() => {
@@ -1876,37 +1901,24 @@ async function showConteoCartas(manosFinales, ganadorIdx) {
         perdedores.forEach((m, pi) => {
             // Fila del jugador
             const row = document.createElement('div');
-            row.style.cssText = `
-                background:rgba(0,0,0,.4);
-                border:1px solid rgba(200,160,69,.2);
-                border-radius:12px; padding:12px 16px;
-                display:flex; flex-direction:column; gap:8px;
-                box-shadow:0 18px 34px rgba(0,0,0,.24);
-                opacity:0; transform:translateY(16px) scale(.985);
-                transition:opacity 260ms ease, transform 360ms cubic-bezier(.22,1,.36,1), border-color 220ms ease, box-shadow 220ms ease;
-            `;
+            row.className = 'conteo-row';
 
             // Header con nombre y total
             const header = document.createElement('div');
-            header.style.cssText = 'display:flex;align-items:center;justify-content:space-between';
+            header.className = 'conteo-row-head';
             const nombre = document.createElement('span');
+            nombre.className = 'conteo-row-name';
             nombre.textContent = m.nombre;
-            nombre.style.cssText = 'font-size:.9rem;color:var(--text);font-weight:600';
             const total = document.createElement('span');
+            total.className = 'conteo-total';
             total.textContent = '0 pts';
-            total.style.cssText = `
-                font-family:'Cormorant Garamond',serif;
-                font-size:1.3rem; font-weight:700; color:var(--gold);
-                min-width:80px; text-align:right;
-                transition:color .2s, transform .18s ease;
-            `;
             header.appendChild(nombre);
             header.appendChild(total);
             row.appendChild(header);
 
             // Cartas
             const cardsRow = document.createElement('div');
-            cardsRow.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-height:40px';
+            cardsRow.className = 'conteo-cards';
             row.appendChild(cardsRow);
             rows.appendChild(row);
 
@@ -2149,33 +2161,18 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
     const renderMiniCarta = ({ valor, palo, comodin = false, resaltada = false }) => {
         if (comodin) {
             return `
-                <div style="
-                    width:42px;height:58px;border-radius:10px;
-                    border:1px solid rgba(200,160,69,.45);
-                    background:linear-gradient(180deg,#4d2a80 0%,#2b153f 100%);
-                    box-shadow:${resaltada ? '0 10px 22px rgba(200,160,69,.22)' : '0 8px 18px rgba(0,0,0,.22)'};
-                    display:flex;flex-direction:column;align-items:center;justify-content:center;
-                    color:#ffe066;font-weight:800;font-size:1rem;
-                ">🃏<span style="font-size:.48rem;letter-spacing:.08em">JOKER</span></div>
+                <div class="mini-card joker${resaltada ? ' resaltada' : ''}">
+                    <span>🃏</span><span class="mc-lbl">JOKER</span>
+                </div>
             `;
         }
 
         const isRed = palo === '♥' || palo === '♦';
-        const ink = isRed ? '#d84c4c' : '#f4f1ea';
         return `
-            <div style="
-                width:42px;height:58px;border-radius:10px;
-                border:1px solid ${resaltada ? 'rgba(200,160,69,.55)' : 'rgba(255,255,255,.08)'};
-                background:linear-gradient(180deg,#fbfaf6 0%,#efe8db 100%);
-                box-shadow:${resaltada ? '0 10px 22px rgba(200,160,69,.22)' : '0 8px 18px rgba(0,0,0,.22)'};
-                color:${isRed ? '#d84c4c' : '#1d2430'};
-                position:relative;overflow:hidden;
-                display:flex;align-items:center;justify-content:center;
-                font-family:'Cormorant Garamond',serif;
-            ">
-                <div style="position:absolute;top:4px;left:5px;font-size:.72rem;line-height:.82; font-weight:700; text-align:left;">${valor}<br>${palo}</div>
-                <div style="font-size:1.22rem;font-weight:700;color:${ink};transform:translateY(2px)">${palo}</div>
-                <div style="position:absolute;right:5px;bottom:4px;font-size:.72rem;line-height:.82; font-weight:700; text-align:right; transform:rotate(180deg)">${valor}<br>${palo}</div>
+            <div class="mini-card natural${resaltada ? ' resaltada' : ''}" style="color:${isRed ? '#d84c4c' : '#1d2430'}">
+                <div class="mc-corner tl">${valor}<br>${palo}</div>
+                <div class="mc-suit" style="color:${isRed ? '#d84c4c' : '#1d2430'}">${palo}</div>
+                <div class="mc-corner br">${valor}<br>${palo}</div>
             </div>
         `;
     };
@@ -2209,48 +2206,32 @@ function mostrarSelectorPosicionJoker(cartaId, destJugadorIdx, destJugadaIdx, ju
 
     const modal = document.createElement('div');
     modal.id = 'joker-pos-modal';
-    modal.style.cssText = `
-        position: fixed; inset: 0; z-index: 9999;
-        display: flex; align-items: center; justify-content: center;
-        background: rgba(0,0,0,.7);
-    `;
+    modal.className = 'joker-modal-backdrop';
 
     const secuenciaHtml = jugada.cartas.map(c => renderMiniCarta(c)).join(`
-        <div style="display:flex;align-items:center;color:rgba(255,255,255,.32);font-size:1rem;margin:0 -1px">+</div>
+        <div class="joker-seq-sep">+</div>
     `);
 
     modal.innerHTML = `
-        <div style="
-            background: #1a2a1a;
-            border: 2px solid var(--gold, #c8a045);
-            border-radius: 10px;
-            padding: 18px 22px;
-            min-width: 260px;
-            max-width: 320px;
-            text-align: center;
-            box-shadow: 0 8px 32px rgba(0,0,0,.6);
-        ">
-            <div style="font-size:.72rem;color:#aaa;margin-bottom:6px">¿Dónde va el 🃏 Joker?</div>
-            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        <div class="joker-modal-box">
+            <div class="joker-modal-title">¿Dónde va el 🃏 Joker?</div>
+            <div class="joker-modal-seq">
                 ${secuenciaHtml}
             </div>
-            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:stretch">
-                ${lblBaja ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')"
-                    style="background:linear-gradient(180deg,#132217 0%,#101a12 100%);border:1px solid rgba(46,204,113,.45);color:#d7f7e4;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.8rem;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:104px;box-shadow:0 12px 24px rgba(0,0,0,.24)">
-                    <span style="font-size:.78rem;font-weight:700;letter-spacing:.03em">⬅ Baja</span>
+            <div class="joker-pos-actions">
+                ${lblBaja ? `<button class="joker-pos-btn" onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'baja')">
+                    <span class="lbl">⬅ Baja</span>
                     ${renderMiniCarta({ ...cartaBaja, resaltada: true })}
-                    <small style="font-size:.68rem;color:#8fd9af">${lblBaja}</small>
+                    <small>${lblBaja}</small>
                 </button>` : ''}
-                ${lblAlta ? `<button onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')"
-                    style="background:linear-gradient(180deg,#132217 0%,#101a12 100%);border:1px solid rgba(46,204,113,.45);color:#d7f7e4;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.8rem;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:104px;box-shadow:0 12px 24px rgba(0,0,0,.24)">
-                    <span style="font-size:.78rem;font-weight:700;letter-spacing:.03em">Alta ➡</span>
+                ${lblAlta ? `<button class="joker-pos-btn" onclick="window._confirmarPosJoker('${cartaId}',${destJugadorIdx},${destJugadaIdx},'alta')">
+                    <span class="lbl">Alta ➡</span>
                     ${renderMiniCarta({ ...cartaAlta, resaltada: true })}
-                    <small style="font-size:.68rem;color:#8fd9af">${lblAlta}</small>
+                    <small>${lblAlta}</small>
                 </button>` : ''}
-                ${!lblBaja && !lblAlta ? `<span style="color:#aaa;font-size:.75rem">Solo hay una posición posible</span>` : ''}
+                ${!lblBaja && !lblAlta ? `<span class="joker-modal-note">Solo hay una posición posible</span>` : ''}
             </div>
-            <button onclick="document.getElementById('joker-pos-modal').remove(); window.cancelIntercambio();"
-                style="margin-top:12px;background:transparent;border:none;color:#888;cursor:pointer;font-size:.72rem">
+            <button class="joker-cancel" onclick="document.getElementById('joker-pos-modal').remove(); window.cancelIntercambio();">
                 ✕ Cancelar
             </button>
         </div>
@@ -2536,6 +2517,15 @@ function renderPot() {
     if (potBanca) potBanca.textContent = `Banca · ${fmtChips(G.banca ?? 0)}`;
 }
 
+function updateHandScroll() {
+    const wrap = document.getElementById('hand-scroll-wrap');
+    const zone = document.getElementById('discard-zone');
+    if (!wrap || !zone) return;
+    const canScroll = zone.scrollWidth > zone.clientWidth + 4;
+    wrap.classList.toggle('can-scroll', canScroll);
+    wrap.classList.toggle('scrolled-end', canScroll && zone.scrollLeft + zone.clientWidth >= zone.scrollWidth - 8);
+}
+
 function render() {
     if (!G || myIdx < 0) return;
     const me = G.jugadores[myIdx];
@@ -2568,6 +2558,7 @@ function render() {
     renderOwnerConsole();
     restoreAnimatedBajadas();
     applyMySkin();
+    updateHandScroll();
     _lastRenderedTurn = G.turno;
     _turnJustChanged = false;
 }
@@ -2936,12 +2927,16 @@ function createCardElement(c, fromSlot = null) {
         el.innerHTML = `<div class="card-face joker-f"><span class="cv">🃏</span><span class="cs" style="font-size:.55rem">JOKER</span></div>`;
     } else {
         const sc = SUIT_CLS[c.palo] || '';
+        const fig = ['J', 'Q', 'K'].includes(c.valor);
+        const faceCls = ['A', 'J', 'Q', 'K'].includes(c.valor) ? ` face-${c.valor.toLowerCase()}` : '';
         el.innerHTML = `
-            <div class="card-face ${sc}">
+            <div class="card-face ${sc}${faceCls}">
                 <div class="corner tl">${c.valor}<br>${c.palo}</div>
-                <div class="cv">${c.palo}</div>
-                <div class="cs">${c.valor}</div>
+                <div class="corner tr">${c.valor}<br>${c.palo}</div>
+                <div class="corner bl">${c.valor}<br>${c.palo}</div>
                 <div class="corner br">${c.valor}<br>${c.palo}</div>
+                <div class="cv">${c.palo}</div>
+                <div class="cs${fig ? ' fig' : ''}">${fig ? '<i class="ph-fill ph-crown"></i>' : ''}${c.valor}</div>
             </div>`;
     }
 
@@ -3269,12 +3264,16 @@ function cFull(c, withId = true) {
         </div>`;
     }
     const sc = SUIT_CLS[c.palo] || '';
+    const fig = ['J', 'Q', 'K'].includes(c.valor);
+    const faceCls = ['A', 'J', 'Q', 'K'].includes(c.valor) ? ` face-${c.valor.toLowerCase()}` : '';
     return `<div class="card"${withId ? ` data-id="${c.id}"` : ''}>
-        <div class="card-face ${sc}">
+        <div class="card-face ${sc}${faceCls}">
             <div class="corner tl">${c.valor}<br>${c.palo}</div>
-            <div class="cv">${c.palo}</div>
-            <div class="cs">${c.valor}</div>
+            <div class="corner tr">${c.valor}<br>${c.palo}</div>
+            <div class="corner bl">${c.valor}<br>${c.palo}</div>
             <div class="corner br">${c.valor}<br>${c.palo}</div>
+            <div class="cv">${c.palo}</div>
+            <div class="cs${fig ? ' fig' : ''}">${fig ? '<i class="ph-fill ph-crown"></i>' : ''}${c.valor}</div>
         </div>
     </div>`;
 }
@@ -3367,7 +3366,7 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
     const fichasMap = {};
     (Array.isArray(fichas) ? fichas : []).forEach(f => { fichasMap[f.jugadorIdx] = f; });
     const bancaNote = (conApuesta && bancaRepartida && bancaRepartida.porJugador > 0)
-        ? `<div style="margin-top:2px;font-size:.66rem;color:var(--gold);text-align:center">🪙 Banca repartida: +${fmtChips(bancaRepartida.porJugador)} a ${bancaRepartida.ganadores.length > 1 ? `${bancaRepartida.ganadores.length} empatados` : 'el menor puntaje'}</div>`
+        ? `<div class="podio-banca-note">🪙 Banca repartida: +${fmtChips(bancaRepartida.porJugador)} a ${bancaRepartida.ganadores.length > 1 ? `${bancaRepartida.ganadores.length} empatados` : 'el menor puntaje'}</div>`
         : '';
     const podioColors = [
         { bg: 'linear-gradient(135deg,#c8a045,#7a5c00)', border: 'rgba(200,160,69,.8)', medal: '🥇', label: '1er lugar', glow: '0 0 30px rgba(200,160,69,.6)' },
@@ -3377,29 +3376,16 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
 
     const overlay = document.createElement('div');
     overlay.id = 'podio-overlay';
-    overlay.style.cssText = `
-        position:fixed; inset:0; z-index:9000;
-        background:rgba(0,0,0,.85); backdrop-filter:blur(6px);
-        display:flex; flex-direction:column; align-items:center;
-        justify-content:center; gap:20px; padding:24px;
-    `;
 
     // Título
     const titulo = document.createElement('div');
-    titulo.innerHTML = '<i class="ph ph-trophy" style="display:inline-flex;vertical-align:-.12em"></i> ¡Fin del juego!';
-    titulo.style.cssText = `
-        font-family:'Cormorant Garamond',serif;
-        font-size:clamp(2rem,6vw,3rem); font-weight:700;
-        color:var(--gold); letter-spacing:3px;
-        text-shadow:0 0 40px rgba(200,160,69,.6);
-        opacity:0; transform:translateY(-20px);
-        transition:all .5s ease;
-    `;
+    titulo.className = 'podio-title';
+    titulo.innerHTML = '<i class="ph ph-trophy"></i> ¡Fin del juego!';
     overlay.appendChild(titulo);
 
     // Podio cards
     const podioWrap = document.createElement('div');
-    podioWrap.style.cssText = 'display:flex;flex-direction:column;gap:10px;width:min(400px,92vw)';
+    podioWrap.className = 'podio-wrap';
     overlay.appendChild(podioWrap);
 
     if (bancaNote) {
@@ -3410,14 +3396,8 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
 
     // Botón nueva partida
     const btnWrap = document.createElement('div');
-    btnWrap.style.cssText = 'margin-top:8px;opacity:0;transition:opacity .5s ease .8s';
-    btnWrap.innerHTML = `<button onclick="startNewGameFromPodium()" style="
-        background:linear-gradient(135deg,var(--gold),#b8920a);
-        color:#0b1e12; border:none; border-radius:12px;
-        padding:14px 32px; font-size:1rem; font-weight:700;
-        cursor:pointer; letter-spacing:1px; text-transform:uppercase;
-        font-family:inherit;
-    ">Nueva Partida →</button>`;
+    btnWrap.className = 'podio-btn-wrap';
+    btnWrap.innerHTML = `<button class="podio-new-btn" onclick="startNewGameFromPodium()">Nueva Partida →</button>`;
     overlay.appendChild(btnWrap);
 
     document.body.appendChild(overlay);
@@ -3436,26 +3416,23 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
 
         setTimeout(() => {
             const card = document.createElement('div');
+            card.className = 'podio-card';
             card.style.cssText = `
                 background:${col.bg};
                 border:2px solid ${col.border};
-                border-radius:14px; padding:16px 20px;
-                display:flex; align-items:center; gap:14px;
                 box-shadow:${col.glow};
-                opacity:0; transform:translateX(-30px);
-                transition:all .4s cubic-bezier(.22,1,.36,1);
             `;
 
             card.innerHTML = `
-                <div style="font-size:${i===0?'2.2rem':'1.6rem'};line-height:1">${col.medal}</div>
+                <div class="podio-medal" style="font-size:${i===0?'2.2rem':'1.6rem'}">${col.medal}</div>
                 <div style="flex:1">
-                    <div style="font-size:${i===0?'1.1rem':'.95rem'};font-weight:700;color:#fff">${j.nombre}</div>
-                    <div style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px">${col.label}</div>
+                    <div class="podio-name" style="font-size:${i===0?'1.1rem':'.95rem'}">${j.nombre}</div>
+                    <div class="podio-label">${col.label}</div>
                 </div>
-                <div style="text-align:right">
-                    ${fichasMap[j.idx] != null ? `<div style="font-size:.78rem;font-weight:700;color:#ffe08a">🪙 ${fmtChips(fichasMap[j.idx].fichas)}</div>` : ''}
-                    ${fichasMap[j.idx] != null ? `<div style="font-size:.64rem;font-weight:700;color:${fichasMap[j.idx].ganancia >= 0 ? '#6bcf77' : '#ffb3a0'}">${fichasMap[j.idx].ganancia >= 0 ? '+' : ''}${fmtChips(fichasMap[j.idx].ganancia)}</div>` : ''}
-                    <div style="font-family:'Cormorant Garamond',serif;font-size:${i===0?'1.6rem':'1.2rem'};font-weight:700;color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
+                <div class="podio-right">
+                    ${fichasMap[j.idx] != null ? `<div class="podio-chips">🪙 ${fmtChips(fichasMap[j.idx].fichas)}</div>` : ''}
+                    ${fichasMap[j.idx] != null ? `<div class="podio-ganancia" style="color:${fichasMap[j.idx].ganancia >= 0 ? '#6bcf77' : '#ffb3a0'}">${fichasMap[j.idx].ganancia >= 0 ? '+' : ''}${fmtChips(fichasMap[j.idx].ganancia)}</div>` : ''}
+                    <div class="podio-pts" style="font-size:${i===0?'1.6rem':'1.2rem'};color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
                 </div>
             `;
 
@@ -3481,6 +3458,8 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
 function toast(msg, type = 'red') {
     const t = document.getElementById('toast');
     if (!t) return;
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
     t.textContent = msg;
     t.classList.remove('toast-green', 'toast-yellow', 'toast-red', 'show');
     t.classList.add(type === 'green' ? 'toast-green' : type === 'yellow' ? 'toast-yellow' : 'toast-red');

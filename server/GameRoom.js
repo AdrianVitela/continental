@@ -263,7 +263,7 @@ class GameRoom {
       });
     }
 
-    if (result.event === 'fin_juego') this._persistirFichas();
+      if (result.event === 'fin_juego') { this._persistirFichas(); this._registrarPartida(); }
 
     return result;
   }
@@ -276,7 +276,7 @@ class GameRoom {
       this.readyAcks.clear();
       const result = this.engine.finalizarRonda();
       this._broadcastState(result.event, result.data);
-      if (result.event === 'fin_juego') this._persistirFichas();
+    if (result.event === 'fin_juego') { this._persistirFichas(); this._registrarPartida(); }
     } else {
       const readyPlayerIds = connected.filter(id => this.readyAcks.has(id));
       this._broadcastState('esperando_siguiente_ronda', {
@@ -301,6 +301,34 @@ class GameRoom {
       } catch (e) {
         console.error('[ROOM]', this.code, 'error persistiendo fichas de', j.nombre, e.message);
       }
+    }
+  }
+
+  // Registra el resultado final de una partida para estadísticas y ranking.
+  async _registrarPartida() {
+    if (!this.engine || !this.engine.jugadores.length) return;
+    const jugadores = this.engine.jugadores;
+    const posiciones = [...jugadores]
+      .sort((a, b) => (a.pts_t - b.pts_t) || ((b.fichas - b.fichasInicio) - (a.fichas - a.fichasInicio)))
+      .map(j => j.id);
+    try {
+      const { rows } = await pool.query(
+        'INSERT INTO partidas (codigo, con_apuesta, ronda) VALUES ($1, $2, $3) RETURNING id',
+        [this.code, this.conApuesta, this.engine.ronda]
+      );
+      const partidaId = rows[0].id;
+      for (const j of jugadores) {
+        await pool.query(
+          `INSERT INTO partidas_jugadores
+             (partida_id, user_id, nombre, posicion, pts_totales, fichas_inicio, fichas_final, ganancia)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [partidaId, j.userId || null, j.nombre, posiciones.indexOf(j.id) + 1, j.pts_t,
+           j.fichasInicio, j.fichas, j.fichas - j.fichasInicio]
+        );
+      }
+      console.log('[ROOM]', this.code, 'partida registrada id', partidaId, 'jugadores', jugadores.length);
+    } catch (e) {
+      console.error('[ROOM]', this.code, 'error registrando partida', e.message);
     }
   }
 

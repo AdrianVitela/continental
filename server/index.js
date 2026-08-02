@@ -63,6 +63,39 @@ async function ensureDatabaseSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS partidas (
+      id            SERIAL PRIMARY KEY,
+      codigo        VARCHAR(5),
+      con_apuesta   BOOLEAN DEFAULT FALSE,
+      ronda         SMALLINT DEFAULT 7,
+      created_at    TIMESTAMP DEFAULT NOW(),
+      finished_at   TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partidas_jugadores (
+      id             SERIAL PRIMARY KEY,
+      partida_id     INTEGER REFERENCES partidas(id) ON DELETE CASCADE,
+      user_id        INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+      nombre         VARCHAR(30),
+      posicion       SMALLINT,
+      pts_totales    INTEGER,
+      fichas_inicio  BIGINT,
+      fichas_final   BIGINT,
+      ganancia       BIGINT
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_pj_user    ON partidas_jugadores(user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_pj_partida ON partidas_jugadores(partida_id)
+  `);
+
+  await pool.query(`
     UPDATE usuarios
     SET skin = 'clasico'
     WHERE skin IS NULL OR skin = ''
@@ -184,7 +217,18 @@ wss.on('connection', (ws, req) => {
   ws.lastPongAt = Date.now();
   clients.set(ws, { playerId: null, roomCode: null, nombre: null, auth: null });
 
-  ws.on('message', async (raw) => {
+  ws.on('message', (raw) => {
+    // Cola por socket: los mensajes se procesan en orden. El `auth` es async
+    // (verifica el JWT contra la BD); sin esta cola, mensajes posteriores
+    // (create_room / join_room) podían ejecutarse antes de completar el auth
+    // y quedar con ctx.userId = null, degradando skin/badge a 'clasico'.
+    const queue = ws._msgQueue || Promise.resolve();
+    ws._msgQueue = queue
+      .then(() => handleWsMessage(ws, raw))
+      .catch(err => console.error('[index] error en cola ws.message', err));
+  });
+
+  async function handleWsMessage(ws, raw) {
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     const ctx = clients.get(ws);
@@ -303,11 +347,24 @@ wss.on('connection', (ws, req) => {
 
           const { badge: joinBadge, skin: joinSkin, rol: joinRole, chips: joinChips } = await fetchPlayerProfile(ctx.userId, safeNombre);
 
-          if (room.conApuesta && (!Number.isInteger(joinChips) || joinChips < 100)) {
+          const effectiveChips = ctx.userId ? joinChips : (existingSeat ? existingSeat.chips : null);
+          if (room.conApuesta && (!Number.isInteger(effectiveChips) || effectiveChips < 100)) {
             return send(ws, { type: 'error', msg: 'Necesitas al menos 100 fichas para entrar a una mesa con apuesta.' });
           }
 
-          const player = room.addPlayer(playerId, safeNombre, ws, joinBadge, joinSkin, joinRole, ctx.userId, joinChips);
+          // Si el cliente no viene autenticado (ctx.userId null) pero retoma un
+          // asiento existente, conservar su perfil (skin/badge/rol) en lugar de
+          // degradarlo a 'clasico'.
+          const player = room.addPlayer(
+            playerId,
+            safeNombre,
+            ws,
+            ctx.userId ? joinBadge : (existingSeat ? existingSeat.badge : null),
+            ctx.userId ? joinSkin  : (existingSeat ? existingSeat.skin  : 'clasico'),
+            ctx.userId ? joinRole  : (existingSeat ? existingSeat.rol   : 'jugador'),
+            ctx.userId,
+            ctx.userId ? joinChips : (existingSeat ? existingSeat.chips : null)
+          );
           if (!player) return send(ws, { type: 'error', msg: 'Sala llena o ya iniciada.' });
 
           ctx.playerId = player.id;
@@ -425,7 +482,7 @@ wss.on('connection', (ws, req) => {
       console.error('[index] Excepción no capturada en ws.message, tipo:', msg?.type, err);
       try { send(ws, { type: 'error', msg: 'Error interno del servidor.' }); } catch (_) {}
     }
-  });
+  }
 
   ws.on('close', (code, reason) => {
     const ctx = clients.get(ws);

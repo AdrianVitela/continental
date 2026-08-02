@@ -80,6 +80,9 @@ const Anim = (() => {
       preScale = 1.05,
       rotateStart = 0,
       rotateEnd = (Math.random() - .5) * 6,
+      rotateYStart = 0,
+      rotateYEnd = 0,
+      perspective = null,
       zIndex = 9999,
       borderRadius = 'var(--r)',
       startBoxShadow = '0 8px 28px rgba(0,0,0,.6)',
@@ -105,13 +108,14 @@ const Anim = (() => {
       ghost.classList.add(...extraClassName.trim().split(/\s+/).filter(Boolean));
     }
 
+    const persp = perspective != null ? `perspective(${perspective}px) ` : '';
     ghost.style.cssText = `
       position:fixed; z-index:${zIndex}; pointer-events:none;
       width:${src.width}px; height:${src.height}px;
       left:${src.left}px; top:${src.top}px;
       border-radius:${borderRadius};
       box-shadow:${startBoxShadow};
-      transform:scale(${preScale}) rotate(${rotateStart}deg);
+      transform:${persp}scale(${preScale}) rotateY(${rotateYStart}deg) rotate(${rotateStart}deg);
       transition:none;
       ${extraStyle}
     `;
@@ -124,7 +128,7 @@ const Anim = (() => {
     ghost.style.top = `${dst.top}px`;
     ghost.style.width = `${dst.width}px`;
     ghost.style.height = `${dst.height}px`;
-    ghost.style.transform = `scale(1) rotate(${rotateEnd}deg)`;
+    ghost.style.transform = `${persp}scale(1) rotateY(${rotateYEnd}deg) rotate(${rotateEnd}deg)`;
     if (endBoxShadow) ghost.style.boxShadow = endBoxShadow;
 
     await wait(holdMs ?? Math.max(durationMs - 20, 0));
@@ -176,6 +180,27 @@ const Anim = (() => {
 
     await wait(flightMs);
     ghost.remove();
+
+    // Feedback al aterrizar en el fondo: sonido + partículas + anillo dorado
+    if (typeof SFX !== 'undefined' && SFX.play) { try { SFX.play('pagar'); } catch (e) {} }
+    if (fondoEl) {
+      const fr = fondoEl.getBoundingClientRect();
+      const cx = fr.left + fr.width / 2;
+      const cy = fr.top + fr.height / 2;
+      spawnParticles(cx, cy, 8);
+      const ring = document.createElement('div');
+      ring.style.cssText = `
+        position: fixed; pointer-events: none; z-index: 9998;
+        left: ${cx}px; top: ${cy}px;
+        width: 10px; height: 10px; margin: -5px 0 0 -5px;
+        border-radius: 50%;
+        border: 2px solid rgba(200,160,69,.8);
+        box-shadow: 0 0 12px rgba(200,160,69,.6);
+        animation: pagoRing .45s cubic-bezier(.22,1,.36,1) forwards;
+      `;
+      document.body.appendChild(ring);
+      setTimeout(() => ring.remove(), 500);
+    }
   }
 
   // Efecto de barajeo en el mazo antes de repartir

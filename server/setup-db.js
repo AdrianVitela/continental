@@ -53,6 +53,39 @@ async function crearTablas() {
     ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partidas (
+      id            SERIAL PRIMARY KEY,
+      codigo        VARCHAR(5),
+      con_apuesta   BOOLEAN DEFAULT FALSE,
+      ronda         SMALLINT DEFAULT 7,
+      created_at    TIMESTAMP DEFAULT NOW(),
+      finished_at   TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partidas_jugadores (
+      id             SERIAL PRIMARY KEY,
+      partida_id     INTEGER REFERENCES partidas(id) ON DELETE CASCADE,
+      user_id        INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+      nombre         VARCHAR(30),
+      posicion       SMALLINT,
+      pts_totales    INTEGER,
+      fichas_inicio  BIGINT,
+      fichas_final   BIGINT,
+      ganancia       BIGINT
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_pj_user    ON partidas_jugadores(user_id)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS idx_pj_partida ON partidas_jugadores(partida_id)
+  `);
+
   console.log('✅ Tablas creadas correctamente');
   await pool.end();
 }

@@ -283,4 +283,67 @@ router.post('/me/revocar', rateLimit({ max: 5, windowMs: 10 * 60 * 1000, message
   }
 });
 
+// ── GET /api/stats ───────────────────────────────────────────────
+// Estadísticas acumuladas del usuario autenticado + historial reciente.
+router.get('/stats', async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization);
+    const stats = await pool.query(`
+      SELECT
+        COUNT(*)::int                                     AS partidas,
+        COUNT(*) FILTER (WHERE p.con_apuesta)::int        AS con_apuesta,
+        COALESCE(SUM(pj.ganancia), 0)::int                AS ganancia_total,
+        COALESCE(SUM(pj.pts_totales), 0)::int             AS pts_totales,
+        COUNT(*) FILTER (WHERE pj.posicion = 1)::int      AS victorias,
+        MAX(p.finished_at)                                AS ultima_partida
+      FROM partidas_jugadores pj
+      JOIN partidas p ON p.id = pj.partida_id
+      WHERE pj.user_id = $1
+    `, [payload.id]);
+    const historial = await pool.query(`
+      SELECT p.id, p.codigo, p.con_apuesta, p.ronda, p.finished_at,
+             pj.posicion, pj.pts_totales, pj.ganancia
+        FROM partidas_jugadores pj
+        JOIN partidas p ON p.id = pj.partida_id
+       WHERE pj.user_id = $1
+       ORDER BY p.finished_at DESC
+       LIMIT 15
+    `, [payload.id]);
+    res.json({ ...stats.rows[0], historial: historial.rows });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'No autorizado.' });
+  }
+});
+
+// ── GET /api/ranking ─────────────────────────────────────────────
+// Top de jugadores por victorias / ganancia + la posición del usuario.
+router.get('/ranking', async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization);
+    const top = await pool.query(`
+      SELECT u.id, u.nombre, u.badge, u.skin,
+             COUNT(pj.id)::int                                        AS partidas,
+             COUNT(pj.id) FILTER (WHERE pj.posicion = 1)::int         AS victorias,
+             COALESCE(SUM(pj.ganancia), 0)::int                       AS ganancia_total,
+             COALESCE(SUM(pj.pts_totales), 0)::int                    AS pts_totales
+        FROM usuarios u
+        LEFT JOIN partidas_jugadores pj ON pj.user_id = u.id
+       GROUP BY u.id, u.nombre, u.badge, u.skin
+      HAVING COUNT(pj.id) > 0
+       ORDER BY victorias DESC, ganancia_total DESC, pts_totales ASC
+       LIMIT 20
+    `);
+    const yo = await pool.query(`
+      SELECT COUNT(*)::int AS partidas,
+             COUNT(*) FILTER (WHERE pj.posicion = 1)::int AS victorias,
+             COALESCE(SUM(pj.ganancia), 0)::int AS ganancia_total
+        FROM partidas_jugadores pj
+       WHERE pj.user_id = $1
+    `, [payload.id]);
+    res.json({ ranking: top.rows, yo: { ...yo.rows[0], id: payload.id } });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'No autorizado.' });
+  }
+});
+
 module.exports = router;

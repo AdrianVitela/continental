@@ -6,6 +6,7 @@ const pool     = require('./db');
 const router = express.Router();
 const { middleware: rateLimit, rateLimitHit, isRateLimited } = require('./rate-limit');
 const { signUserToken, verifyAuthorized, incrementTokenVersion } = require('./jwt-utils');
+const { progresoNivel, tituloNivel } = require('./logros');
 
 const NAME_RE  = /^[A-Za-z0-9áéíóúÁÉÍÓÚñÑüÜ ]{2,18}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -111,7 +112,7 @@ router.get('/me', async (req, res) => {
     const payload = await verifyAuthorized(req.headers.authorization);
 
     const result = await pool.query(
-      'SELECT id, nombre, badge, rol, skin, chips, created_at FROM usuarios WHERE id = $1',
+      'SELECT id, nombre, badge, rol, skin, chips, xp, nivel, created_at FROM usuarios WHERE id = $1',
       [payload.id]
     );
     if (result.rows.length === 0)
@@ -119,6 +120,12 @@ router.get('/me', async (req, res) => {
 
     const u = result.rows[0];
     if (u.chips != null) u.chips = Number(u.chips);
+    const prog = progresoNivel(u.xp);
+    u.xp = Number(u.xp || 0);
+    u.nivel = u.nivel || prog.nivel;
+    u.xpEnNivel = prog.xpEnNivel;
+    u.xpParaSiguiente = prog.xpParaSiguiente;
+    u.tituloNivel = tituloNivel(u.nivel);
     res.json({ usuario: u });
 
   } catch (err) {
@@ -321,14 +328,14 @@ router.get('/ranking', async (req, res) => {
   try {
     const payload = await verifyAuthorized(req.headers.authorization);
     const top = await pool.query(`
-      SELECT u.id, u.nombre, u.badge, u.skin,
+      SELECT u.id, u.nombre, u.badge, u.skin, u.nivel,
              COUNT(pj.id)::int                                        AS partidas,
              COUNT(pj.id) FILTER (WHERE pj.posicion = 1)::int         AS victorias,
              COALESCE(SUM(pj.ganancia), 0)::int                       AS ganancia_total,
              COALESCE(SUM(pj.pts_totales), 0)::int                    AS pts_totales
         FROM usuarios u
         LEFT JOIN partidas_jugadores pj ON pj.user_id = u.id
-       GROUP BY u.id, u.nombre, u.badge, u.skin
+       GROUP BY u.id, u.nombre, u.badge, u.skin, u.nivel
       HAVING COUNT(pj.id) > 0
        ORDER BY victorias DESC, ganancia_total DESC, pts_totales ASC
        LIMIT 20
@@ -341,6 +348,59 @@ router.get('/ranking', async (req, res) => {
        WHERE pj.user_id = $1
     `, [payload.id]);
     res.json({ ranking: top.rows, yo: { ...yo.rows[0], id: payload.id } });
+  } catch (err) {
+    res.status(err.status || 401).json({ error: err.message || 'No autorizado.' });
+  }
+});
+
+// ── GET /api/logros ─────────────────────────────────────────────
+// Nivel del usuario + catálogo de logros con su progreso personal.
+router.get('/logros', async (req, res) => {
+  try {
+    const payload = await verifyAuthorized(req.headers.authorization);
+
+    const u = await pool.query('SELECT xp, nivel FROM usuarios WHERE id = $1', [payload.id]);
+    if (!u.rows[0]) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const nivelData = progresoNivel(u.rows[0].xp);
+
+    const logros = await pool.query(
+      'SELECT id, clave, nombre, descripcion, tipo, meta, icono, xp, fichas, titulo, orden FROM logros ORDER BY orden'
+    );
+    const userProg = await pool.query(
+      'SELECT logro_id, progreso, completado, completado_at FROM logros_usuario WHERE user_id = $1',
+      [payload.id]
+    );
+    const progMap = new Map(userProg.rows.map(r => [r.logro_id, r]));
+
+    const lista = logros.rows.map(l => {
+      const p = progMap.get(l.id);
+      return {
+        clave: l.clave,
+        nombre: l.nombre,
+        descripcion: l.descripcion,
+        tipo: l.tipo,
+        meta: l.meta,
+        icono: l.icono,
+        xp: l.xp,
+        fichas: l.fichas,
+        titulo: l.titulo,
+        orden: l.orden,
+        progreso: p?.progreso ?? 0,
+        completado: p?.completado ?? false,
+        completado_at: p?.completado_at ?? null,
+      };
+    });
+
+    res.json({
+      nivel: nivelData.nivel,
+      titulo: tituloNivel(nivelData.nivel),
+      xpTotal: nivelData.xpTotal,
+      xpEnNivel: nivelData.xpEnNivel,
+      xpParaSiguiente: nivelData.xpParaSiguiente,
+      pct: nivelData.pct,
+      logros: lista,
+    });
   } catch (err) {
     res.status(err.status || 401).json({ error: err.message || 'No autorizado.' });
   }

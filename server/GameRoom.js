@@ -2,6 +2,7 @@
 const { GameEngine } = require('./GameEngine');
 const { randomUUID } = require('crypto');
 const pool = require('./db');
+const { aplicarLogrosPartida } = require('./logros');
 
 const ROOM_TIMEOUT_MS  = 6 * 60 * 60 * 1000;
 const ANTE_MIN_JOIN    = 100;
@@ -19,6 +20,7 @@ class GameRoom {
     this.engine     = null;
     this.createdAt  = Date.now();
     this.host       = host;
+    this._partidaRegistrada = false;
 
     this.addPlayer(host.id, host.nombre, host.ws, host.badge || null, host.skin || 'clasico', host.rol || 'jugador', host.userId || null, host.chips);
   }
@@ -304,31 +306,72 @@ class GameRoom {
     }
   }
 
-  // Registra el resultado final de una partida para estadísticas y ranking.
+  // Registra el resultado final de una partida para estadísticas, ranking,
+  // XP y logros. Corre en una transacción y guarda una sola vez por partida.
   async _registrarPartida() {
+    if (this._partidaRegistrada) return;
     if (!this.engine || !this.engine.jugadores.length) return;
+    this._partidaRegistrada = true;
+
     const jugadores = this.engine.jugadores;
     const posiciones = [...jugadores]
       .sort((a, b) => (a.pts_t - b.pts_t) || ((b.fichas - b.fichasInicio) - (a.fichas - a.fichasInicio)))
       .map(j => j.id);
+
+    const client = await pool.connect();
     try {
-      const { rows } = await pool.query(
+      await client.query('BEGIN');
+
+      const { rows } = await client.query(
         'INSERT INTO partidas (codigo, con_apuesta, ronda) VALUES ($1, $2, $3) RETURNING id',
         [this.code, this.conApuesta, this.engine.ronda]
       );
       const partidaId = rows[0].id;
+
       for (const j of jugadores) {
-        await pool.query(
+        await client.query(
           `INSERT INTO partidas_jugadores
-             (partida_id, user_id, nombre, posicion, pts_totales, fichas_inicio, fichas_final, ganancia)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+             (partida_id, user_id, nombre, posicion, pts_totales, fichas_inicio, fichas_final, ganancia,
+              bajo_tercia, bajo_corrida, castigos, se_castigo)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
           [partidaId, j.userId || null, j.nombre, posiciones.indexOf(j.id) + 1, j.pts_t,
-           j.fichasInicio, j.fichas, j.fichas - j.fichasInicio]
+           j.fichasInicio, j.fichas, j.fichas - j.fichasInicio,
+           Boolean(j.bajoTercia), Boolean(j.bajoCorrida), j.fuePenalizado ? 1 : 0,
+           Boolean(j.seCastigo)]
         );
       }
+
+      const progresos = new Map();
+      for (const j of jugadores) {
+        if (!j.userId) continue;
+        try {
+          const prog = await aplicarLogrosPartida(client, partidaId, j.userId, {
+            posicion: posiciones.indexOf(j.id) + 1,
+            ronda: this.engine.ronda,
+            conApuesta: this.conApuesta,
+          });
+          progresos.set(j.userId, prog);
+        } catch (e) {
+          console.error('[ROOM]', this.code, 'error aplicando logros de', j.nombre, e.message);
+        }
+      }
+
+      await client.query('COMMIT');
+
+      for (const j of jugadores) {
+        const prog = progresos.get(j.userId);
+        if (!prog) continue;
+        const player = this.players.find(p => p.userId === j.userId);
+        this._send(player, prog);
+      }
+
       console.log('[ROOM]', this.code, 'partida registrada id', partidaId, 'jugadores', jugadores.length);
     } catch (e) {
+      await client.query('ROLLBACK');
+      this._partidaRegistrada = false;
       console.error('[ROOM]', this.code, 'error registrando partida', e.message);
+    } finally {
+      client.release();
     }
   }
 

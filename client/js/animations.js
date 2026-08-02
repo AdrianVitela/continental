@@ -49,10 +49,10 @@ const Anim = (() => {
     const {
       opacityDuration = 80,
       scaleDuration = 200,
-      scaleFrom = 1.15,
-      scaleTo = 1,
-      easing = 'cubic-bezier(.34,1.56,.64,1)',
-      settleDelay = 80,
+      scaleFrom = 1.06,
+      rotateYFrom = 68,
+      easing = 'cubic-bezier(.22,1,.36,1)',
+      settleDelay = 60,
     } = opts;
 
     const opacityMs = scaleMs(opacityDuration, motion.reveal);
@@ -61,9 +61,13 @@ const Anim = (() => {
 
     targetEl.style.transition = `opacity ${opacityMs}ms ease, transform ${scaleMsValue}ms ${easing}`;
     targetEl.style.opacity = '1';
-    targetEl.style.transform = `scale(${scaleFrom})`;
+    targetEl.style.transform = `perspective(560px) rotateY(${rotateYFrom}deg) scale(${scaleFrom})`;
     setTimeout(() => {
-      targetEl.style.transform = `scale(${scaleTo})`;
+      targetEl.style.transform = 'perspective(560px) rotateY(0deg) scale(1)';
+      setTimeout(() => {
+        targetEl.style.transition = '';
+        targetEl.style.transform = '';
+      }, scaleMsValue + 50);
     }, settleMs);
   }
 
@@ -123,13 +127,41 @@ const Anim = (() => {
 
     await wait(16);
 
-    ghost.style.transition = `all ${durationMs}ms cubic-bezier(.22,1,.36,1)`;
-    ghost.style.left = `${dst.left}px`;
-    ghost.style.top = `${dst.top}px`;
-    ghost.style.width = `${dst.width}px`;
-    ghost.style.height = `${dst.height}px`;
-    ghost.style.transform = `${persp}scale(1) rotateY(${rotateYEnd}deg) rotate(${rotateEnd}deg)`;
-    if (endBoxShadow) ghost.style.boxShadow = endBoxShadow;
+    const dx = dst.left - src.left;
+    const dy = dst.top - src.top;
+    const arc = Math.max(34, Math.min(120, Math.hypot(dx, dy) * 0.28));
+
+    if (typeof ghost.animate === 'function') {
+      // Vuelo con arco (Web Animations API)
+      const midRotateY = rotateYStart + (rotateYEnd - rotateYStart) * 0.5;
+      const midRotate = rotateStart + (rotateEnd - rotateStart) * 0.5;
+      ghost.animate([
+        {
+          transform: `${persp}translate(0,0) scale(${preScale}) rotateY(${rotateYStart}deg) rotate(${rotateStart}deg)`,
+          width: `${src.width}px`, height: `${src.height}px`,
+          boxShadow: startBoxShadow,
+        },
+        {
+          transform: `${persp}translate(${dx / 2}px, ${dy / 2 - arc}px) scale(1) rotateY(${midRotateY}deg) rotate(${midRotate}deg)`,
+          width: `${(src.width + dst.width) / 2}px`, height: `${(src.height + dst.height) / 2}px`,
+          boxShadow: startBoxShadow,
+          offset: 0.5,
+        },
+        {
+          transform: `${persp}translate(${dx}px, ${dy}px) scale(1) rotateY(${rotateYEnd}deg) rotate(${rotateEnd}deg)`,
+          width: `${dst.width}px`, height: `${dst.height}px`,
+          boxShadow: endBoxShadow || startBoxShadow,
+        },
+      ], { duration: durationMs, easing: 'cubic-bezier(.28,.6,.4,1)', fill: 'forwards' });
+    } else {
+      ghost.style.transition = `all ${durationMs}ms cubic-bezier(.22,1,.36,1)`;
+      ghost.style.left = `${dst.left}px`;
+      ghost.style.top = `${dst.top}px`;
+      ghost.style.width = `${dst.width}px`;
+      ghost.style.height = `${dst.height}px`;
+      ghost.style.transform = `${persp}scale(1) rotateY(${rotateYEnd}deg) rotate(${rotateEnd}deg)`;
+      if (endBoxShadow) ghost.style.boxShadow = endBoxShadow;
+    }
 
     await wait(holdMs ?? Math.max(durationMs - 20, 0));
     ghost.remove();
@@ -184,6 +216,7 @@ const Anim = (() => {
     // Feedback al aterrizar en el fondo: sonido + partículas + anillo dorado
     if (typeof SFX !== 'undefined' && SFX.play) { try { SFX.play('pagar'); } catch (e) {} }
     if (fondoEl) {
+      bumpElement(fondoEl, 1.06, 240);
       const fr = fondoEl.getBoundingClientRect();
       const cx = fr.left + fr.width / 2;
       const cy = fr.top + fr.height / 2;
@@ -297,6 +330,7 @@ const Anim = (() => {
       const land = () => {
         if (resolved) return;
         spawnParticles(dstX, dstY, 5);
+        bumpElement(potEl, 1.06, 240);
         if (--pending <= 0) {
           resolved = true;
           clearTimeout(safety);
@@ -402,6 +436,23 @@ const Anim = (() => {
     setTimeout(() => num.remove(), scaleMs(950, motion.speed));
   }
 
+  // Bump (rebote) one-shot sobre un elemento al aterrizar
+  function bumpElement(el, scale = 1.06, ms = 220) {
+    if (!el) return;
+    let base = '';
+    try {
+      const cs = getComputedStyle(el).transform;
+      if (cs && cs !== 'none' && cs !== 'matrix(1, 0, 0, 1, 0, 0)') base = `${cs} `;
+    } catch { /* noop */ }
+    try {
+      el.animate([
+        { transform: `${base}scale(1)` },
+        { transform: `${base}scale(${scale})`, offset: 0.5 },
+        { transform: `${base}scale(1)` },
+      ], { duration: ms, easing: 'cubic-bezier(.22,1,.36,1)' });
+    } catch { /* noop */ }
+  }
+
   // Partículas doradas al aterrizar
   function spawnParticles(x, y, count = 12) {
     const colors = ['#c8a045', '#ffe066', '#fff4c2', '#f0c040', '#ffffff'];
@@ -440,7 +491,8 @@ const Anim = (() => {
     dealAnim, 
     betChipsToPot,
     floatScore, 
-    spawnParticles
+    spawnParticles,
+    bumpElement
   };
 })();
 

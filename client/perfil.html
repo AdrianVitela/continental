@@ -26,8 +26,9 @@
         linear-gradient(180deg, #12301f 0%, #0b1e12 100%);
     }
     body::before { content: none; }
+    html, body { height: 100%; overflow: hidden; }
 
-    .hub-shell { display: flex; min-height: 100vh; }
+    .hub-shell { display: flex; height: 100vh; }
 
     /* Sidebar (idéntico al lobby) */
     .sidebar {
@@ -42,6 +43,7 @@
       position: sticky;
       top: 0;
       height: 100vh;
+      overflow-y: auto;
       z-index: 400;
     }
     .side-logo {
@@ -106,6 +108,14 @@
     }
     .side-user-name { font-size: .88rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .side-user-badge { font-size: .66rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .06em; }
+    .badge-diamante {
+      background: linear-gradient(115deg, #f2faff, #a8e6ff 20%, #d8f6ff 35%, #6fd3ff 55%, #c8eeff 75%, #f2faff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent !important;
+      text-shadow: 0 0 12px rgba(140,220,255,.5);
+      font-weight: 700;
+    }
     .side-logout {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 8px;
@@ -127,6 +137,8 @@
       display: flex;
       flex-direction: column;
       padding: 36px clamp(20px, 4vw, 56px) 60px;
+      height: 100vh;
+      overflow-y: auto;
     }
     .hub-top {
       display: flex;
@@ -509,55 +521,131 @@
     .danger-zone .panel-head h3 { color: #ff9a8c; }
     .danger-zone .panel-head h3 i { color: #ff6b5e; }
 
+    /* Niveles y logros */
+    .nivel-card {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 18px;
+      background: linear-gradient(160deg, rgba(200,160,69,.1), rgba(255,255,255,.02));
+      border: 1px solid rgba(200,160,69,.25);
+      border-radius: 14px;
+    }
+    .nivel-badge {
+      width: 64px; height: 64px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.7rem; font-weight: 700;
+      background: radial-gradient(circle at 30% 30%, #c8a045, #6b4e10 58%, #3d2e00);
+      color: #fff;
+      border: 2px dashed rgba(255,220,140,.65);
+      box-shadow: 0 0 0 4px rgba(200,160,69,.18), inset 0 -4px 8px rgba(0,0,0,.4);
+    }
+    .nivel-info { flex: 1; min-width: 0; }
+    .nivel-title { font-size: 1rem; color: var(--gold); font-weight: 700; }
+    .nivel-xp-text { font-size: .78rem; color: var(--text-dim); margin: 3px 0 8px; }
+    .xp-bar {
+      height: 10px; border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(200,160,69,.2);
+      overflow: hidden;
+    }
+    .xp-bar-fill {
+      height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, #8a6d1f, #c8a045, #ffe066);
+      transition: width .6s var(--eout);
+      width: 0;
+    }
+    .nivel-restante { font-size: .7rem; color: var(--text-muted); margin-top: 6px; }
+
+    .logros-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 1200px) { .logros-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 900px) { .logros-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 620px) { .logros-grid { grid-template-columns: repeat(2, 1fr); } }
+    .logros-pager {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .pager-btn {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; line-height: 1;
+      color: var(--gold-hi);
+      background: rgba(200,160,69,.1);
+      border: 1px solid rgba(200,160,69,.3);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    .pager-btn:hover:not(:disabled) { background: rgba(200,160,69,.2); }
+    .pager-btn:disabled { opacity: .3; cursor: default; }
+    @keyframes logroTileIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: none; }
+    }
+    .logro-tile.page-in { animation: logroTileIn .45s var(--eout) both; }
+    .logro-tile {
+      display: flex; gap: 11px; align-items: flex-start;
+      padding: 12px 13px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      transition: all .2s ease;
+    }
+    .logro-tile .logro-icon {
+      width: 36px; height: 36px; flex-shrink: 0;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      color: var(--text-dim);
+    }
+    .logro-tile.completed { border-color: rgba(200,160,69,.4); background: rgba(200,160,69,.06); box-shadow: 0 0 0 1px rgba(200,160,69,.06); }
+    .logro-tile.completed .logro-icon { color: var(--gold-hi); background: rgba(200,160,69,.14); border-color: rgba(200,160,69,.35); animation: completedGlow 3.2s ease-in-out infinite; }
+    @keyframes completedGlow {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(200,160,69,.18), 0 0 8px rgba(200,160,69,.10); }
+      50%      { box-shadow: 0 0 0 1px rgba(200,160,69,.4),  0 0 18px rgba(200,160,69,.30); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .logro-tile.completed .logro-icon { animation: none; }
+      .logro-tile.page-in { animation: none; }
+    }
+    .logro-tile .logro-name { font-size: .82rem; font-weight: 600; color: var(--text); }
+    .logro-tile .logro-desc { font-size: .7rem; color: var(--text-muted); margin-top: 2px; line-height: 1.35; }
+    .logro-prog { margin-top: 7px; }
+    .logro-prog .xp-bar { height: 6px; }
+    .logro-prog span { font-size: .66rem; color: var(--text-muted); }
+    .logro-reward { margin-top: 5px; font-size: .66rem; color: var(--gold-dim); display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .nivel-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: .66rem;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: rgba(200,160,69,.1);
+      border: 1px solid rgba(200,160,69,.25);
+      color: var(--gold);
+    }
+
     /* Navegador interno de secciones (solo en el perfil) */
     .profile-layout { display: flex; gap: 26px; align-items: flex-start; }
     .profile-body { flex: 1; min-width: 0; }
     .profile-layout [id] { scroll-margin-top: 26px; }
-    .profile-sidenav {
-      width: 178px;
-      flex-shrink: 0;
-      position: sticky;
-      top: 26px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      padding: 14px 12px;
-      background: rgba(11, 26, 17, .55);
-      border: 1px solid rgba(200,160,69,.14);
-      border-radius: 14px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 18px 40px rgba(0,0,0,.22);
-      animation: fadeUp .55s var(--eout) both;
-    }
-    .ps-title {
-      font-size: .6rem;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      color: var(--text-muted);
-      font-weight: 600;
-      padding: 0 10px 8px;
-    }
-    .ps-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 10px;
-      border-radius: 9px;
-      color: var(--text-dim);
-      font-size: .8rem;
-      text-decoration: none;
-      border: 1px solid transparent;
-      transition: background .15s ease, color .15s ease, border-color .15s ease;
-      cursor: pointer;
-      user-select: none;
-    }
-    .ps-link i { font-size: .95rem; }
-    .ps-link:hover { background: rgba(200,160,69,.08); color: var(--gold-hi); }
-    .ps-link.active {
-      background: rgba(200,160,69,.14);
-      border-color: rgba(200,160,69,.22);
-      color: var(--gold-hi);
-    }
 
     /* Toast */
     .toast {
@@ -603,7 +691,8 @@
 
     /* Responsive */
     @media (max-width: 860px) {
-      .hub-shell { flex-direction: column; }
+      html, body { height: auto; overflow: visible; }
+      .hub-shell { flex-direction: column; height: auto; }
       .sidebar {
         position: sticky;
         top: 0;
@@ -624,20 +713,9 @@
       .side-user { display: none; }
       .side-logout { padding: 8px 10px; }
       .side-logout span { display: none; }
-      .hub-main { padding: 24px 16px 40px; }
+      .hub-main { padding: 24px 16px 40px; height: auto; overflow-y: visible; }
       .profile-layout { flex-direction: column; }
       .profile-layout [id] { scroll-margin-top: 96px; }
-      .profile-sidenav {
-        position: static;
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 4px;
-        padding: 10px 12px;
-        top: auto;
-      }
-      .ps-title { width: 100%; padding: 0 8px 6px; }
     }
     @media (max-width: 560px) {
       .profile-hero { flex-direction: column; align-items: center; text-align: center; }
@@ -711,6 +789,7 @@
           <div class="profile-meta">
             <span class="rol-pill" id="profile-rol">—</span>
             <span class="badge-pill" id="profile-badge" style="display:none">—</span>
+            <span class="nivel-pill" id="profile-nivel"><i class="ph ph-trend-up"></i>Nivel 1</span>
             <span class="profile-email" id="profile-email">—</span>
           </div>
           <div class="profile-since" id="profile-since"></div>
@@ -783,6 +862,26 @@
           </div>
         </div>
       </section>
+      <!-- Niveles y logros -->
+      <section id="sec-niveles" class="panel" style="margin-bottom:18px">
+        <div class="panel-head"><h3><i class="ph ph-trend-up"></i>Niveles y logros</h3></div>
+        <div class="panel-body">
+          <div class="nivel-card">
+            <div class="nivel-badge" id="nivel-badge">1</div>
+            <div class="nivel-info">
+              <div class="nivel-title" id="nivel-titulo">Novato</div>
+              <div class="nivel-xp-text" id="nivel-xp-text">0 / 100 XP</div>
+              <div class="xp-bar"><div class="xp-bar-fill" id="xp-bar-fill"></div></div>
+              <div class="nivel-restante" id="nivel-restante"></div>
+            </div>
+          </div>
+          <div class="logros-grid" id="logros-grid"></div>
+          <div class="logros-pager" id="logros-pager" style="display:none">
+            <button class="pager-btn" id="logros-prev" onclick="pagLogros(-1)" title="Anterior">‹</button>
+            <button class="pager-btn" id="logros-next" onclick="pagLogros(1)" title="Siguiente">›</button>
+          </div>
+        </div>
+      </section>
       <section id="sec-pref" class="panel" style="margin-bottom:18px">
         <div class="panel-head"><h3><i class="ph ph-sliders-horizontal"></i>Preferencias</h3></div>
         <div class="panel-body">
@@ -830,16 +929,6 @@
 
         </div><!-- /.profile-body -->
 
-        <nav class="profile-sidenav" aria-label="Secciones del perfil">
-          <div class="ps-title">En esta página</div>
-          <a class="ps-link" data-sec="sec-hero"><i class="ph ph-user-circle"></i>Tu perfil</a>
-          <a class="ps-link" data-sec="sec-identidad"><i class="ph ph-user-pen"></i>Identidad</a>
-          <a class="ps-link" data-sec="sec-pers"><i class="ph ph-palette"></i>Cartas</a>
-          <a class="ps-link" data-sec="sec-stats"><i class="ph ph-chart-line-up"></i>Estadísticas</a>
-          <a class="ps-link" data-sec="sec-pref"><i class="ph ph-sliders-horizontal"></i>Preferencias</a>
-          <a class="ps-link" data-sec="sec-sesion"><i class="ph ph-shield-warning"></i>Sesión</a>
-        </nav>
-
       </div><!-- /.profile-layout -->
     </main>
   </div>
@@ -883,7 +972,9 @@
       const nombre = u.nombre || '';
       const el = (id) => document.getElementById(id);
       el('user-display').textContent = nombre;
-      el('user-badge').textContent = BADGE_LABELS[u.badge] || '';
+      const badgeEl2 = el('user-badge');
+      badgeEl2.textContent = BADGE_LABELS[u.badge] || '';
+      badgeEl2.classList.toggle('badge-diamante', badgeToneClass(u.badge) === 'badge-diamante');
       el('btn-admin').style.display = u.rol === 'owner' ? 'flex' : 'none';
       el('side-avatar').textContent = BADGE_EMOJI[u.badge] || (nombre ? nombre[0].toUpperCase() : '?');
       el('profile-name').textContent = nombre;
@@ -896,9 +987,11 @@
       const badgeEl = el('profile-badge');
       if (u.badge && BADGE_LABELS[u.badge]) {
         badgeEl.style.display = 'inline-flex';
+        badgeEl.classList.toggle('badge-diamante', badgeToneClass(u.badge) === 'badge-diamante');
         badgeEl.textContent = (BADGE_EMOJI[u.badge] || '') + ' ' + BADGE_LABELS[u.badge];
       } else {
         badgeEl.style.display = 'none';
+        badgeEl.classList.remove('badge-diamante');
       }
       el('email-static').textContent = u.email || '—';
       el('fichas-static').textContent = fmtChips(u.chips);
@@ -906,6 +999,7 @@
       el('profile-since').innerHTML = '<i class="ph ph-clock"></i>Con nosotros desde ' + formatFecha(u.created_at);
       el('nombre-input').value = nombre;
       el('profile-pill').textContent = u.rol === 'owner' ? 'Owner' : 'Jugador';
+      el('profile-nivel').innerHTML = '<i class="ph ph-trend-up"></i>Nivel ' + (u.nivel || 1);
     }
 
     async function cargarDatos () {
@@ -926,6 +1020,7 @@
         initPrefs();
         initDate();
         cargarStats();
+        cargarLogros();
       } catch {
         toast('Error al cargar tus datos.', 'err');
       }
@@ -935,34 +1030,6 @@
       const f = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
       document.getElementById('profile-date').innerHTML = '<i class="ph ph-calendar-blank"></i>' + (f.charAt(0).toUpperCase() + f.slice(1));
     }
-
-    /* ── Navegador interno de secciones ─────────────────────── */
-    (function initSectionNav () {
-      const links = Array.from(document.querySelectorAll('.ps-link'));
-      const targets = links.map(a => document.getElementById(a.dataset.sec)).filter(Boolean);
-      if (!links.length || !targets.length) return;
-
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(en => {
-          if (en.isIntersecting) {
-            links.forEach(a => a.classList.toggle('active', a.dataset.sec === en.target.id));
-          }
-        });
-      }, { rootMargin: '-35% 0px -55% 0px' });
-      targets.forEach(t => observer.observe(t));
-
-      links[0].classList.add('active');
-
-      links.forEach(a => {
-        a.addEventListener('click', e => {
-          e.preventDefault();
-          const t = document.getElementById(a.dataset.sec);
-          if (!t) return;
-          t.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          history.replaceState(null, '', '#' + a.dataset.sec);
-        });
-      });
-    })();
 
     /* ── Nombre ─────────────────────────────────────────────── */
     function showNombreMsg (kind, text) {
@@ -1056,6 +1123,114 @@
         const res = await fetch('/api/stats', { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) return;
         renderStats(await res.json());
+      } catch {}
+    }
+
+    /* ── Niveles y logros ─────────────────────────────────────── */
+    function animarBarraXP (fill, xpText, objetivoPct, xpEnNivel, xpParaSiguiente, dur = 600) {
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const fmt = n => Number(n).toLocaleString('es-MX');
+      const poner = (v, texto) => {
+        if (fill) fill.style.width = v + '%';
+        if (xpText) xpText.textContent = texto;
+      };
+      if (reduce || !fill) {
+        poner(objetivoPct, `${fmt(xpEnNivel)} / ${fmt(xpParaSiguiente)} XP`);
+        return;
+      }
+      const from = parseFloat(fill.style.width) || 0;
+      const t0 = performance.now();
+      const ease = t => 1 - Math.pow(1 - t, 3);
+      fill.style.transition = 'none';
+      const step = now => {
+        const p = Math.min(1, (now - t0) / dur);
+        const v = from + (objetivoPct - from) * ease(p);
+        const xpActual = objetivoPct > 0 ? Math.round(xpEnNivel * v / objetivoPct) : 0;
+        poner(v, `${fmt(Math.min(xpActual, xpEnNivel))} / ${fmt(xpParaSiguiente)} XP`);
+        if (p < 1) requestAnimationFrame(step);
+        else fill.style.transition = '';
+      };
+      requestAnimationFrame(step);
+    }
+
+    function renderNivel (d) {
+      const pct = d.xpParaSiguiente > 0
+        ? Math.min(100, Math.round((d.xpEnNivel / d.xpParaSiguiente) * 100))
+        : 100;
+      const rest = d.xpParaSiguiente - d.xpEnNivel;
+      document.getElementById('nivel-badge').textContent = d.nivel;
+      document.getElementById('nivel-titulo').textContent = d.titulo || 'Novato';
+      const xpText = document.getElementById('nivel-xp-text');
+      animarBarraXP(document.getElementById('xp-bar-fill'), xpText, pct, Number(d.xpEnNivel) || 0, Number(d.xpParaSiguiente) || 0);
+      document.getElementById('nivel-restante').textContent =
+        rest > 0 ? `${Number(rest).toLocaleString('es-MX')} XP para el nivel ${d.nivel + 1}`
+                 : `Nivel máximo alcanzado`;
+    }
+
+    const LOGROS_POR_PAGINA = 15;
+    let logrosPaginas = [];
+    let logrosPagina = 0;
+
+    function renderLogros (lista) {
+      const grid = document.getElementById('logros-grid');
+      const pager = document.getElementById('logros-pager');
+      if (!grid) return;
+      logrosPaginas = [];
+      for (let i = 0; i < lista.length; i += LOGROS_POR_PAGINA) {
+        logrosPaginas.push(lista.slice(i, i + LOGROS_POR_PAGINA));
+      }
+      logrosPagina = 0;
+      pintarLogrosPagina();
+      if (pager) {
+        pager.style.display = logrosPaginas.length > 1 ? 'flex' : 'none';
+        pintarLogrosBotones();
+      }
+    }
+
+    function pintarLogrosPagina () {
+      const grid = document.getElementById('logros-grid');
+      const pagina = logrosPaginas[logrosPagina] || [];
+      grid.innerHTML = pagina.map((l, i) => {
+        const done = l.completado_at;
+        const pct = l.meta > 0 ? Math.min(100, Math.round((l.progreso / l.meta) * 100)) : (done ? 100 : 0);
+        return `<div class="logro-tile ${done ? 'completed' : ''} page-in" style="animation-delay:${Math.min(i * 35, 500)}ms">
+          <div class="logro-icon"><i class="ph ph-${l.icono}"></i></div>
+          <div style="flex:1;min-width:0">
+            <div class="logro-name${l.clave === 'partida_perfecta' ? ' badge-diamante' : ''}">${l.nombre}${l.titulo ? ' <span style="color:var(--gold)">· «' + (BADGE_LABELS[l.titulo] || l.titulo) + '»</span>' : ''}</div>
+            <div class="logro-desc">${l.descripcion}</div>
+            ${l.meta > 0 ? `<div class="logro-prog"><div class="xp-bar"><div class="xp-bar-fill" style="width:${pct}%"></div></div><span>${Math.min(l.progreso, l.meta)} / ${l.meta}</span></div>` : ''}
+            <div class="logro-reward">
+              <span>🏅 +${l.xp} XP</span>
+              <span>🪙 +${Number(l.fichas).toLocaleString('es-MX')}</span>
+              ${l.titulo ? `<span>🎖️ Título</span>` : ''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function pintarLogrosBotones () {
+      const prev = document.getElementById('logros-prev');
+      const next = document.getElementById('logros-next');
+      if (prev) prev.disabled = logrosPagina <= 0;
+      if (next) next.disabled = logrosPagina >= logrosPaginas.length - 1;
+    }
+
+    function pagLogros (dir) {
+      const nueva = logrosPagina + dir;
+      if (nueva < 0 || nueva >= logrosPaginas.length) return;
+      logrosPagina = nueva;
+      pintarLogrosPagina();
+      pintarLogrosBotones();
+    }
+
+    async function cargarLogros () {
+      try {
+        const res = await fetch('/api/logros', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderNivel(data);
+        renderLogros(data.logros || []);
       } catch {}
     }
 

@@ -18,8 +18,24 @@ const SKINS = [
   { id: 'marfil',     label: '🎖️ Marfil',   bg: 'linear-gradient(135deg,#8a7b63,#4a4134,#e6d8bc,#4a4134)', border: 'rgba(240,225,194,.62)', free: false, roles: ['early_adopter'] },
 ];
 
-const BADGE_EMOJI = { 'owner': '👑', 'beta_tester': '🧪', 'early_adopter': '🎖️', 'vip': '⭐' };
-const BADGE_LABELS = { 'owner': 'Owner', 'beta_tester': 'Beta Tester', 'early_adopter': 'Early Adopter', 'vip': 'VIP' };
+const BADGE_EMOJI = {
+  'owner': '👑', 'beta_tester': '🧪', 'early_adopter': '🎖️', 'vip': '⭐',
+  'veterano': '🎖️', 'leyenda': '👑', 'imparable': '🔥', 'invencible': '🏆',
+  'magnate': '💰', 'perfecto': '💎', 'dios_continental': '🏛️', 'inmortal': '♾️',
+  'ahorrativo': '🪙',
+};
+const BADGE_LABELS = {
+  'owner': 'Owner', 'beta_tester': 'Beta Tester', 'early_adopter': 'Early Adopter', 'vip': 'VIP',
+  'veterano': 'Veterano', 'leyenda': 'Leyenda', 'imparable': 'Imparable',
+  'invencible': 'Invencible', 'magnate': 'Magnate', 'perfecto': 'Perfecto',
+  'dios_continental': 'Dios del Continental', 'inmortal': 'Inmortal', 'ahorrativo': 'Ahorrativo',
+};
+
+// Clase extra para estilizar el título de badges especiales (p. ej. "Perfecto" en diamante).
+function badgeToneClass(badge) {
+  return badge === 'perfecto' ? 'badge-diamante' : '';
+}
+window.badgeToneClass = badgeToneClass;
 
 function hasAccessToSkin (skin) {
   if (skin.free) return true;

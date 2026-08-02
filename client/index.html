@@ -26,6 +26,7 @@
                 linear-gradient(180deg, #12301f 0%, #0b1e12 100%);
         }
         body::before { content: none; }
+        html, body { height: auto; overflow-x: hidden; overflow-y: auto; }
 
         /* ============================================================
            SIDEBAR
@@ -110,6 +111,14 @@
         }
         .side-user-name { font-size: .88rem; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .side-user-badge { font-size: .66rem; color: var(--gold-dim); text-transform: uppercase; letter-spacing: .06em; }
+        .badge-diamante {
+            background: linear-gradient(115deg, #f2faff, #a8e6ff 20%, #d8f6ff 35%, #6fd3ff 55%, #c8eeff 75%, #f2faff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent !important;
+            text-shadow: 0 0 12px rgba(140,220,255,.5);
+            font-weight: 700;
+        }
         .side-logout {
             display: flex; align-items: center; justify-content: center; gap: 8px;
             padding: 8px;
@@ -414,6 +423,24 @@
         }
         .side-user-chips i { color: var(--gold-dim); }
         .side-user-chips strong { font-weight: 700; letter-spacing: .3px; }
+        .side-user-level { margin-top: 5px; }
+        .nivel-mini {
+            display: inline-block;
+            font-size: .6rem; font-weight: 700; letter-spacing: 1px;
+            color: var(--gold); background: rgba(200,160,69,.12);
+            border: 1px solid rgba(200,160,69,.28);
+            border-radius: 999px; padding: 1px 8px;
+        }
+        .xp-mini-bar {
+            height: 5px; margin-top: 4px; border-radius: 999px;
+            background: rgba(255,255,255,.07);
+            border: 1px solid rgba(200,160,69,.2); overflow: hidden;
+        }
+        .xp-mini-fill {
+            height: 100%; width: 0; border-radius: 999px;
+            background: linear-gradient(90deg, #8a6d1f, #c8a045, #ffe066);
+            transition: width .6s ease;
+        }
         .room-bet-tag {
             display: inline-flex; align-items: center; gap: 4px;
             font-size: .66rem; color: var(--gold-hi);
@@ -460,9 +487,13 @@
             background: rgba(255,255,255,.04);
             border: 1px solid rgba(255,255,255,.08);
             border-radius: 11px;
-            transition: background .15s ease, border-color .15s ease;
+            transition: background .18s var(--eout), border-color .18s var(--eout), transform .18s var(--eout);
+            animation: fadeUp .4s var(--eout) backwards;
         }
-        .room-row:hover { background: rgba(200,160,69,.07); border-color: rgba(200,160,69,.28); }
+        .room-row:hover { background: rgba(200,160,69,.07); border-color: rgba(200,160,69,.28); transform: translateY(-2px); }
+        @media (prefers-reduced-motion: reduce) {
+            .room-row, .rooms-modal, .rooms-empty { animation: none !important; }
+        }
         .room-table-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
         .room-table-dot[data-color="green"] { background: #1f7a4d; }
         .room-table-dot[data-color="navy"]  { background: #2a4a7a; }
@@ -811,6 +842,7 @@
                     <div style="min-width:0">
                         <div class="side-user-name" id="user-display">—</div>
                         <div class="side-user-badge" id="user-badge"></div>
+                        <div class="side-user-level" id="user-level"><span class="nivel-mini">Nivel 1</span><div class="xp-mini-bar"><div class="xp-mini-fill" id="xp-mini-fill"></div></div></div>
                         <div class="side-user-chips"><i class="ph ph-coins"></i><strong id="user-chips">0</strong> fichas</div>
                     </div>
                 </div>
@@ -1175,7 +1207,10 @@
             const avatarEl = document.getElementById('side-avatar');
             const nombre = user.nombre || '';
             if (displayEl) displayEl.textContent = nombre;
-            if (badgeEl) badgeEl.textContent = BADGE_LABELS[user.badge] || '';
+            if (badgeEl) {
+                badgeEl.textContent = BADGE_LABELS[user.badge] || '';
+                badgeEl.classList.toggle('badge-diamante', badgeToneClass(user.badge) === 'badge-diamante');
+            }
             if (adminBtn) adminBtn.style.display = user.rol === 'owner' ? 'flex' : 'none';
             if (greetEl) greetEl.textContent = nombre;
             if (avatarEl) avatarEl.textContent = BADGE_EMOJI[user.badge] || (nombre ? nombre[0].toUpperCase() : '?');
@@ -1189,6 +1224,32 @@
                 const f = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
                 dateEl.innerHTML = '<i class="ph ph-calendar-blank"></i>' + (f.charAt(0).toUpperCase() + f.slice(1));
             }
+            renderNivelUi(user);
+            if (user.xpEnNivel == null) hydrateNivel(user);
+        }
+
+        function renderNivelUi(user) {
+            const levelEl = document.getElementById('user-level');
+            const fillEl = document.getElementById('xp-mini-fill');
+            if (!levelEl || !fillEl) return;
+            levelEl.querySelector('.nivel-mini').textContent = 'Nivel ' + (user.nivel || 1);
+            const en = user.xpEnNivel, para = user.xpParaSiguiente;
+            const pct = para > 0 ? Math.min(100, Math.round((en / para) * 100)) : 100;
+            fillEl.style.width = (isFinite(pct) ? pct : 0) + '%';
+        }
+
+        async function hydrateNivel(user) {
+            try {
+                const res = await fetch('/api/me', { headers: { Authorization: 'Bearer ' + window.AUTH?.token } });
+                if (!res.ok) return;
+                const data = await res.json();
+                const u = data.usuario;
+                if (!u) return;
+                const merged = { ...user, ...u };
+                window.AUTH = { ...window.AUTH, usuario: merged };
+                localStorage.setItem('usuario', JSON.stringify(merged));
+                renderNivelUi(merged);
+            } catch {}
         }
 
         // Mostrar info de usuario

@@ -297,9 +297,10 @@ function renderRoomsList (rooms, loading = false) {
     return;
   }
   const tableColorName = { green: 'Verde', navy: 'Azul', wine: 'Vino', black: 'Negro' };
-  list.innerHTML = rooms.map(r => {
+  list.innerHTML = rooms.map((r, i) => {
     const full = r.playerCount >= r.maxPlayers;
     const sinFichas = r.conApuesta && myChips < 100;
+    const delay = Math.min(i * 60, 500);
     const meta = `
       <span>${r.playerCount}/${r.maxPlayers} jugadores</span>
       <span class="room-table-dot" data-color="${r.tableColor}" style="display:inline-block;width:8px;height:8px;border-radius:50%"></span>
@@ -308,7 +309,7 @@ function renderRoomsList (rooms, loading = false) {
       ${r.hot ? '<span class="room-flame"><i class="ph ph-fire"></i>Caliente</span>' : ''}
     `;
     return `
-      <div class="room-row ${full ? 'full' : ''}">
+      <div class="room-row ${full ? 'full' : ''}" style="animation-delay:${delay}ms">
         <div class="room-info">
           <div class="room-host"><i class="ph ph-user-circle"></i> ${esc(r.host)}</div>
           <div class="room-meta">${meta}</div>
@@ -710,6 +711,15 @@ function updateLobbyState (lobbyState) {
     'beta_tester':   { emoji: '🧪', label: 'Beta Tester' },
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
+    'veterano':      { emoji: '🎖️', label: 'Veterano' },
+    'leyenda':       { emoji: '👑', label: 'Leyenda' },
+    'imparable':     { emoji: '🔥', label: 'Imparable' },
+    'invencible':    { emoji: '🏆', label: 'Invencible' },
+    'magnate':       { emoji: '💰', label: 'Magnate' },
+    'perfecto':      { emoji: '💎', label: 'Perfecto' },
+    'dios_continental': { emoji: '🏛️', label: 'Dios del Continental' },
+    'inmortal':      { emoji: '♾️', label: 'Inmortal' },
+    'ahorrativo':    { emoji: '🪙', label: 'Ahorrativo' },
   };
   const SKIN_AVATAR_BG = {
     'clasico':   'linear-gradient(135deg,#1a3a80,#0d2050)',

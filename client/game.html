@@ -564,17 +564,12 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   z-index: 0;
 }
 
-/* OPONENTES: sentados en el arco superior del fieltro */
+/* OPONENTES: sentados alrededor del óvalo */
 .opponents-row {
   position: absolute;
-  top: 6%;
-  left: 6%;
-  right: 6%;
+  inset: 0;
   z-index: 3;
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
+  pointer-events: none;
 }
 
 .opp {
@@ -583,10 +578,12 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   border-radius: 12px;
   padding: 6px 10px 8px;
   text-align: center;
-  min-width: 96px;
+  min-width: 0;
   max-width: 230px;
-  position: relative;
-  overflow: visible !important;
+  position: absolute;
+  translate: -50% -50%;
+  pointer-events: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -597,13 +594,31 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
 }
 .opp.turn   {
   border-color: var(--gold);
-  background: linear-gradient(180deg, rgba(200,160,69,.14), rgba(0,0,0,.34));
+  background: linear-gradient(120deg, rgba(200,160,69,.14), rgba(0,0,0,.34), rgba(200,160,69,.14));
+  background-size: 220% 100%;
+  animation: turnSweep 1.7s linear infinite;
   box-shadow: 0 0 14px rgba(200,160,69,.3), 0 5px 16px rgba(0,0,0,.42), inset 0 0 0 1px rgba(255,230,150,.07);
   transform: translateY(-2px);
 }
 .opp.turn.turn-arrive { animation: turnPulse .58s cubic-bezier(.22,1,.36,1); }
 .opp.bajado { border-color: #2a8a4a; }
-.opp-name   { font-size: .68rem; color: var(--text-dim); white-space: nowrap; }
+
+/* Sacudida + flash (castigo / bajada en falso) */
+.player-shake { animation: playerShake .5s cubic-bezier(.36,.07,.19,.97) both; }
+.player-flash-red { animation: playerFlashRed .6s ease; }
+@keyframes playerShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes playerFlashRed {
+  0%   { box-shadow: 0 0 0 rgba(220,60,60,0); }
+  30%  { box-shadow: 0 0 26px rgba(220,60,60,.85), inset 0 0 12px rgba(220,60,60,.4); border-color: rgba(220,80,80,.9); }
+  100% { box-shadow: 0 0 0 rgba(220,60,60,0); }
+}
+.opp-name   { font-size: .68rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 1; }
 .opp-backs  { display: flex; gap: 2px; justify-content: center; flex-wrap: wrap; }
 .cback-xs {
   width: 12px; height: 17px; border-radius: 2px;
@@ -615,30 +630,58 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   overflow: hidden;
 }
 
-/* Jugadas del oponente, delante de su asiento */
-.opp-plays {
+/* Bajadas sobre el fieltro, frente a cada asiento */
+#felt-plays {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.seat-plays {
+  position: absolute;
+  translate: -50% -50%;
   display: flex;
-  gap: 5px;
+  width: max-content;
+  max-width: 30%;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
-  margin-top: 4px;
+  align-items: center;
+  pointer-events: auto;
 }
-.opp-plays .bajada-pile {
+.seat-plays .bajada-pile {
   background: rgba(0,0,0,.28);
   border: 1px solid rgba(255,255,255,.09);
   border-radius: 6px;
   padding: 3px;
 }
-.opp-plays .bajada-pile-label { font-size: 0.46rem; }
-.opp-plays .bajada-pile-cards { gap: 1px; }
-.opp-plays .card-sm,
-.opp-plays .joker-sm {
-  width: calc(var(--cw-sm) * 0.6);
-  height: calc(var(--ch-sm) * 0.6);
-  font-size: 0.5rem;
-  border-radius: 3px;
+.seat-plays .bajada-pile-label { font-size: 0.52rem; }
+.seat-plays .bajada-pile-cards { gap: 2px; }
+.seat-plays .card-sm,
+.seat-plays .joker-sm {
+  width: calc(var(--cw-sm) * var(--plays-scale, 1.1));
+  height: calc(var(--ch-sm) * var(--plays-scale, 1.1));
+  font-size: 0.75rem;
+  border-radius: 4px;
 }
-.opp-plays .joker-sm small { font-size: 5px !important; }
+.seat-plays .joker-sm small { font-size: 8px !important; }
+
+/* Bajada de asientos laterales (n=5): un poco más pequeña para no invadir el centro */
+.seat-plays.sp--side {
+  max-width: 26%;
+  --plays-scale: 0.95;
+}
+.seat-plays.sp--side .card-sm,
+.seat-plays.sp--side .joker-sm { font-size: 0.68rem; }
+
+/* Mi bajada (anillo inferior): misma escala que antes */
+.seat-plays.sp--me {
+  max-width: 72%;
+  --plays-scale: 1.875;
+}
+.seat-plays.sp--me .card-sm,
+.seat-plays.sp--me .joker-sm { font-size: 1.05rem; border-radius: 6px; }
+.seat-plays.sp--me .bajada-pile { background: rgba(0,0,0,.22); border: 2px solid rgba(46,204,113,.22); }
 
 /* ===== CENTRO DEL FIELTRO: MAZO Y FONDO ===== */
 .felt-center {
@@ -744,7 +787,14 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   justify-content: center;
   gap: 6px;
   margin-bottom: 4px;
+  min-width: 0;
 }
+.opp--tiny { padding: 3px 6px 4px; }
+.opp--tiny .opp-top { margin-bottom: 0; gap: 3px; }
+.opp--tiny .opp-avatar { width: 16px; height: 16px; font-size: .58rem; }
+.opp--tiny .opp-backs,
+.opp--tiny .opp-meta,
+.opp--tiny .opp-jugadas { display: none; }
 .opp-avatar {
   width: 20px;
   height: 20px;
@@ -876,6 +926,11 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   50%     { border-color: #4de88a; box-shadow: 0 0 16px rgba(46,204,113,.4); }
 }
 
+@keyframes turnSweep {
+  0%   { background-position: 210% 0; }
+  100% { background-position: -30% 0; }
+}
+
 /* ===== MEJORAS UI: transición de ronda ===== */
 .round-changed #ronda-pill,
 .round-changed .round-dots {
@@ -916,7 +971,9 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   transition: box-shadow .22s var(--eout), background .22s var(--eout), transform .22s var(--eout);
 }
 .player-header.my-turn {
-  background: linear-gradient(90deg, rgba(200,160,69,.16), rgba(200,160,69,.04), transparent);
+  background: linear-gradient(90deg, rgba(200,160,69,.16), rgba(200,160,69,.04), transparent, rgba(200,160,69,.12));
+  background-size: 220% 100%;
+  animation: turnSweep 2s linear infinite;
   border-radius: 10px;
   box-shadow: inset 0 0 0 1px rgba(200,160,69,.18), 0 0 24px rgba(200,160,69,.08);
 }
@@ -946,20 +1003,6 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   line-height: 1.2;
 }
 .row-desc { font-size: 0.5rem; color: var(--text-dim); text-transform: none; }
-
-/* TU BAJADA (solo visible cuando estás bajado) */
-.my-plays {
-  display: flex;
-  gap: 6px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  padding: 4px 10px 2px;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-.my-plays .bajada-pile { background: rgba(0,0,0,.22); border: 2px solid rgba(46,204,113,.22); }
 
 /* FILA 1: SOBRANTES */
 .discard-zone {
@@ -1333,6 +1376,11 @@ html.theme-black, body.theme-black  { --felt: #1a1a1a; --felt-deep: #0a0a0a; }
   transition: transform .16s var(--eout), box-shadow .16s;
 }
 .podio-new-btn:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 14px 30px rgba(200,160,69,.35); }
+.podio-card.podio-winner-glow { animation: podioWinnerGlow 1.8s ease-in-out infinite; }
+@keyframes podioWinnerGlow {
+  0%,100% { box-shadow: 0 0 12px rgba(200,160,69,.3), 0 0 0 1px rgba(200,160,69,.4); }
+  50%     { box-shadow: 0 0 30px rgba(200,160,69,.7), 0 0 0 1px rgba(200,160,69,.55); }
+}
 
 /* ===== CONTEO DE CARTAS ===== */
 .conteo-overlay {
@@ -1411,10 +1459,60 @@ select:focus-visible {
   box-shadow: 0 12px 30px rgba(180,50,50,.24);
 }
 
+/* ===== NOTIFICACIONES (logros / XP / nivel) ===== */
+#notif-stack {
+  position: fixed; top: 14px; right: 14px; z-index: 9600;
+  display: flex; flex-direction: column; gap: 10px;
+  width: min(340px, calc(100vw - 28px));
+  pointer-events: none;
+}
+.notif-card {
+  pointer-events: auto;
+  position: relative; overflow: hidden;
+  background: linear-gradient(160deg, rgba(24,44,30,.97), rgba(12,26,17,.97));
+  border: 1px solid rgba(200,160,69,.35);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex; gap: 12px; align-items: center;
+  box-shadow: 0 12px 32px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04) inset;
+}
+.notif-card.level { border-color: rgba(255,224,102,.6); }
+.notif-card::after {
+  content: ''; position: absolute; left: 0; bottom: 0; height: 2px;
+  background: linear-gradient(90deg, var(--gold), var(--gold-hi));
+  animation: notifProgress 4s linear forwards;
+}
+.notif-card.level::after { background: linear-gradient(90deg, #ffe066, #c8a045); }
+.notif-icon {
+  width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.35rem; line-height: 1;
+  background: rgba(200,160,69,.14);
+  border: 1px solid rgba(200,160,69,.3);
+  color: var(--gold-hi);
+}
+.notif-icon .ph { font-size: 1.35rem; }
+.notif-body { flex: 1; min-width: 0; }
+.notif-title { font-size: .8rem; font-weight: 700; color: var(--gold-hi); }
+.notif-desc { font-size: .72rem; color: var(--text-dim); line-height: 1.4; margin-top: 2px; }
+.notif-xp { font-size: .7rem; font-weight: 700; color: #ffe08a; white-space: nowrap; }
+@keyframes notifIn {
+  from { opacity: 0; transform: translateX(64px) scale(.92); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes notifOut {
+  to { opacity: 0; transform: translateX(64px) scale(.92); }
+}
+@keyframes notifProgress { from { width: 100%; } to { width: 0%; } }
+
 /* ===== ANIMACIONES ===== */
 @keyframes pulse {
   0%,100% { opacity:1; transform:scale(1); }
   50%      { opacity:.4; transform:scale(.65); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opp.turn, .player-header.my-turn { animation: none; }
+  .player-shake { animation: none; }
 }
 @keyframes pagoRing {
   0%   { opacity: .9; transform: scale(.4); }
@@ -1857,8 +1955,11 @@ select:focus-visible {
   .guide-topbar-btn { order: 5; width: auto; margin-left: auto; padding: 5px 10px; }
   .owner-console-panel { max-height: min(34vh, 280px); }
   .tb-title { font-size: 0.92rem; }
-  .opp { min-width: 62px; padding: 4px 7px; }
+  .opp { min-width: 0; padding: 4px 7px; }
   .opp-name { font-size: 0.6rem; }
+  .opp-backs,
+  .opp-meta,
+  .opp-jugadas { display: none; }
   .cback-xs { width: 10px; height: 14px; }
   .felt { border-width: 8px; border-radius: 50% / 40%; }
   .felt-center { gap: 18px; }
@@ -1918,10 +2019,19 @@ select:focus-visible {
   .felt { border-width: 8px; border-radius: 50% / 42%; }
   .felt-center { gap: 20px; }
   .opponents-row { gap: 5px; }
-  .opp { padding: 3px 6px; min-width: 55px; }
-  .opp-name { font-size: 0.58rem; margin-bottom: 2px; }
-  .opp-plays .card-sm,
-  .opp-plays .joker-sm { width: calc(var(--cw-sm) * 0.72); height: calc(var(--ch-sm) * 0.72); font-size: 0.52rem; }
+  .opp { padding: 2px 5px 3px; min-width: 0; }
+  .opp-top { margin-bottom: 0; gap: 3px; }
+  .opp-avatar { width: 14px; height: 14px; font-size: 0.54rem; }
+  .opp-name { font-size: 0.56rem; margin-bottom: 0; }
+  .opp-backs,
+  .opp-meta,
+  .opp-jugadas { display: none; }
+  .opp-turn-arrow { top: -6px; font-size: 0.55rem; }
+  .seat-plays { max-width: 34%; gap: 3px; }
+  .seat-plays.sp--me { max-width: 78%; }
+  .seat-plays.sp--side { max-width: 30%; }
+  .seat-plays .card-sm,
+  .seat-plays .joker-sm { width: calc(var(--cw-sm) * var(--plays-scale, 1.0)); height: calc(var(--ch-sm) * var(--plays-scale, 1.0)); font-size: 0.62rem; }
   .deck-label { font-size: 0.5rem; }
   .mazo-count { font-size: 0.45rem; }
   .player-section { gap: 1px; padding: 1px 0; }
@@ -2007,7 +2117,7 @@ select:focus-visible {
 
   <!-- MESA -->
   <div class="poker-table" id="main-table">
-    <div class="felt">
+    <div class="felt" id="felt">
       <div class="felt-glow"></div>
 
       <!-- Asientos de oponentes (arco superior) -->
@@ -2041,6 +2151,9 @@ select:focus-visible {
           <div class="pot-banca" id="pot-banca">Banca · 0</div>
         </div>
       </div>
+
+      <!-- Bajadas sobre el fieltro, frente a cada asiento -->
+      <div id="felt-plays" style="display:none"></div>
     </div>
   </div>
 
@@ -2057,13 +2170,6 @@ select:focus-visible {
         <span class="my-chips" id="my-chips" style="display:none"></span>
       </div>
       <div id="my-bubble-anchor" class="bubble-anchor"></div>
-
-      <!-- Fila 0: Tu bajada (solo cuando estás bajado) -->
-      <div class="row-label" id="my-plays-label" style="display:none">
-        <span>🎴 TU BAJADA</span>
-        <span class="row-desc">Tus jugadas sobre la mesa</span>
-      </div>
-      <div class="my-plays" id="my-plays" style="display:none"></div>
 
       <!-- Fila 1: Sobrantes -->
       <div class="row-label">
@@ -2186,6 +2292,7 @@ select:focus-visible {
   </div>
 
   <div id="toast"></div>
+  <div id="notif-stack"></div>
 
 </div><!-- /game -->
 

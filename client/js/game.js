@@ -1049,6 +1049,18 @@ function init() {
     setupAudioUnlock();
     syncGuidePreferenceUi();
     window.addEventListener('resize', refreshGuideLayout);
+    // El layout de asientos/bajadas depende del ancho del fieltro (dinámico):
+    // re-renderiza oponentes y bajadas al redimensionar.
+    let _seatResizeT;
+    window.addEventListener('resize', () => {
+        clearTimeout(_seatResizeT);
+        _seatResizeT = setTimeout(() => {
+            if (G && myIdx >= 0) {
+                renderOpponents();
+                renderTableBajadas();
+            }
+        }, 120);
+    });
     const handZone = document.getElementById('discard-zone');
     if (handZone) handZone.addEventListener('scroll', updateHandScroll, { passive: true });
     const scrollArrow = document.getElementById('hand-scroll-arrow');
@@ -1302,7 +1314,10 @@ function setupSocketEvents() {
                     });
                 });
                 buildingCards.clear();
-                if (msg.includes('BAJADA EN FALSO')) toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
+                if (msg.includes('BAJADA EN FALSO')) {
+                    toast('⚠️ Las cartas regresaron a tus sobrantes. Penalizado 2 turnos.', 'red');
+                    shakePlayerHeader(myIdx, { red: true });
+                }
                 render();
             }
         }
@@ -1312,6 +1327,75 @@ function setupSocketEvents() {
         toast(msg || 'La mesa fue cerrada por administración.', 'red');
         setTimeout(() => { location.href = '/'; }, 900);
     });
+    WS.on('progreso', (p) => {
+        if (!p) return;
+        const stored = JSON.parse(localStorage.getItem('usuario') || '{}');
+        const next = { ...stored, xp: p.xpTotal, nivel: p.nivel, badge: p.badge || stored.badge };
+        localStorage.setItem('usuario', JSON.stringify(next));
+        window.AUTH = window.AUTH
+            ? { ...window.AUTH, usuario: { ...(window.AUTH.usuario || {}), ...next } }
+            : window.AUTH;
+
+        const reduced = typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (p.subioNivel) {
+            enqueueNotif('level', {
+                icon: '🎉',
+                title: `¡Subiste al nivel ${p.nivel}!`,
+                desc: p.nuevoTitulo ? `Nuevo título: «${escapeHtml(p.nuevoTitulo)}»` : '',
+                xp: p.xpGanada ? `+${p.xpGanada} XP` : '',
+            });
+            if (Anim.confetti && !reduced) {
+                Anim.confetti(window.innerWidth / 2, window.innerHeight * 0.4, 90);
+            }
+        }
+        (p.nuevosLogros || []).forEach(l => {
+            enqueueNotif('logro', {
+                icon: l.icono ? `<i class="ph ph-${l.icono}"></i>` : '🏅',
+                title: l.nombre || 'Logro desbloqueado',
+                desc: l.titulo ? `Título «${escapeHtml(l.titulo)}» desbloqueado` : 'Nuevo logro conseguido',
+                xp: [
+                    l.xp ? `+${l.xp} XP` : '',
+                    l.fichas ? `+${Number(l.fichas).toLocaleString('es-MX')} fichas` : '',
+                ].filter(Boolean).join(' · '),
+            });
+        });
+        if (p.fichasBonus > 0 && !(p.nuevosLogros || []).length) {
+            enqueueNotif('logro', {
+                icon: '🪙',
+                title: 'Fichas ganadas',
+                desc: 'Por tu partida',
+                xp: `+${Number(p.fichasBonus).toLocaleString('es-MX')}`,
+            });
+        }
+    });
+}
+
+// ── Cola de notificaciones (logros / XP / nivel) ──────────────────
+function enqueueNotif(kind, { icon, title, desc, xp } = {}) {
+    const stack = document.getElementById('notif-stack');
+    if (!stack) return;
+    const card = document.createElement('div');
+    card.className = `notif-card${kind === 'level' ? ' level' : ''}`;
+    card.innerHTML = `
+        <div class="notif-icon">${icon || '🏅'}</div>
+        <div class="notif-body">
+            <div class="notif-title">${title || ''}</div>
+            ${desc ? `<div class="notif-desc">${desc}</div>` : ''}
+        </div>
+        ${xp ? `<div class="notif-xp">${xp}</div>` : ''}
+    `;
+    stack.appendChild(card);
+    while (stack.children.length > 4) stack.firstElementChild.remove();
+    const dismiss = () => {
+        card.classList.add('out');
+        card.style.animation = 'notifOut .28s cubic-bezier(.22,1,.36,1) both';
+        setTimeout(() => card.remove(), 320);
+    };
+    const t = setTimeout(dismiss, 4000);
+    card.addEventListener('click', () => { clearTimeout(t); dismiss(); });
+    card.addEventListener('animationend', (e) => { if (e.animationName === 'notifIn') card.style.animation = ''; });
 }
 
 // ═══════════════════════════════════════════════════
@@ -1439,6 +1523,21 @@ function oppFlash(jugadorIdx, { color = 'rgba(255,255,255,.25)', text = '', glow
     }
 }
 
+// Sacudida + flash en el header del jugador (castigo / bajada en falso)
+function shakePlayerHeader(jugadorIdx, { red = true } = {}) {
+    const el = jugadorIdx === myIdx
+        ? document.querySelector('.player-header')
+        : document.querySelector(`.opp[data-idx="${jugadorIdx}"]`);
+    if (!el) return;
+    el.classList.remove('player-shake', 'player-flash-red');
+    void el.offsetWidth;
+    el.classList.add('player-shake');
+    if (red) el.classList.add('player-flash-red');
+    setTimeout(() => {
+        el.classList.remove('player-shake', 'player-flash-red');
+    }, 720);
+}
+
 async function handleTomarMazo(data) {
     if (data.jugadorIdx === myIdx) {
         const mazoEl    = document.getElementById('mazo-wrap');
@@ -1560,6 +1659,7 @@ async function handleCastigo(data) {
         ]);
 
         newCards.forEach(el => Anim.revealCard(el));
+        shakePlayerHeader(myIdx, { red: false });
 
     } else {
         // Otro jugador se castigó
@@ -1621,7 +1721,8 @@ function animateCastigo(jugadorIdx) {
     const oppEl = document.querySelector(`.opp[data-idx="${jugadorIdx}"]`);
     if (!oppEl) return;
 
-    // Flash naranja en la tarjeta
+    // Sacudida + flash naranja en la tarjeta
+    shakePlayerHeader(jugadorIdx, { red: false });
     oppEl.style.transition = 'box-shadow .15s ease, border-color .15s ease';
     oppEl.style.boxShadow  = '0 0 30px rgba(255,140,0,.9), 0 0 60px rgba(255,140,0,.4)';
     oppEl.style.borderColor = 'rgba(255,140,0,.9)';
@@ -1698,8 +1799,8 @@ async function handleBajar(data) {
         await new Promise(r => requestAnimationFrame(r));
         await new Promise(r => requestAnimationFrame(r));
 
-        // 3. Destino: tu bajada en la zona inferior
-        const bajadas   = document.getElementById('my-plays');
+        // 3. Destino: tu bajada en el anillo inferior del fieltro
+        const bajadas   = document.getElementById('felt-plays')?.querySelector(`.seat-plays[data-pi="${myIdx}"]`);
         const slotArr   = bajadas?.querySelectorAll('.bajada-pile-cards') || [];
         const dstEl     = slotArr[0] || bajadas;
         const dstRect   = dstEl?.getBoundingClientRect();
@@ -2456,6 +2557,15 @@ const BADGES = {
     'beta_tester':   { emoji: '🧪', label: 'Beta Tester' },
     'early_adopter': { emoji: '🎖️', label: 'Early Adopter' },
     'vip':           { emoji: '⭐', label: 'VIP' },
+    'veterano':      { emoji: '🎖️', label: 'Veterano' },
+    'leyenda':       { emoji: '👑', label: 'Leyenda' },
+    'imparable':     { emoji: '🔥', label: 'Imparable' },
+    'invencible':    { emoji: '🏆', label: 'Invencible' },
+    'magnate':       { emoji: '💰', label: 'Magnate' },
+    'perfecto':      { emoji: '💎', label: 'Perfecto' },
+    'dios_continental': { emoji: '🏛️', label: 'Dios del Continental' },
+    'inmortal':      { emoji: '♾️', label: 'Inmortal' },
+    'ahorrativo':    { emoji: '🪙', label: 'Ahorrativo' },
 };
 function skinClass(skin) {
     if (!skin || skin === 'clasico') return '';
@@ -2490,7 +2600,7 @@ function applyTableTheme(color) {
 
 function restoreAnimatedBajadas() {
     if (!_animatedBajadas.size) return;
-    document.querySelectorAll('#opponents .opp-plays .card-sm, #opponents .opp-plays .joker-sm, #my-plays .card-sm, #my-plays .joker-sm').forEach(el => {
+    document.querySelectorAll('#felt-plays .seat-plays .card-sm, #felt-plays .seat-plays .joker-sm').forEach(el => {
         const id = el.dataset.id || el.dataset.comodinId;
         if (!id) return;
         if (_animatedBajadas.has(id)) {
@@ -2621,13 +2731,85 @@ function renderScoreboard() {
     `).join('');
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// seatLayout(n)
+// Devuelve posiciones (%) sobre el fieltro para asientos y bajadas de cada
+// jugador, más el tamaño máximo de la bajada (maxW %) y su zona (para el paso
+// de ajuste fitSeatPlays). Los oponentes se sientan en orden de array
+// alrededor del óvalo; la bajada de cada uno queda en el "anillo" frente a su
+// asiento, sin invadir mazo/fondo (zona central). El jugador propio (myIdx)
+// queda abajo al centro.
+//  - 5 jugadores en pantallas anchas: 2 arriba + 2 laterales.
+//  - 5 jugadores en pantallas estrechas (<1000px): 4 en una fila superior.
+//  - Landscape corto (≤500px alto): todos en una fila superior compacta.
+// ─────────────────────────────────────────────────────────────────────────────
+function seatLayout(n) {
+    const feltEl = document.getElementById('felt');
+    const feltW = feltEl ? feltEl.clientWidth : 0;
+    const land = window.matchMedia?.('(orientation: landscape) and (max-height: 500px)').matches;
+    const narrow = feltW > 0 && feltW < 1000;
+
+    let seats, plays, maxWs, zones, seatWs;
+    if (land) {
+        const k = Math.max(n - 1, 1);
+        const xArr = Array.from({ length: k }, (_, i) => Math.round(100 * (i + 1) / (k + 1)));
+        seats = xArr.map(x => [x, 9]);
+        plays = xArr.map(x => [x, 27]);
+        maxWs = xArr.map(() => ({ 1: 30, 2: 24, 3: 20, 4: 18 }[k] || 18));
+        zones = xArr.map(() => 'land');
+        seatWs = xArr.map(() => Math.max(10, Math.floor(80 / k)));
+    } else if (n === 5 && narrow) {
+        seats = [[20, 9], [40, 9], [60, 9], [80, 9]];
+        plays = [[20, 27], [40, 27], [60, 27], [80, 27]];
+        maxWs = [18, 18, 18, 18];
+        zones = ['top', 'top', 'top', 'top'];
+        seatWs = [17, 17, 17, 17];
+    } else {
+        const M = {
+            2: { seats: [[50, 9]], plays: [[50, 25]], maxW: [30], zone: ['top'], seatW: [30] },
+            3: { seats: [[30, 9], [70, 9]], plays: [[30, 26], [70, 26]], maxW: [24, 24], zone: ['top', 'top'], seatW: [26, 26] },
+            4: { seats: [[20, 10], [50, 8], [80, 10]], plays: [[20, 28], [50, 26], [80, 28]], maxW: [23, 23, 23], zone: ['top', 'top', 'top'], seatW: [26, 26, 26] },
+            5: { seats: [[33, 9], [67, 9], [9, 22], [91, 22]], plays: [[33, 23], [67, 23], [13, 44], [87, 44]], maxW: [22, 22, 13, 13], zone: ['top', 'top', 'side', 'side'], seatW: [26, 26, 14, 14] },
+        }[n] || { seats: [[30, 9], [70, 9]], plays: [[30, 23], [70, 23]], maxW: [24, 24], zone: ['top', 'top'], seatW: [26, 26] };
+        seats = M.seats; plays = M.plays; maxWs = M.maxW; zones = M.zone; seatWs = M.seatW;
+    }
+
+    const opp = (ji) => {
+        const seatIdx = ji < myIdx ? ji : ji - 1;
+        return {
+            seat: seats[seatIdx] || null,
+            play: plays[seatIdx] || null,
+            maxW: maxWs[seatIdx] != null ? maxWs[seatIdx] : 24,
+            zone: zones[seatIdx] || 'top',
+            seatW: seatWs[seatIdx] != null ? seatWs[seatIdx] : 26,
+        };
+    };
+    return {
+        oppCount: n - 1,
+        feltW,
+        narrow,
+        land,
+        seatOf: (ji) => ji === myIdx
+            ? { seat: null, play: [50, land ? 86 : 81], maxW: land ? 80 : 72, zone: 'me', seatW: 0 }
+            : opp(ji),
+    };
+}
+
 function renderOpponents() {
     const opEl = document.getElementById('opponents');
     opEl.innerHTML = '';
+    const layout = seatLayout(G.jugadores.length);
     G.jugadores.forEach((j, i) => {
         if (i === myIdx) return;
+        const pos = layout.seatOf(i);
         const d = document.createElement('div');
-        d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}${_turnJustChanged && i === G.turno ? ' turn-arrive' : ''}`;
+        d.className = `opp${i === G.turno ? ' turn' : ''}${j.bajado ? ' bajado' : ''}${_turnJustChanged && i === G.turno ? ' turn-arrive' : ''}${pos.zone === 'side' ? ' opp--side' : ''}`;
+        if (pos.seat) {
+            d.style.left = pos.seat[0] + '%';
+            d.style.top = pos.seat[1] + '%';
+            d.style.maxWidth = pos.seatW + '%';
+            if (layout.feltW && layout.feltW * pos.seatW / 100 < 95) d.classList.add('opp--tiny');
+        }
         d.dataset.idx = i;
         const avBg = skinAvatarStyle(j.skin).bg;
         const avBd = skinAvatarStyle(j.skin).border;
@@ -2645,7 +2827,6 @@ function renderOpponents() {
                 <span class="opp-count">${j.mano?.length || 0} cartas · ${j.pts_t}pts</span>
             </div>
             ${j.bajado && j.jugadas?.length ? `<div class="opp-jugadas">${j.jugadas.length} jugada(s)</div>` : ''}
-            <div class="opp-plays"></div>
         `;
         opEl.appendChild(d);
     });
@@ -2690,20 +2871,25 @@ function skinAvatarStyle(skin) {
 // ─────────────────────────────────────────────────────────────────────────────
 function renderTableBajadas() {
     // Limpiar todas las zonas de jugadas
-    document.querySelectorAll('#opponents .opp-plays').forEach(p => { p.innerHTML = ''; });
-    const myPlaysEl = document.getElementById('my-plays');
-    const myLabelEl = document.getElementById('my-plays-label');
-    if (myPlaysEl) myPlaysEl.innerHTML = '';
-    let tengoJugadas = false;
+    const feltPlays = document.getElementById('felt-plays');
+    if (feltPlays) feltPlays.innerHTML = '';
+    const layout = seatLayout(G.jugadores.length);
 
     G.jugadores.forEach((j, ji) => {
         if (!j.bajado || !j.jugadas?.length) return;
 
-        const target = ji === myIdx
-            ? myPlaysEl
-            : document.querySelector(`#opponents .opp[data-idx="${ji}"] .opp-plays`);
-        if (!target) return;
-        if (ji === myIdx) tengoJugadas = true;
+        const pos = layout.seatOf(ji);
+        let target = feltPlays?.querySelector(`.seat-plays[data-pi="${ji}"]`);
+        if (!target) {
+            target = document.createElement('div');
+            target.className = `seat-plays${ji === myIdx ? ' sp--me' : (pos.zone === 'side' ? ' sp--side' : '')}`;
+            target.dataset.pi = ji;
+            target.dataset.maxW = String(pos.maxW);
+            target.dataset.zone = pos.zone;
+            if (pos.play) { target.style.left = pos.play[0] + '%'; target.style.top = pos.play[1] + '%'; }
+            if (pos.maxW && pos.zone !== 'land') target.style.maxWidth = pos.maxW + '%';
+            feltPlays?.appendChild(target);
+        }
 
         j.jugadas.forEach((jug, jugi) => {
             const pile = document.createElement('div');
@@ -2737,17 +2923,17 @@ function renderTableBajadas() {
                                      data-ic-key="${icKey}"
                                      data-comodin-id="${c.id}"
                                      onclick="event.stopPropagation(); window.ejecutarIntercambioDesdeKey('${icKey}')">
-                                     🃏<small style="font-size:8px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
-                                     <small style="font-size:7px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
+                                     🃏<small style="font-size:12px;display:block;color:#ffe066;">=${vr}${vrPalo}</small>
+                                     <small style="font-size:10px;display:block;color:#4de88a;">↔ CLIC</small></div>`;
                     }
                     if (intercambioMode && isMyTurn() && ji !== myIdx) {
                         return `<div class="card-sm joker-sm comodin-intercambiable"
                                      title="Reemplaza a: ${vr}${vrPalo}"
                                      data-comodin-id="${c.id}" data-jugador="${ji}" data-jugada="${jugi}"
                                      onclick="event.stopPropagation(); window.activarModoIntercambio(${ji}, ${jugi}, '${c.id}')">
-                                     🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                                     🃏<small style="font-size:12px;display:block;">=${vr}${vrPalo}</small></div>`;
                     }
-                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}" data-comodin-id="${c.id}">🃏<small style="font-size:8px;display:block;">=${vr}${vrPalo}</small></div>`;
+                    return `<div class="card-sm joker-sm" title="Reemplaza a: ${vr}${vrPalo}" data-comodin-id="${c.id}">🃏<small style="font-size:12px;display:block;">=${vr}${vrPalo}</small></div>`;
                 }
                 return cSm(c);
             }).join('');
@@ -2764,12 +2950,16 @@ function renderTableBajadas() {
         });
     });
 
-    // Mostrar/ocultar TU BAJADA
-    if (myPlaysEl) myPlaysEl.style.display = tengoJugadas ? 'flex' : 'none';
-    if (myLabelEl) myLabelEl.style.display = tengoJugadas ? 'flex' : 'none';
+    // Mostrar el contenedor de bajadas solo si alguien tiene jugadas
+    const hayJugadas = G.jugadores.some(j => j.bajado && j.jugadas?.length);
+    if (feltPlays) feltPlays.style.display = hayJugadas ? 'flex' : 'none';
+
+    // Ajustar el tamaño de cada bajada para que quepa en su zona sin invadir
+    // mazo/fondo (reduce --plays-scale solo si hace falta).
+    fitSeatPlays();
 
     // Animar solo cartas nuevas (con ID real, no textContent)
-    const allPlays = document.querySelectorAll('#opponents .opp-plays .card-sm, #opponents .opp-plays .joker-sm, #my-plays .card-sm, #my-plays .joker-sm');
+    const allPlays = document.querySelectorAll('#felt-plays .seat-plays .card-sm, #felt-plays .seat-plays .joker-sm');
     allPlays.forEach((el, i) => {
         const id = el.dataset.id || el.dataset.comodinId;
         if (!id) return;
@@ -2784,6 +2974,40 @@ function renderTableBajadas() {
             el.style.animation = 'none';
             el.offsetHeight;
             el.style.animation = `cardLand 320ms cubic-bezier(.22,1,.36,1) ${i * 40}ms both`;
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// fitSeatPlays
+// Reduce --plays-scale de cada .seat-plays hasta que su ancho/alto quepan en su
+// zona (maxW % del fieltro y una fracción del alto), evitando invadir
+// mazo/fondo. No agranda: solo encoge cuando hace falta.
+// ─────────────────────────────────────────────────────────────────────────────
+function fitSeatPlays() {
+    const feltEl = document.getElementById('felt');
+    if (!feltEl) return;
+    const feltW = feltEl.clientWidth;
+    const feltH = feltEl.clientHeight;
+    const MAXH = { top: 0.16, side: 0.26, me: 0.30, land: 0.20 };
+    const DEFAULT_SCALE = { me: 1.875, side: 0.95 };
+    const MIN_SCALE = { land: 0.35 };
+
+    document.querySelectorAll('#felt-plays .seat-plays').forEach(el => {
+        const zone = el.dataset.zone || 'top';
+        const maxW = parseFloat(el.dataset.maxW || '24');
+        const maxWPx = feltW * maxW / 100;
+        const maxHPx = feltH * (MAXH[zone] || 0.16);
+        const minScale = MIN_SCALE[zone] || 0.45;
+        let scale = parseFloat(getComputedStyle(el).getPropertyValue('--plays-scale'));
+        if (!isFinite(scale) || scale <= 0) scale = DEFAULT_SCALE[el.dataset.zone] || 1.1;
+
+        let guard = 0;
+        let r = el.getBoundingClientRect();
+        while (guard++ < 10 && (r.width > maxWPx + 1 || r.height > maxHPx + 1) && scale > minScale) {
+            scale = Math.max(minScale, scale - 0.08);
+            el.style.setProperty('--plays-scale', String(scale));
+            r = el.getBoundingClientRect();
         }
     });
 }
@@ -3394,6 +3618,35 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
         podioWrap.appendChild(bn);
     }
 
+    const cards = [];
+    sorted.forEach((j, i) => {
+        const col = podioColors[i] || { bg:'rgba(0,0,0,.3)', border:'rgba(255,255,255,.1)', medal:['4️⃣','5️⃣'][i-3]||'', label:`${i+1}º lugar`, glow:'none' };
+
+        const card = document.createElement('div');
+        card.className = 'podio-card';
+        card.style.cssText = `
+            background:${col.bg};
+            border:2px solid ${col.border};
+            box-shadow:${col.glow};
+        `;
+
+        card.innerHTML = `
+            <div class="podio-medal" style="font-size:${i===0?'2.2rem':'1.6rem'}">${col.medal}</div>
+            <div style="flex:1">
+                <div class="podio-name" style="font-size:${i===0?'1.1rem':'.95rem'}">${j.nombre}</div>
+                <div class="podio-label">${col.label}</div>
+            </div>
+            <div class="podio-right">
+                ${fichasMap[j.idx] != null ? `<div class="podio-chips">🪙 ${fmtChips(fichasMap[j.idx].fichas)}</div>` : ''}
+                ${fichasMap[j.idx] != null ? `<div class="podio-ganancia" style="color:${fichasMap[j.idx].ganancia >= 0 ? '#6bcf77' : '#ffb3a0'}">${fichasMap[j.idx].ganancia >= 0 ? '+' : ''}${fmtChips(fichasMap[j.idx].ganancia)}</div>` : ''}
+                <div class="podio-pts" style="font-size:${i===0?'1.6rem':'1.2rem'};color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
+            </div>
+        `;
+
+        podioWrap.appendChild(card);
+        cards.push(card);
+    });
+
     // Botón nueva partida
     const btnWrap = document.createElement('div');
     btnWrap.className = 'podio-btn-wrap';
@@ -3402,47 +3655,55 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
 
     document.body.appendChild(overlay);
 
-    // Animar título
+    // ── Entrada animada ──
+    const reduced = typeof window.matchMedia === 'function'
+        && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const useGsap = !reduced && typeof window.gsap !== 'undefined';
+
+    if (useGsap) {
+        overlay.querySelectorAll('.podio-title, .podio-card, .podio-btn-wrap')
+            .forEach(el => { el.style.transition = 'none'; });
+        const gsap = window.gsap;
+        const tl = gsap.timeline();
+        tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: 'power1.out' });
+        tl.fromTo(titulo, { opacity: 0, y: -24 }, { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.08');
+        tl.fromTo(cards, { opacity: 0, y: 46, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.52, ease: 'back.out(1.3)', stagger: 0.15 }, '-=0.2');
+        if (cards[0]) {
+            tl.add(() => {
+                cards[0].classList.add('podio-winner-glow');
+                const r = cards[0].getBoundingClientRect();
+                SFX.play('victoria');
+                if (Anim.confetti) Anim.confetti(r.left + r.offsetWidth / 2, r.top, 45);
+            }, '-=0.05');
+        }
+        tl.fromTo(btnWrap, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.38, ease: 'power2.out' }, '+=0.1');
+        return;
+    }
+
+    if (reduced) {
+        overlay.style.opacity = '1';
+        titulo.style.opacity = '1';
+        titulo.style.transform = 'none';
+        cards.forEach(c => { c.style.opacity = '1'; c.style.transform = 'none'; });
+        btnWrap.style.opacity = '1';
+        return;
+    }
+
+    // Fallback sin GSAP (transiciones CSS existentes)
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
             titulo.style.opacity = '1';
             titulo.style.transform = 'translateY(0)';
         });
     });
-
-    // Animar cada posición con delay
-    sorted.forEach((j, i) => {
-        const col = podioColors[i] || { bg:'rgba(0,0,0,.3)', border:'rgba(255,255,255,.1)', medal:['4️⃣','5️⃣'][i-3]||'', label:`${i+1}º lugar`, glow:'none' };
-
+    cards.forEach((card, i) => {
         setTimeout(() => {
-            const card = document.createElement('div');
-            card.className = 'podio-card';
-            card.style.cssText = `
-                background:${col.bg};
-                border:2px solid ${col.border};
-                box-shadow:${col.glow};
-            `;
-
-            card.innerHTML = `
-                <div class="podio-medal" style="font-size:${i===0?'2.2rem':'1.6rem'}">${col.medal}</div>
-                <div style="flex:1">
-                    <div class="podio-name" style="font-size:${i===0?'1.1rem':'.95rem'}">${j.nombre}</div>
-                    <div class="podio-label">${col.label}</div>
-                </div>
-                <div class="podio-right">
-                    ${fichasMap[j.idx] != null ? `<div class="podio-chips">🪙 ${fmtChips(fichasMap[j.idx].fichas)}</div>` : ''}
-                    ${fichasMap[j.idx] != null ? `<div class="podio-ganancia" style="color:${fichasMap[j.idx].ganancia >= 0 ? '#6bcf77' : '#ffb3a0'}">${fichasMap[j.idx].ganancia >= 0 ? '+' : ''}${fmtChips(fichasMap[j.idx].ganancia)}</div>` : ''}
-                    <div class="podio-pts" style="font-size:${i===0?'1.6rem':'1.2rem'};color:${i===0?'#ffe066':'rgba(255,255,255,.8)'}">${j.pts_t} pts</div>
-                </div>
-            `;
-
-            podioWrap.appendChild(card);
-
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     card.style.opacity = '1';
                     card.style.transform = 'translateX(0)';
                     if (i === 0) {
+                        cards[0].classList.add('podio-winner-glow');
                         SFX.play('victoria');
                         if (Anim.confetti) Anim.confetti(card.getBoundingClientRect().left + card.offsetWidth / 2, card.getBoundingClientRect().top, 45);
                     }
@@ -3450,9 +3711,7 @@ function showPodio(jugadores, fichas, bancaRepartida, conApuesta) {
             });
         }, 300 + i * 300);
     });
-
-    // Mostrar botón
-    setTimeout(() => { btnWrap.style.opacity = '1'; }, 300 + sorted.length * 300 + 400);
+    setTimeout(() => { btnWrap.style.opacity = '1'; }, 300 + cards.length * 300 + 400);
 }
 
 function toast(msg, type = 'red') {

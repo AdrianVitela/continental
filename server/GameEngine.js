@@ -436,6 +436,11 @@ class GameEngine {
             conectado: true,
             penalizacion: null,
             puedeBajar: true,
+            // Seguimiento para logros (persisten entre rondas)
+            bajoTercia: false,
+            bajoCorrida: false,
+            fuePenalizado: false,
+            seCastigo: false,
         }));
         this.conApuesta = Boolean(conApuesta);
         this.pot = 0;      // pozo de la ronda actual
@@ -717,6 +722,7 @@ class GameEngine {
             if (resMazo) return resMazo;
             const cartaMazo = this.mazo.pop();
             jc.mano.push(cartaFondo, cartaMazo);
+            jc.seCastigo = true;
             this.addLog(`⚡ ${jc.nombre} se castigó.`);
             this.estado = 'esperando_accion';
             this.lastAction = Date.now();
@@ -779,6 +785,7 @@ class GameEngine {
         if (!validacion.valido) {
             this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
             this.jActivo.puedeBajar = false;
+            this.jActivo.fuePenalizado = true;
             const motivo = validacion.errores.join(', ');
             this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre}: ${motivo}. Penalizado 2 turnos.`);
             return this._err(`¡BAJADA EN FALSO! ${motivo}. Castigado 2 turnos sin bajar.`);
@@ -796,6 +803,7 @@ class GameEngine {
             if (sobrantes.length > 0) {
                 this.jActivo.penalizacion = { activa: true, turnosRestantes: 2 };
                 this.jActivo.puedeBajar = false;
+                this.jActivo.fuePenalizado = true;
                 this.addLog(`⚠️ ¡BAJADA EN FALSO! ${this.jActivo.nombre}: ronda 7 requiere 0 sobrantes. Penalizado 2 turnos.`);
                 return this._err(`¡BAJADA EN FALSO! En la ronda 7 debes meter TODAS tus cartas en las jugadas. Te quedan ${sobrantes.length} carta(s) en sobrantes. Castigado 2 turnos.`);
             }
@@ -812,6 +820,8 @@ class GameEngine {
 
         this.jActivo.mano = this.jActivo.mano.filter(c => !cartasUsadasIds.has(c.id));
         this.jActivo.bajado = true;
+        if (terciasCount > 0) this.jActivo.bajoTercia = true;
+        if (corridasCount > 0) this.jActivo.bajoCorrida = true;
 
         this.addLog(`🔥 ${this.jActivo.nombre} se bajó en ronda ${this.ronda}!`);
         this.lastAction = Date.now();

@@ -42,6 +42,33 @@ const clients = new Map();
 let socketSeq = 0;
 
 async function ensureDatabaseSchema() {
+  // Tablas base (sin esto el arranque fallaría en una BD nueva):
+  // los ALTER de abajo asumen que "usuarios" ya existe.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id          SERIAL PRIMARY KEY,
+      nombre      VARCHAR(30)  NOT NULL UNIQUE,
+      email       VARCHAR(100) NOT NULL UNIQUE,
+      password    VARCHAR(255) NOT NULL,
+      badge       VARCHAR(50)  DEFAULT NULL,
+      rol         VARCHAR(20)  DEFAULT 'jugador',
+      skin        VARCHAR(50)  DEFAULT 'clasico',
+      chips       BIGINT       NOT NULL DEFAULT 10000,
+      created_at  TIMESTAMP    DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS feedback (
+      id          SERIAL PRIMARY KEY,
+      usuario_id  INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      nombre      VARCHAR(30),
+      mensaje     TEXT NOT NULL,
+      rating      SMALLINT CHECK (rating BETWEEN 1 AND 5),
+      created_at  TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   await pool.query(`
     ALTER TABLE usuarios
     ADD COLUMN IF NOT EXISTS skin VARCHAR(50) DEFAULT 'clasico'

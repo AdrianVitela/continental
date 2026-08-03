@@ -4,7 +4,7 @@ const { Resend } = require('resend');
 const pool       = require('./db');
 
 const router     = express.Router();
-const resend     = new Resend(process.env.RESEND_API_KEY);
+const resend     = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const { middleware: rateLimit } = require('./rate-limit');
 const { verifyAuthorized } = require('./jwt-utils');
 
@@ -34,6 +34,11 @@ router.post('/feedback', rateLimit({ max: 10, windowMs: 15 * 60 * 1000, message:
     );
 
     const estrellas = safeRating ? '⭐'.repeat(safeRating) + ` (${safeRating}/5)` : 'Sin calificación';
+
+    if (!resend) {
+      console.log('[feedback] sin RESEND_API_KEY: feedback guardado solo en BD');
+      return res.json({ ok: true });
+    }
 
     const resendResult = await resend.emails.send({
       from: 'Continental <onboarding@resend.dev>',
